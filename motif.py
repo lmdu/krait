@@ -95,6 +95,11 @@ for i in range(2, 7):
 		for m2 in motifs[m1]:
 			MOTIFS[m2] = m1
 
+def normalize(motif):
+	return MOTIFS[motif]
+
+
+
 if __name__ == '__main__':
 	import json
 	with open("motif.json", "w") as fp:

@@ -1,31 +1,79 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import division
 import os
 import sys
-from db import SSRDB
-from ssr import SSRSearchEngine
 from PySide.QtCore import *
 from PySide.QtGui import *
 from PySide.QtSql import *
 
-#import ctypes
-#myappid = 'Mencent.GWSSR.SSR.0.1' # arbitrary string
-#ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+from db import PerfectTableModel, CompoundTableModel, DatabaseConnection
+from ssr import SSRDetector, CSSRDetector
+
+__VERSION__ = 'v0.0.1'
+
+qss = '''
+*{
+	font-size:12px;
+	font-family: "Microsoft YaHei";
+}
+
+/* main windows */
+MainWindow{
+	background:#fff;
+}
+
+QTableView{
+	border:0;
+}
+
+/* tool bar */
+QToolBar{
+	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #f2f2f2);
+	border-bottom:1px solid #a6a6a6;
+}
+
+/* status bar */
+QStatusBar{
+	background:qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #ededed);
+	border-top:1px solid #ccc;
+	font-size:12px;
+}
+QProgressBar{
+	text-align: right;
+	max-width: 120px;
+	min-width: 120xp;
+	max-height: 10px;
+	min-height: 15px;
+}
+'''
+class Data(dict):
+	def __getattr__(self, name):
+		try:
+			return self[name]
+		except KeyError:
+			raise AttributeError(name)
+
+	def __setattr__(self, name, val):
+		self[name] = val
+
 
 class MainWindow(QMainWindow):
 	def __init__(self):
 		super(MainWindow, self).__init__()
 
-		self.setWindowTitle("Gmia v0.1")
+		self.setWindowTitle("Krait %s" % __VERSION__)
 		self.setWindowIcon(QIcon(QPixmap("logo.png")))
-
-		self.tabs = QTabWidget()
-		self.setCentralWidget(self.tabs)
-
-		self.generalTab = GeneralTab()
-		self.tabs.insertTab(0, self.generalTab, "General")
-		#self.tabs.insertTab(9, QWidget(), "Statistics")
-		#self.tabs.insertTab(1, QWidget(), "Search SSRs")
+		
+		self.table = QTableView()
+		self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
+		self.table.resizeColumnsToContents()
+		self.table.verticalHeader().hide()
+		self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.model = SSRTableModel()
+		self.table.setModel(self.model)
+		self.setCentralWidget(self.table)
 
 		self.createActions()
 		self.createMenus()
@@ -34,9 +82,13 @@ class MainWindow(QMainWindow):
 
 		self.readSettings()
 
-		self.createSSRDb()
+		self.setStyleSheet(qss)
+
+		self.data = Data()
+		self.database = DatabaseConnection()
 
 		self.show()
+
 
 	def readSettings(self):
 		self.settings = QSettings("config.ini", QSettings.IniFormat)
@@ -48,17 +100,11 @@ class MainWindow(QMainWindow):
 	def closeEvent(self, event):
 		self.writeSettings()
 
-	def createSSRDb(self):
-		db = QSqlDatabase.addDatabase('QSQLITE')
-		db.setDatabaseName("file:ssr?mode=memory&cache=shared")
-		db.open()
-		self.db = SSRDB("file:ssr?mode=memory&cache=shared")
-
 	def createActions(self):
 		#open a project action
 		self.openProjectAct = QAction(self.tr("Open project"), self)
 		self.openProjectAct.setShortcut(QKeySequence.Open)
-		self.openProjectAct.triggered.connect(self.doOpenProject)
+		self.openProjectAct.triggered.connect(self.openProject)
 
 		#close a project action
 		self.closeProjectAct = QAction(self.tr("Close project"), self)
@@ -67,16 +113,17 @@ class MainWindow(QMainWindow):
 		#save a project action
 		self.saveProjectAct = QAction(self.tr("Save project"), self)
 		self.saveProjectAct.setShortcut(QKeySequence.Save)
+		self.saveProjectAct.triggered.connect(self.saveProject)
 		
 		#save as a project action
 		self.saveAsProjectAct = QAction(self.tr("Save project as..."), self)
 		self.saveAsProjectAct.setShortcut(QKeySequence.SaveAs)
 		
 		#load fasta file or genome action
-		self.loadFastaAct = QAction(self.tr("Load fasta sequence"), self)
-		self.loadFastaAct.triggered.connect(self.doLoadFasta)
-		self.loadFastasAct = QAction(self.tr("Load Fastas in folder"), self)
-		self.loadFastasAct.triggered.connect(self.doLoadFastas)
+		self.loadFastaAct = QAction(self.tr("Import fasta sequence"), self)
+		self.loadFastaAct.triggered.connect(self.importFasta)
+		self.loadFastasAct = QAction(self.tr("Import Fastas in folder"), self)
+		self.loadFastasAct.triggered.connect(self.importFastas)
 		
 		#export the Results
 		self.exportResAct = QAction(self.tr("Export Results"), self)
@@ -105,25 +152,50 @@ class MainWindow(QMainWindow):
 
 		self.preferenceAct = QAction(self.tr("Preferences"), self)
 		self.preferenceAct.setShortcut(QKeySequence.Preferences)
-		self.preferenceAct.triggered.connect(self.doPreference)
+		self.preferenceAct.triggered.connect(self.setPreference)
 
 		#toolbar actions
-		#search ssrs tool button
-		self.searchAct = QAction(QIcon("icons/tandem.png"), self.tr("Search SSRs"), self)
-		self.searchAct.triggered.connect(self.doSearchSSRs)
-		self.searchRunAct = QAction(QIcon("icons/tandem.png"), self.tr("Run search SSRs"), self)
-		self.searchRunAct.triggered.connect(self.doSearchSSRs)
-		self.searchParaAct = QAction(self.tr("Set minimum repeats"), self)
-		self.searchParaAct.triggered.connect(self.doPreference)
+		#search perfect ssrs tool button
+		self.perfectAct = QAction(QIcon("icons/tandem.png"), self.tr("Search SSRs"), self)
+		self.perfectAct.setStatusTip(self.tr("Search perfect microsatellites"))
+		self.perfectAct.setToolTip(self.tr("Search perfect microsatellites"))
+		self.perfectAct.triggered.connect(self.searchPerfectSSRs)
+		self.perfectMenuAct = QAction(self.tr("Perform SSR search"), self)
+		self.perfectMenuAct.triggered.connect(self.searchPerfectSSRs)
+		self.perfectResultAct = QAction(self.tr("Show perfect SSRs"), self)
+		self.perfectResultAct.triggered.connect(self.showPerfectSSRs)
+		self.perfectRemoveAct = QAction(self.tr("Remove perfect SSRs"), self)
+		self.perfectRemoveAct.triggered.connect(self.removePerfectSSRs)
+		self.minRepeatAct = QAction(self.tr("Minimum repeats"), self)
+		self.minRepeatAct.triggered.connect(self.setPreference)
+		
+		#search compound ssrs tool button
+		self.compoundAct = QAction(QIcon("icons/compound.png"), self.tr("Identify cSSRs"), self)
+		self.compoundAct.setStatusTip(self.tr("Identify compound microsatellites using dMax"))
+		self.compoundAct.setToolTip(self.tr("Identify compound microsatellites using dMax"))
+		self.compoundAct.triggered.connect(self.searchCompoundSSRs)
+		self.compoundMenuAct = QAction(self.tr("Perform cSSRs search"), self)
+		self.compoundMenuAct.triggered.connect(self.searchCompoundSSRs)
+		self.compoundResultAct = QAction(self.tr("Show compound SSRs"), self)
+		self.compoundResultAct.triggered.connect(self.showCompoundSSRs)
+		self.compoundRemoveAct = QAction(self.tr("Remove cSSR results"), self)
+		self.compoundRemoveAct.triggered.connect(self.removeCompoundSSRs)
+		self.bestDmaxAct = QAction(self.tr("Estimate best dMax"), self)
+		self.bestDmaxAct.triggered.connect(self.estimateBestMaxDistance)
+		self.maxDistanceAct = QAction(self.tr("Maximal allowed distance"), self)
+		self.maxDistanceAct.triggered.connect(self.setPreference)
 
-		self.identifyAct = QAction(QIcon("icons/compound.png"), self.tr("Identify cSSRs"), self)
-		self.identifyRunAct = QAction(QIcon("icons/compound.png"), self.tr("Run identify cSSRs"), self)
-		self.identifyParaAct = QAction(self.tr("dMax setting"), self)
-		self.removeIdentifyAct = QAction(self.tr("Remove cSSR results"), self)
+		#about action
+		self.aboutAct = QAction(self.tr("About"), self)
+		self.aboutAct.triggered.connect(self.about)
+		
 
 	def createMenus(self):
 		self.fileMenu = self.menuBar().addMenu("&File")
 		self.editMenu = self.menuBar().addMenu("&Edit")
+		self.searchMenu = self.menuBar().addMenu("&Search")
+		self.viewMenu = self.menuBar().addMenu("&View")
+		self.toolMenu = self.menuBar().addMenu("&Tool")
 		self.helpMenu = self.menuBar().addMenu("&Help")
 		
 		self.fileMenu.addAction(self.openProjectAct)
@@ -147,21 +219,39 @@ class MainWindow(QMainWindow):
 		self.editMenu.addSeparator()
 		self.editMenu.addAction(self.preferenceAct)
 
+		self.searchMenu.addAction(self.perfectMenuAct)
+		self.searchMenu.addAction(self.compoundMenuAct)
+
+		self.viewMenu.addAction(self.perfectResultAct)
+		self.viewMenu.addAction(self.compoundResultAct)
+		self.viewMenu.addSeparator()
+		self.viewMenu.addAction(self.perfectRemoveAct)
+		self.viewMenu.addAction(self.compoundRemoveAct)
+
+		self.toolMenu.addAction(self.bestDmaxAct)
+
+		self.helpMenu.addAction(self.aboutAct)
+
+
 		#tool bar menus
 		#search ssrs tool button menu
-		self.searchMenu = QMenu()
-		self.searchMenu.addAction(self.searchRunAct)
-		self.searchMenu.addSeparator()
-		self.searchMenu.addAction(self.loadFastaAct)
-		self.searchMenu.addAction(self.loadFastasAct)
-		self.searchMenu.addSeparator()
-		self.searchMenu.addAction(self.searchParaAct)
+		self.perfectMenu = QMenu()
+		self.perfectMenu.addAction(self.perfectMenuAct)
+		self.perfectMenu.addAction(self.perfectResultAct)
+		self.perfectMenu.addAction(self.perfectRemoveAct)
+		self.perfectMenu.addSeparator()
+		self.perfectMenu.addAction(self.loadFastaAct)
+		self.perfectMenu.addAction(self.loadFastasAct)
+		self.perfectMenu.addSeparator()
+		self.perfectMenu.addAction(self.minRepeatAct)
 
-		self.identifyMenu = QMenu()
-		self.identifyMenu.addAction(self.identifyRunAct)
-		self.identifyMenu.addAction(self.removeIdentifyAct)
-		self.identifyMenu.addSeparator()
-		self.identifyMenu.addAction(self.identifyParaAct)
+		self.compoundMenu = QMenu()
+		self.compoundMenu.addAction(self.compoundMenuAct)
+		self.compoundMenu.addAction(self.compoundResultAct)
+		self.compoundMenu.addAction(self.compoundRemoveAct)
+		self.compoundMenu.addSeparator()
+		self.compoundMenu.addAction(self.bestDmaxAct)
+		self.compoundMenu.addAction(self.maxDistanceAct)
 		
 
 	def createToolBars(self):
@@ -171,11 +261,11 @@ class MainWindow(QMainWindow):
 		self.toolBar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
 		#search ssr action and menus
-		self.searchAct.setMenu(self.searchMenu)
-		self.toolBar.addAction(self.searchAct)
+		self.perfectAct.setMenu(self.perfectMenu)
+		self.toolBar.addAction(self.perfectAct)
 
-		self.identifyAct.setMenu(self.identifyMenu)
-		self.toolBar.addAction(self.identifyAct)
+		self.compoundAct.setMenu(self.compoundMenu)
+		self.toolBar.addAction(self.compoundAct)
 
 		self.annotToolBtn = QAction(QIcon("icons/annotation.png"), self.tr("Locate SSRs"), self)
 		#self.annotToolBtn.setDisabled(True)
@@ -205,28 +295,56 @@ class MainWindow(QMainWindow):
 		self.statusBar = self.statusBar()
 		self.statusBar.showMessage("Genome-wide microsatellites analysis tool.")
 		self.progressBar = QProgressBar(self)
-		self.progressBar.setAlignment(Qt.AlignRight)
-		self.progressBar.setMaximumSize(140, 14)
 		self.statusBar.addPermanentWidget(self.progressBar)
 
+	def openProject(self):
+		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
+		if not dbfile: return
+		self.database.openDatabase(dbfile)
 
+	def saveProject(self):
+		if not self.database.databaseName():
+			self.database.commit()
+			return
 
+		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
+		if not dbfile: return
+	
+		query = QSqlQuery()
+		query.exec_("ATTACH DATABASE '%s' AS 'filedb'")
 
-	def doOpenProject(self):
-		for k in self.settings.allKeys():
-			print k,"\t", self.settings.value(k)
+		for table in self.database.tables():
+			query.exec_("CREATE TABLE filedb.%s AS SELECT * FROM %s" % (table, table))
 
-	def doLoadFasta(self):
-		fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fas *.fasta);;All files (*.*)")
-		if fasta:
-			self.inputFasta = fasta
-			self.pushStatusMessage("Load fasta file %s" % fasta)
+	def saveProjectAs(self):
+		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
+		if not dbfile: return
+	
+		query = QSqlQuery()
+		query.exec_("ATTACH DATABASE '%s' AS 'filedb'")
 
-	def doLoadFastas(self):
-		folder = QFileDialog.getExistingDirectory(self)
-		if folder:
-			self.inputFasta = folder
-			self.pushStatusMessage("Load all fastas in folder %s" % folder)
+		for table in self.database.tables():
+			query.exec_("CREATE TABLE filedb.%s AS SELECT * FROM %s" % (table, table))
+
+	
+	def importFasta(self):
+		'''
+		Import a fasta file from a directory
+		'''
+		fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta);;All files (*.*)")
+		if not fasta: return
+		self.data.fastas = [fasta]
+		self.message("Import fasta %s" % fasta)
+
+	def importFastas(self):
+		'''
+		import all fasta files from a directory
+		'''
+		directory = QFileDialog.getExistingDirectory(self)
+		if not directory: return
+		folder = QDir(directory)
+		self.data.fastas = map(folder.absoluteFilePath, folder.entryList(QDir.Files))
+		self.message("Import %s fastas in %s" % (len(self.data.fastas), directory))
 
 	def doCopy(self):
 		focus = QApplication.focusWidget()
@@ -252,12 +370,12 @@ class MainWindow(QMainWindow):
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyPress, Qt.Key_A, Qt.ControlModifier))
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyRelease, Qt.Key_A, Qt.ControlModifier))
 
-	def doPreference(self):
+	def setPreference(self):
 		dialog = PreferenceDialog(self, self.settings)
 		if dialog.exec_() == QDialog.Accepted:
 			dialog.saveSettings()
 
-	def doSearchSSRs(self):
+	def searchPerfectSSRs(self):
 		#if self.db.isTableExists('ssr'):
 		#	status = QMessageBox.warning(self, 
 		#		self.tr("Warning"), 
@@ -267,15 +385,39 @@ class MainWindow(QMainWindow):
 
 		#	if status == QMessageBox.Cancel:
 			
-		minimunRepeats = self.getMinimunRepeats()
-		self.db.createSSRTable()
-		if os.path.isfile(self.inputFasta):
-			self.pushStatusMessage("Build fasta index for %s" % self.inputFasta)
-			genome = pyfaidx.Fasta(self.inputFasta)
+		rules = self.getMicrosatelliteRules()
+		worker = SSRSearchWorker(self, self.data.fastas, rules)
+		worker.update_message.connect(self.message)
+		worker.update_progress.connect(self.setProgress)
+		worker.finished.connect(self.showPerfectSSRs)
+		worker.start()
 
-			self.db
+	def showPerfectSSRs(self):
+		self.model.setTable('ssr')
+		self.model.select()
 
-	def getMinimunRepeats(self):
+	def removePerfectSSRs(self):
+		pass
+
+	def searchCompoundSSRs(self):
+		dmax = int(self.settings.value('dmax', 10))
+		worker = CSSRSearchWorker(self, dmax)
+		worker.update_message.connect(self.message)
+		worker.update_progress.connect(self.setProgress)
+		worker.finished.connect(self.showCompoundSSRs)
+		worker.start()
+
+	def showCompoundSSRs(self):
+		self.model.setTable('cssr')
+		self.model.select()
+
+	def removeCompoundSSRs(self):
+		pass
+
+	def estimateBestMaxDistance(self):
+		pass
+
+	def getMicrosatelliteRules(self):
 		return {
 			1: int(self.settings.value('mono', 12)),
 			2: int(self.settings.value('di', 7)),
@@ -285,9 +427,14 @@ class MainWindow(QMainWindow):
 			6: int(self.settings.value('hexa', 3))
 		}
 		
+	def setProgress(self, percent):
+		self.progressBar.setValue(percent)
 
-	def pushStatusMessage(self, msg):
-		self.generalTab.writeMessage(msg)
+	def message(self, msg):
+		self.statusBar.showMessage(msg)
+
+	def about(self):
+		pass
 
 
 class PreferenceDialog(QDialog):
@@ -383,23 +530,80 @@ class PreferenceDialog(QDialog):
 		self.settings.setValue('dmax', self.distanceValue.value())
 		self.settings.setValue('flank', self.flankValue.value())
 		
-
-class GeneralTab(QWidget):
+class SSRTableModel(QSqlTableModel):
 	def __init__(self):
-		super(GeneralTab, self).__init__()
-		self.runningStatusWdg = QTextBrowser(self)
-		layout = QVBoxLayout()
-		layout.addWidget(QLabel("Running message and status:"))
-		layout.addWidget(self.runningStatusWdg)
-		self.setLayout(layout)
+		super(SSRTableModel, self).__init__()
+		self.setTable('ssr')
+		headers = ["ID", "Sequence", "Start", "End", "Motif", "Repeat", "Length", "Normalized motif"]
+		for idx, name in enumerate(headers):
+			self.setHeaderData(idx, Qt.Horizontal, name)
 
-	def writeMessage(self, msg):
-		self.runningStatusWdg.append(msg)
+	def data(self, index, role=Qt.DisplayRole):
+		if role == Qt.TextAlignmentRole:
+			return Qt.AlignCenter
+
+		return QSqlTableModel.data(self, index, role)
+
+class SSRSearchWorker(QThread):
+	update_progress = Signal(int)
+	update_message = Signal(str)
+
+	def __init__(self, parent, fastas, rules):
+		super(SSRSearchWorker, self).__init__(parent)
+		self.fastas = fastas
+		self.rules = rules
+		self.perfect = PerfectTableModel()
+
+	def run(self):
+		current_fastas = 0
+		for fasta in self.fastas:
 			
-class SSRTab(QWidget):
-	def __init__(self):
-		super(SSRTab, self).__init__()
-		#self.SSRTableWdg =
+			current_fastas += 1
+			fasta_progress = current_fastas/len(self.fastas)
+
+			detector = SSRDetector(fasta, self.rules)
+			#create fasta file index
+			self.update_message.emit("Build fasta index for %s" % fasta)
+			detector.createFastaIndex()
+			
+			total_seqs = detector.getSequenceCount()
+			current_seqs = 0
+			for name, seq in detector.getSequences():
+				total_len = len(seq)
+				current_seqs += 1
+				seq_progress = current_seqs/total_seqs
+
+				self.update_message.emit('Search perfect SSRs in %s' % name)
+				
+				for ssr in detector.searchSSRsInSequence(name, seq):
+					self.perfect.insert(ssr)
+					progress = round(fasta_progress * seq_progress * (ssr.end/total_len)*100)
+					self.update_progress.emit(progress)
+
+		self.update_progress.emit(100)
+		self.update_message.emit("Perfect search completed")
+
+class CSSRSearchWorker(QThread):
+	update_progress = Signal(int)
+	update_message = Signal(str)
+	
+	def __init__(self, parent, dmax):
+		super(CSSRSearchWorker, self).__init__(parent)
+		self.dmax = dmax
+		self.perfect = PerfectTableModel()
+		self.compound = CompoundTableModel()
+
+	def run(self):
+		total_ssrs = self.perfect.getTotalCounts()
+		ssrs = self.perfect.fetchAll()
+		for cssr in CSSRDetector(ssrs, self.dmax):
+			self.compound.insert(cssr)
+			progress = round(int(cssr.cssrs.split(',')[-1])/total_ssrs*100)
+			self.update_progress.emit(progress)
+			self.update_message.emit("Search compound SSRs in %s" % cssr.sequence)
+
+		self.update_progress.emit(100)
+		self.update_message.emit("Compound search completed")
 
 
 if __name__ == '__main__':

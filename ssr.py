@@ -1,43 +1,164 @@
 #!/usr/bin/env python
 import os
+import re
 import sys
 import time
 import pyfaidx
-from motif import MOTIFS
-from optparse import OptionParser
+from motif import normalize
 
-import re
+class SSR(dict):
+	def __getattr__(self, name):
+		try:
+			return self[name]
+		except KeyError:
+			raise AttributeError(name)
 
-#Search all ssrs from sequence
-#@para sequence string, fasta sequence.
-#@para threshold dict, the minimal repeats for ssr.
-#@return tuple, ssr information
-def SSRSearchEngine(chrom, sequence, threshold):
-	pattern = re.compile(r'([atgcATGC]{1,6}?)\1{%s,}' % (min(threshold.values()) - 1))
-	ssrs = pattern.finditer(sequence)
-	for ssr in ssrs:
-		seq = ssr.group(0)
-		length = len(seq)
-		motif = ssr.group(1)
-		motifLen = len(motif)
-		repeat = length/motifLen
-		if repeat < threshold[motifLen]: continue
-		start = ssr.start(0) + 1
-		end = ssr.end(0)
-		smotif = MOTIFS[motif.upper()]
-		yield (None, chrom, start, end, repeat, length, motif, smotif)
+	def __setattr__(self, name, val):
+		self[name] = val
 
-def main():
-	threshold = {1:12, 2:7, 3:5, 4:4, 5:4, 6:4}
-	start_time = time.time()
-	genome = pyfaidx.Fasta('../chr1.fa')
-	for chrom in genome:
-		for ssr in SSRSearchEngine(chrom.name, str(chrom[:].seq), threshold):
-			pass
-	end_time = time.time()
-	print round(end_time - start_time, 2)
+
+class SSRDetector:
+	'''
+	Detect microsatellites from input fasta files with rules
+	@para fasta str, input fasta file
+	@para rules dict, minimal repeats for each ssr types
+	'''
+	def __init__(self, fasta, rules=None):
+		self.fasta_file = fasta
+		self.rules = rules
+
+		#default rules
+		if rules is None:
+			self.rules = {1:12, 2:7, 3:5, 4:4, 5:4, 6:4}
+
+		#create ssr search pattern
+		self._createSearchPattern()
+
+	def __iter__(self):
+		for name, seq in self.getSequences():
+			for ssr in self.searchSSRsInSequence(name, seq):
+				yield ssr
+
+	def createFastaIndex(self):
+		if not os.path.exists(self.fasta_file):
+			raise Exception('Fasta file %s is not exists' % self.fasta_file)
+		
+		self.fasta = pyfaidx.Fasta(self.fasta_file)
+
+	def _createSearchPattern(self):
+		'''
+		create microsatellite search regular expression pattern
+		'''
+		repeats = min(self.rules.values()) - 1
+		self.pattern = re.compile(r'([ATGC]{1,6}?)\1{%s,}' % repeats)
+
+	def getSequenceCount(self):
+		return len(self.fasta.keys())
+	
+	def getSequences(self):
+		for seq in self.fasta:
+			yield (seq.name, seq[:].seq.upper())
+
+	def searchSSRsInSequence(self, chrom, sequence):
+		for tandem in self.pattern.finditer(sequence):
+			ssr, motif = tandem.group(0,1)
+			length = len(ssr)
+			mlen = len(motif)
+			repeat = length/mlen
+			
+			#ssr can not match the search rule
+			if repeat < self.rules[mlen]:
+				continue
+
+			#get the start and end location of ssr
+			start, end = tandem.span()
+			start += 1
+
+			#standardize the motif of ssr
+			smotif = normalize(motif)
+
+			yield SSR(
+				ID = None,
+				sequence = chrom,
+				start = start,
+				end = end, 
+				repeat = repeat,
+				length = length,
+				motif = motif,
+				smotif = smotif
+			)
+
+def join_compound_SSRs(cSSRs):
+	sequence = cSSRs[0].sequence
+	start = str(cSSRs[0].start)
+	end = str(cSSRs[-1].end)
+	complexity = str(len(cSSRs))
+
+	motif = []
+	smotif = []
+	seq = []
+	cssrs = []
+
+	for idx, ssr in enumerate(cSSRs):
+		smotif.append(ssr.smotif)
+		motif.append(ssr.motif)
+		cssrs.append(ssr.ID)
+		if 0 < idx < len(cSSRs):
+			d = distance(cSSRs[idx-1], ssr)
+			if d > 0:
+				seq.append("(N)%s" % d)
+		seq.append("(%s)%s" % (ssr.motif, ssr.repeat))
+
+	motif = "-".join(motif)
+	smotif = "-".join(smotif)
+	cssrs = ",".join(map(str,cssrs))
+	seq = "-".join(seq)
+	return SSR(
+		sequence = sequence,
+		start = start,
+		end = end,
+		motif = motif,
+		smotif = smotif,
+		complexity = complexity,
+		cssrs = cssrs,
+		compound = seq
+	)
+
+def distance(ssr1, ssr2):
+	return ssr2.start - ssr1.end - 1	
+
+class CSSRDetector:
+	def __init__(self, ssrs, dmax=None):
+		self.ssrs = ssrs
+		self.dmax = dmax
+		if dmax is None:
+			self.dmax = 10
+
+	def __iter__(self):
+		return self.searchCompound()
+
+	def searchCompound(self):
+		cSSRs = [self.ssrs.next()]
+		for ssr in self.ssrs:
+			d = distance(cSSRs[-1], ssr)
+			if ssr.sequence == cSSRs[-1].sequence and d <= self.dmax:
+				cSSRs.append(ssr)
+			else:
+				if len(cSSRs) > 1:
+					yield join_compound_SSRs(cSSRs)
+				cSSRs = [ssr]
+
+		else:
+			if len(cSSRs) > 1:
+				yield join_compound_SSRs(cSSRs)
+
+
+	
 
 if __name__ == '__main__':
-	import cProfile
-	cProfile.run("main()")
+	start_time = time.time()
+	for ssr in MicrosatelliteDetector(sys.argv[1]):
+		pass
+	end_time = time.time()
+	print round(end_time - start_time, 2)
 	

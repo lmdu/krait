@@ -1,72 +1,86 @@
 #!/usr/bin/env python
-try:
-	import sqlite3
-except ImportError:
-	from pysqlite2 import dbapi2 as sqlite3
+# -*- coding: utf-8 -*-
+from PySide.QtSql import *
+from ssr import SSR
 
-#create a SSR object from dict
-class Row(sqlite3.Row):
-	def __getattr__(self, name):
-		try:
-			return self[name]
-		except KeyError:
-			raise AttributeError(name)
+class DatabaseConnection(QSqlDatabase):
+	def __init__(self, dbname=':memory:'):
+		super(DatabaseConnection, self).__init__()
+		self.addDatabase('QSQLITE')
+		self.openDatabase(dbname)
 
-#connect to ssr database and create ssr table
-class SSRDB:
-	def __init__(self, db):
-		self.conn = sqlite3.connect(db)
-		self.conn.row_factory = Row
-		self.cursor = self.conn.cursor()
+	def openDatabase(self, dbname):
+		self.setDatabaseName(dbname)
+		self.open()
+		self.transaction()
 
-	def createTable(self, sql):
-		c = self.conn.cursor()
-		try:
-			c.execute(sql)
-		finally:
-			c.close()
 
-	def createSSRTable(self):
-		self.createTable('''
-			CREATE TABLE IF NOT EXISTS ssr(
-				ID INTEGER PRIMARY KEY,
-				chrom TEXT,
-				start INTEGER,
-				end INTEGER,
-				repeat INTEGER,
-				length INTEGER,
-				motif INTEGER,
-				smotif INTEGER
-			)
-		''')
+class TableModel(object):
+	table = None
+	fields = []
+	
+	def __init__(self):
+		self.query = QSqlQuery()
+		self.createTable()
+		self.prepareInsert()
 
-	def isTableExists(self, name):
-		sql = (
-			"SELECT * FROM sqlite_master"
-			" WHERE name=? and type='table'"
-		)
-		return self.get(sql, name)
-			
-	def iter(self, sql):
-		c = self.conn.cursor()
-		try:
-			for row in c.execute(sql):
-				yield row
-		finally:
-			c.close()
+	def __iter__(self):
+		return self.fetchSSRs()
 
-	def get(self, sql, *para):
-		c = self.conn.cursor()
-		try:
-			c.execute(sql, para)
-			row = c.fetchone()
-			return row[0] if row else None
-		finally:
-			c.close()
+	def createTable(self):
+		sql = ",".join(["%s %s" % (f, t) for f,t,_ in self.fields])
+		sql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (self.table, sql)
+		self.query.exec_(sql)
 
-	def insert(self, sql, data):
-		self.cursor.execute(sql, data)
+	def getTotalCounts(self):
+		self.query.exec_("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
+		while self.query.next():
+			return int(self.query.value(0))
 
-	def submit(self):
-		self.cursor.close()
-		self.conn.commit()
+	def fetchAll(self):
+		self.query.exec_("SELECT * FROM %s" % self.table)
+		while self.query.next():
+			yield SSR({field[0]: field[2](self.query.value(idx)) for idx, field in enumerate(self.fields)})
+
+	def prepareInsert(self):
+		sql = ",".join([":%s" % f for f,_,_ in self.fields])
+		sql = "INSERT INTO %s VALUES (%s)" % (self.table, sql)
+		self.query.prepare(sql)
+
+	def insert(self, ssr):
+		for field in ssr:
+			self.query.bindValue(":%s" % field, ssr[field])
+		self.query.exec_()
+
+class PerfectTableModel(TableModel):
+	table = 'ssr'
+	fields = [
+		("ID", "INTEGER PRIMARY KEY", int),
+		("sequence", "TEXT", str),
+		("start", "INTEGER", int),
+		("end", "INTEGER", int),
+		("repeat", "INTEGER", int),
+		("length", "INTEGER", int),
+		("motif", "TEXT", str),
+		("smotif", "TEXT", str)
+	]
+	
+	def __init__(self):
+		super(PerfectTableModel, self).__init__()
+
+class CompoundTableModel(TableModel):
+	table = 'cssr'
+	fields = [
+		("sequence", "TEXT", str),
+		("start", "INTEGER", int),
+		("end", "INTEGER", int),
+		("motif", "TEXT", str),
+		("smotif", "TEXT", str),
+		("complexity", "INTEGER", int),
+		("cssrs", "TEXT", str),
+		("compound", "TEXT", str)
+	]
+
+	def __init__(self):
+		super(CompoundTableModel, self).__init__()
+
