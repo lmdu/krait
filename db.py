@@ -3,17 +3,11 @@
 from PySide.QtSql import *
 from ssr import SSR
 
-class DatabaseConnection(QSqlDatabase):
-	def __init__(self, dbname=':memory:'):
-		super(DatabaseConnection, self).__init__()
-		self.addDatabase('QSQLITE')
-		self.openDatabase(dbname)
 
-	def openDatabase(self, dbname):
-		self.setDatabaseName(dbname)
-		self.open()
-		self.transaction()
-
+DB = QSqlDatabase.addDatabase('QSQLITE')
+DB.setDatabaseName(':memory:')
+DB.open()
+DB.transaction()
 
 class TableModel(object):
 	table = None
@@ -23,6 +17,7 @@ class TableModel(object):
 		self.query = QSqlQuery()
 		self.createTable()
 		self.prepareInsert()
+		DB.commit()
 
 	def __iter__(self):
 		return self.fetchSSRs()
@@ -59,10 +54,10 @@ class PerfectTableModel(TableModel):
 		("sequence", "TEXT", str),
 		("start", "INTEGER", int),
 		("end", "INTEGER", int),
-		("repeat", "INTEGER", int),
-		("length", "INTEGER", int),
 		("motif", "TEXT", str),
-		("smotif", "TEXT", str)
+		("smotif", "TEXT", str),
+		("repeat", "INTEGER", int),
+		("length", "INTEGER", int)
 	]
 	
 	def __init__(self):
@@ -84,3 +79,4 @@ class CompoundTableModel(TableModel):
 	def __init__(self):
 		super(CompoundTableModel, self).__init__()
 
+#PerfectTableModel()

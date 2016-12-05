@@ -7,7 +7,7 @@ from PySide.QtCore import *
 from PySide.QtGui import *
 from PySide.QtSql import *
 
-from db import PerfectTableModel, CompoundTableModel, DatabaseConnection
+from db import *
 from ssr import SSRDetector, CSSRDetector
 
 __VERSION__ = 'v0.0.1'
@@ -24,13 +24,26 @@ MainWindow{
 }
 
 QTableView{
-	border:0;
+	border: 0;
+	selection-background-color: rgba(95, 186, 125, 80%);
 }
 
 /* tool bar */
 QToolBar{
 	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #f2f2f2);
 	border-bottom:1px solid #a6a6a6;
+	spacing: 5px;
+}
+QLineEdit{
+	border:1px solid #a9a9a9;
+	padding:4px 3px 4px 18px;
+	border-radius: 2px;
+	margin-left:50px;
+	margin-right:5px;
+	background: #fff url(icons/search.png);
+	background-position: left center;
+	background-repeat: none;
+	width:100%;
 }
 
 /* status bar */
@@ -66,14 +79,20 @@ class MainWindow(QMainWindow):
 		self.setWindowIcon(QIcon(QPixmap("logo.png")))
 		
 		self.table = QTableView()
-		self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
-		self.table.resizeColumnsToContents()
+		#self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
+		self.table.horizontalHeader().setStretchLastSection(False)
 		self.table.verticalHeader().hide()
 		self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-		self.model = SSRTableModel()
+		self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.model = QSqlTableModel()
 		self.table.setModel(self.model)
 		self.setCentralWidget(self.table)
+
+		#search text input
+		self.filter = QLineEdit(self)
+		self.filter.setPlaceholderText("Filter data in table e.g. motif=AT and repeat>10")
+		self.filter.editingFinished.connect(self.filterTable)
 
 		self.createActions()
 		self.createMenus()
@@ -85,7 +104,6 @@ class MainWindow(QMainWindow):
 		self.setStyleSheet(qss)
 
 		self.data = Data()
-		self.database = DatabaseConnection()
 
 		self.show()
 
@@ -109,6 +127,7 @@ class MainWindow(QMainWindow):
 		#close a project action
 		self.closeProjectAct = QAction(self.tr("Close project"), self)
 		self.closeProjectAct.setShortcut(QKeySequence.Close)
+		self.closeProjectAct.triggered.connect(self.closeProject)
 		
 		#save a project action
 		self.saveProjectAct = QAction(self.tr("Save project"), self)
@@ -118,6 +137,7 @@ class MainWindow(QMainWindow):
 		#save as a project action
 		self.saveAsProjectAct = QAction(self.tr("Save project as..."), self)
 		self.saveAsProjectAct.setShortcut(QKeySequence.SaveAs)
+		self.saveAsProjectAct.triggered.connect(self.saveProjectAs)
 		
 		#load fasta file or genome action
 		self.loadFastaAct = QAction(self.tr("Import fasta sequence"), self)
@@ -291,6 +311,10 @@ class MainWindow(QMainWindow):
 		self.reportToolBtn.setMenu(self.reportToolBtnMenu)
 		self.toolBar.addAction(self.reportToolBtn)
 
+		#search input
+		#self.filter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+		self.toolBar.addWidget(self.filter)
+
 	def createStatusBar(self):
 		self.statusBar = self.statusBar()
 		self.statusBar.showMessage("Genome-wide microsatellites analysis tool.")
@@ -300,32 +324,37 @@ class MainWindow(QMainWindow):
 	def openProject(self):
 		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
 		if not dbfile: return
-		self.database.openDatabase(dbfile)
+		DB.setDatabaseName(dbfile)
+		DB.open()
+		self.showPerfectSSRs()
 
 	def saveProject(self):
-		if not self.database.databaseName():
-			self.database.commit()
+		if not DB.databaseName():
+			DB.commit()
 			return
 
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
 		if not dbfile: return
-	
 		query = QSqlQuery()
-		query.exec_("ATTACH DATABASE '%s' AS 'filedb'")
-
-		for table in self.database.tables():
+		query.exec_("ATTACH DATABASE '%s' AS 'filedb'" % dbfile)
+		for table in DB.tables():
 			query.exec_("CREATE TABLE filedb.%s AS SELECT * FROM %s" % (table, table))
+		query.exec_("DETACH DATABASE filedb")
 
 	def saveProjectAs(self):
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
 		if not dbfile: return
-	
 		query = QSqlQuery()
-		query.exec_("ATTACH DATABASE '%s' AS 'filedb'")
-
-		for table in self.database.tables():
+		query.exec_("ATTACH DATABASE '%s' AS 'filedb'" % dbfile)
+		for table in DB.tables():
 			query.exec_("CREATE TABLE filedb.%s AS SELECT * FROM %s" % (table, table))
+		query.exec_("DETACH DATABASE filedb")
 
+	def closeProject(self):
+		DB.close()
+		del self.model
+		self.model = QSqlTableModel()
+		self.table.setModel(self.model)
 	
 	def importFasta(self):
 		'''
@@ -394,6 +423,9 @@ class MainWindow(QMainWindow):
 
 	def showPerfectSSRs(self):
 		self.model.setTable('ssr')
+		headers = ["ID", "Sequence", "Start", "End", "Motif", "Normalized motif", "Repeat", "Length"]
+		for idx, name in enumerate(headers):
+			self.model.setHeaderData(idx, Qt.Horizontal, name)
 		self.model.select()
 
 	def removePerfectSSRs(self):
@@ -409,6 +441,9 @@ class MainWindow(QMainWindow):
 
 	def showCompoundSSRs(self):
 		self.model.setTable('cssr')
+		headers = ["Sequence", "Start", "End", "Motif", "Normalized motif", "Complexity", "cSSRs", "Compound"]
+		for idx, name in enumerate(headers):
+			self.model.setHeaderData(idx, Qt.Horizontal, name)
 		self.model.select()
 
 	def removeCompoundSSRs(self):
@@ -416,6 +451,10 @@ class MainWindow(QMainWindow):
 
 	def estimateBestMaxDistance(self):
 		pass
+
+	def filterTable(self):
+		filters = self.filter.text()
+		self.model.setFilter(filters)
 
 	def getMicrosatelliteRules(self):
 		return {
@@ -530,19 +569,17 @@ class PreferenceDialog(QDialog):
 		self.settings.setValue('dmax', self.distanceValue.value())
 		self.settings.setValue('flank', self.flankValue.value())
 		
-class SSRTableModel(QSqlTableModel):
-	def __init__(self):
-		super(SSRTableModel, self).__init__()
-		self.setTable('ssr')
-		headers = ["ID", "Sequence", "Start", "End", "Motif", "Repeat", "Length", "Normalized motif"]
-		for idx, name in enumerate(headers):
-			self.setHeaderData(idx, Qt.Horizontal, name)
+#class SSRTableModel(QSqlTableModel):
+#	def __init__(self):
+#		super(SSRTableModel, self).__init__()
+#		self.setTable('ssr')
+#		self.select()
 
-	def data(self, index, role=Qt.DisplayRole):
-		if role == Qt.TextAlignmentRole:
-			return Qt.AlignCenter
+	#def data(self, index, role=Qt.DisplayRole):
+	#	if role == Qt.TextAlignmentRole:
+	#		return Qt.AlignCenter
 
-		return QSqlTableModel.data(self, index, role)
+	#	return QSqlTableModel.data(self, index, role)
 
 class SSRSearchWorker(QThread):
 	update_progress = Signal(int)
