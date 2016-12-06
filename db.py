@@ -53,9 +53,10 @@ class PerfectTableModel(TableModel):
 		("ID", "INTEGER PRIMARY KEY", int),
 		("sequence", "TEXT", str),
 		("start", "INTEGER", int),
-		("end", "INTEGER", int),
+		("stop", "INTEGER", int),
 		("motif", "TEXT", str),
 		("smotif", "TEXT", str),
+		("mlength", "INTEGER", int),
 		("repeat", "INTEGER", int),
 		("length", "INTEGER", int)
 	]
@@ -66,9 +67,10 @@ class PerfectTableModel(TableModel):
 class CompoundTableModel(TableModel):
 	table = 'cssr'
 	fields = [
+		("ID", "INTEGER PRIMARY KEY", int),
 		("sequence", "TEXT", str),
 		("start", "INTEGER", int),
-		("end", "INTEGER", int),
+		("stop", "INTEGER", int),
 		("motif", "TEXT", str),
 		("smotif", "TEXT", str),
 		("complexity", "INTEGER", int),

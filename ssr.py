@@ -71,7 +71,7 @@ class SSRDetector:
 				continue
 
 			#get the start and end location of ssr
-			start, end = tandem.span()
+			start, stop = tandem.span()
 			start += 1
 
 			#standardize the motif of ssr
@@ -81,17 +81,18 @@ class SSRDetector:
 				ID = None,
 				sequence = chrom,
 				start = start,
-				end = end, 
-				repeat = repeat,
-				length = length,
+				stop = stop,
 				motif = motif,
-				smotif = smotif
+				smotif = smotif,
+				mlength = mlen,
+				repeat = repeat,
+				length = length
 			)
 
 def join_compound_SSRs(cSSRs):
 	sequence = cSSRs[0].sequence
 	start = str(cSSRs[0].start)
-	end = str(cSSRs[-1].end)
+	stop = str(cSSRs[-1].stop)
 	complexity = str(len(cSSRs))
 
 	motif = []
@@ -114,9 +115,10 @@ def join_compound_SSRs(cSSRs):
 	cssrs = ",".join(map(str,cssrs))
 	seq = "-".join(seq)
 	return SSR(
+		ID = None,
 		sequence = sequence,
 		start = start,
-		end = end,
+		stop = stop,
 		motif = motif,
 		smotif = smotif,
 		complexity = complexity,
@@ -125,7 +127,7 @@ def join_compound_SSRs(cSSRs):
 	)
 
 def distance(ssr1, ssr2):
-	return ssr2.start - ssr1.end - 1	
+	return ssr2.start - ssr1.stop - 1	
 
 class CSSRDetector:
 	def __init__(self, ssrs, dmax=None):

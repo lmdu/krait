@@ -32,7 +32,7 @@ QTableView{
 QToolBar{
 	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #f2f2f2);
 	border-bottom:1px solid #a6a6a6;
-	spacing: 5px;
+	spacing: 8px;
 }
 QLineEdit{
 	border:1px solid #a9a9a9;
@@ -79,13 +79,13 @@ class MainWindow(QMainWindow):
 		self.setWindowIcon(QIcon(QPixmap("logo.png")))
 		
 		self.table = QTableView()
-		#self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
-		self.table.horizontalHeader().setStretchLastSection(False)
 		self.table.verticalHeader().hide()
 		self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.table.setSortingEnabled(True)
 		self.table.setContextMenuPolicy(Qt.CustomContextMenu)
-		self.model = QSqlTableModel()
+		self.model = TableModel()
+		self.model.refreshed.connect(self.changeRowCount)
 		self.table.setModel(self.model)
 		self.setCentralWidget(self.table)
 
@@ -318,8 +318,16 @@ class MainWindow(QMainWindow):
 	def createStatusBar(self):
 		self.statusBar = self.statusBar()
 		self.statusBar.showMessage("Genome-wide microsatellites analysis tool.")
+		
+		#add row counts widget
+		self.rowCounts = QLabel("Rows: 0", self)
+		self.rowCounts.setStyleSheet("margin-right:20px;")
+		self.statusBar.addPermanentWidget(self.rowCounts)
+		
+		#add progressing bar
 		self.progressBar = QProgressBar(self)
 		self.statusBar.addPermanentWidget(self.progressBar)
+		
 
 	def openProject(self):
 		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
@@ -353,7 +361,7 @@ class MainWindow(QMainWindow):
 	def closeProject(self):
 		DB.close()
 		del self.model
-		self.model = QSqlTableModel()
+		self.model = TableModel()
 		self.table.setModel(self.model)
 	
 	def importFasta(self):
@@ -423,10 +431,8 @@ class MainWindow(QMainWindow):
 
 	def showPerfectSSRs(self):
 		self.model.setTable('ssr')
-		headers = ["ID", "Sequence", "Start", "End", "Motif", "Normalized motif", "Repeat", "Length"]
-		for idx, name in enumerate(headers):
-			self.model.setHeaderData(idx, Qt.Horizontal, name)
-		self.model.select()
+		self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
+		self.model.refresh()
 
 	def removePerfectSSRs(self):
 		pass
@@ -441,10 +447,8 @@ class MainWindow(QMainWindow):
 
 	def showCompoundSSRs(self):
 		self.model.setTable('cssr')
-		headers = ["Sequence", "Start", "End", "Motif", "Normalized motif", "Complexity", "cSSRs", "Compound"]
-		for idx, name in enumerate(headers):
-			self.model.setHeaderData(idx, Qt.Horizontal, name)
-		self.model.select()
+		self.table.horizontalHeader().setResizeMode(QHeaderView.Interactive)
+		self.model.refresh()
 
 	def removeCompoundSSRs(self):
 		pass
@@ -455,6 +459,7 @@ class MainWindow(QMainWindow):
 	def filterTable(self):
 		filters = self.filter.text()
 		self.model.setFilter(filters)
+		self.model.refresh()
 
 	def getMicrosatelliteRules(self):
 		return {
@@ -465,6 +470,12 @@ class MainWindow(QMainWindow):
 			5: int(self.settings.value('penta', 3)),
 			6: int(self.settings.value('hexa', 3))
 		}
+
+	def changeRowCount(self):
+		while self.model.canFetchMore():
+			self.model.fetchMore()
+		counts = self.model.rowCount()
+		self.rowCounts.setText("Rows: %s" % counts)
 		
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)
@@ -474,6 +485,15 @@ class MainWindow(QMainWindow):
 
 	def about(self):
 		pass
+
+class TableModel(QSqlTableModel):
+	refreshed = Signal()
+	def __init__(self):
+		super(TableModel, self).__init__()
+
+	def refresh(self):
+		self.select()
+		self.refreshed.emit()
 
 
 class PreferenceDialog(QDialog):
@@ -614,7 +634,7 @@ class SSRSearchWorker(QThread):
 				
 				for ssr in detector.searchSSRsInSequence(name, seq):
 					self.perfect.insert(ssr)
-					progress = round(fasta_progress * seq_progress * (ssr.end/total_len)*100)
+					progress = round(fasta_progress * seq_progress * (ssr.stop/total_len)*100)
 					self.update_progress.emit(progress)
 
 		self.update_progress.emit(100)
