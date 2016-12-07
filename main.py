@@ -36,12 +36,12 @@ QToolBar{
 }
 QLineEdit{
 	border:1px solid #a9a9a9;
-	padding:4px 3px 4px 18px;
+	padding:4px 18px 4px 4px;
 	border-radius: 2px;
 	margin-left:50px;
 	margin-right:5px;
-	background: #fff url(icons/search.png);
-	background-position: left center;
+	background: #fff url(icons/filter.png);
+	background-position: right center;
 	background-repeat: none;
 	width:100%;
 }
@@ -71,9 +71,9 @@ class Data(dict):
 		self[name] = val
 
 
-class MainWindow(QMainWindow):
+class SSRMainWindow(QMainWindow):
 	def __init__(self):
-		super(MainWindow, self).__init__()
+		super(SSRMainWindow, self).__init__()
 
 		self.setWindowTitle("Krait %s" % __VERSION__)
 		self.setWindowIcon(QIcon(QPixmap("logo.png")))
@@ -84,7 +84,8 @@ class MainWindow(QMainWindow):
 		self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.table.setSortingEnabled(True)
 		self.table.setContextMenuPolicy(Qt.CustomContextMenu)
-		self.model = TableModel()
+		self.table.doubleClicked.connect(self.showSSRSequence)
+		self.model = SSRTableModel()
 		self.model.refreshed.connect(self.changeRowCount)
 		self.table.setModel(self.model)
 		self.setCentralWidget(self.table)
@@ -361,7 +362,7 @@ class MainWindow(QMainWindow):
 	def closeProject(self):
 		DB.close()
 		del self.model
-		self.model = TableModel()
+		self.model = SSRTableModel()
 		self.table.setModel(self.model)
 	
 	def importFasta(self):
@@ -461,6 +462,15 @@ class MainWindow(QMainWindow):
 		self.model.setFilter(filters)
 		self.model.refresh()
 
+	def showSSRSequence(self, index):
+		'''
+		The row in table double clicked, show the sequence of SSR
+		'''
+		record = self.model.record(index.row())
+		
+
+
+
 	def getMicrosatelliteRules(self):
 		return {
 			1: int(self.settings.value('mono', 12)),
@@ -486,10 +496,10 @@ class MainWindow(QMainWindow):
 	def about(self):
 		pass
 
-class TableModel(QSqlTableModel):
+class SSRTableModel(QSqlTableModel):
 	refreshed = Signal()
 	def __init__(self):
-		super(TableModel, self).__init__()
+		super(SSRTableModel, self).__init__()
 
 	def refresh(self):
 		self.select()
@@ -668,6 +678,6 @@ if __name__ == '__main__':
 	app.setOrganizationName('Mencent')
 	app.setOrganizationDomain('mencent.com')
 	app.setApplicationName('Gmia')
-	mainWin = MainWindow()
+	mainWin = SSRMainWindow()
 	mainWin.show()
 	sys.exit(app.exec_())
