@@ -1,28 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from PySide.QtSql import *
-from ssr import SSR
+from PySide.QtCore import QObject
+from PySide.QtSql import QSqlDatabase, QSqlQuery
+from utils import Data
 
+def open_database(dbname=':memory:'):
+	db = QSqlDatabase.database()
+	db.setDatabaseName(dbname)
+	if not db.open():
+		raise Exception("Can not connect to database %s" % dbname)
+	query = QSqlQuery()
+	query.exec_("PRAGMA synchronous=OFF;")
 
-DB = QSqlDatabase.addDatabase('QSQLITE')
-DB.setDatabaseName(':memory:')
-DB.open()
-DB.transaction()
-
-class TableModel(object):
+class SSRTable(QObject):
 	table = None
 	fields = []
 	
 	def __init__(self):
 		self.query = QSqlQuery()
-		self.createTable()
+		self._createTable()
 		self.prepareInsert()
-		DB.commit()
 
 	def __iter__(self):
 		return self.fetchSSRs()
 
-	def createTable(self):
+	def _createTable(self):
 		sql = ",".join(["%s %s" % (f, t) for f,t,_ in self.fields])
 		sql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (self.table, sql)
 		self.query.exec_(sql)
@@ -35,19 +37,19 @@ class TableModel(object):
 	def fetchAll(self):
 		self.query.exec_("SELECT * FROM %s" % self.table)
 		while self.query.next():
-			yield SSR({field[0]: field[2](self.query.value(idx)) for idx, field in enumerate(self.fields)})
+			yield Data({field[0]: field[2](self.query.value(idx)) for idx, field in enumerate(self.fields)})
 
 	def prepareInsert(self):
 		sql = ",".join([":%s" % f for f,_,_ in self.fields])
 		sql = "INSERT INTO %s VALUES (%s)" % (self.table, sql)
 		self.query.prepare(sql)
 
-	def insert(self, ssr):
-		for field in ssr:
-			self.query.bindValue(":%s" % field, ssr[field])
+	def insert(self, data):
+		for field in data:
+			self.query.bindValue(":%s" % field, data[field])
 		self.query.exec_()
 
-class PerfectTableModel(TableModel):
+class PerfectSSRTable(SSRTable):
 	table = 'ssr'
 	fields = [
 		("ID", "INTEGER PRIMARY KEY", int),
@@ -62,9 +64,9 @@ class PerfectTableModel(TableModel):
 	]
 	
 	def __init__(self):
-		super(PerfectTableModel, self).__init__()
+		super(PerfectSSRTable, self).__init__()
 
-class CompoundTableModel(TableModel):
+class CompoundSSRTable(SSRTable):
 	table = 'cssr'
 	fields = [
 		("ID", "INTEGER PRIMARY KEY", int),
@@ -74,11 +76,25 @@ class CompoundTableModel(TableModel):
 		("motif", "TEXT", str),
 		("smotif", "TEXT", str),
 		("complexity", "INTEGER", int),
+		("length", "INTEGER", int),
 		("cssrs", "TEXT", str),
 		("compound", "TEXT", str)
 	]
 
 	def __init__(self):
-		super(CompoundTableModel, self).__init__()
+		super(CompoundSSRTable, self).__init__()
 
-#PerfectTableModel()
+class FastaSSRTable(SSRTable):
+	table = 'fasta'
+	fields = [
+		("ID", "INTEGER PRIMARY KEY", int),
+		("path", "TEXT", str)
+	]
+
+class SequenceSSRTable(SSRTable):
+	table = 'sequence'
+	fields = [
+		("ID", "INTEGER PRIMARY KEY", int),
+		("name", "TEXT", str),
+		("fasta", "INTEGER", int)
+	]

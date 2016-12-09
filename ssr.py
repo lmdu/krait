@@ -1,21 +1,12 @@
 #!/usr/bin/env python
+from __future__ import division
 import os
 import re
 import sys
 import time
 import pyfaidx
 from motif import normalize
-
-class SSR(dict):
-	def __getattr__(self, name):
-		try:
-			return self[name]
-		except KeyError:
-			raise AttributeError(name)
-
-	def __setattr__(self, name, val):
-		self[name] = val
-
+from utils import Data
 
 class SSRDetector:
 	'''
@@ -31,19 +22,34 @@ class SSRDetector:
 		if rules is None:
 			self.rules = {1:12, 2:7, 3:5, 4:4, 5:4, 6:4}
 
+		#information of current processing fasta sequences
+		self.total_sequences = 0
+		self.processed_sequences = 0
+		self.current_sequence_length = 0
+		self.current_sequence_location = 0
+
 		#create ssr search pattern
 		self._createSearchPattern()
 
+		#create fasta faidx index
+		self._createFastaIndex()
+
 	def __iter__(self):
-		for name, seq in self.getSequences():
-			for ssr in self.searchSSRsInSequence(name, seq):
+		for fasta in self.fastas:
+			self.processed_sequences += 1
+			seq = str(fasta)
+			self.current_sequence_length = len(seq)
+			for ssr in self.search(fasta.name, seq):
 				yield ssr
 
-	def createFastaIndex(self):
+	def _createFastaIndex(self):
 		if not os.path.exists(self.fasta_file):
 			raise Exception('Fasta file %s is not exists' % self.fasta_file)
 		
-		self.fasta = pyfaidx.Fasta(self.fasta_file)
+		self.fastas = pyfaidx.Fasta(self.fasta_file, sequence_always_upper=True)
+		
+		#total sequences in fasta file
+		self.total_sequences = len(self.fastas.keys())
 
 	def _createSearchPattern(self):
 		'''
@@ -51,19 +57,30 @@ class SSRDetector:
 		'''
 		repeats = min(self.rules.values()) - 1
 		self.pattern = re.compile(r'([ATGC]{1,6}?)\1{%s,}' % repeats)
-
-	def getSequenceCount(self):
-		return len(self.fasta.keys())
 	
-	def getSequences(self):
-		for seq in self.fasta:
-			yield (seq.name, seq[:].seq.upper())
+	@property
+	def progress(self):
+		'''
+		Get current process and return float 0-1
+		'''
+		p1 = self.processed_sequences/self.total_sequences
+		p2 = self.current_sequence_location/self.current_sequence_length
+		return p1 * p2
 
-	def searchSSRsInSequence(self, chrom, sequence):
+	def search(self, name, sequence):
+		'''
+		search perfect microsatellites from the given sequence
+		@para name str, sequence name
+		@para sequence str, DNA sequence with ATGC
+		@return dict, one ssr with base information
+		'''
 		for tandem in self.pattern.finditer(sequence):
 			ssr, motif = tandem.group(0,1)
+			#get length of ssr sequence
 			length = len(ssr)
+			#get motif length
 			mlen = len(motif)
+			#get repeats of the ssr
 			repeat = length/mlen
 			
 			#ssr can not match the search rule
@@ -77,9 +94,12 @@ class SSRDetector:
 			#standardize the motif of ssr
 			smotif = normalize(motif)
 
-			yield SSR(
+			#get current sequence location
+			self.current_sequence_location = stop
+
+			yield Data(
 				ID = None,
-				sequence = chrom,
+				sequence = name,
 				start = start,
 				stop = stop,
 				motif = motif,
@@ -91,19 +111,21 @@ class SSRDetector:
 
 def join_compound_SSRs(cSSRs):
 	sequence = cSSRs[0].sequence
-	start = str(cSSRs[0].start)
-	stop = str(cSSRs[-1].stop)
-	complexity = str(len(cSSRs))
+	start = cSSRs[0].start
+	stop = cSSRs[-1].stop
+	complexity = len(cSSRs)
 
 	motif = []
 	smotif = []
 	seq = []
 	cssrs = []
+	size = 0
 
 	for idx, ssr in enumerate(cSSRs):
 		smotif.append(ssr.smotif)
 		motif.append(ssr.motif)
 		cssrs.append(ssr.ID)
+		size += ssr.length
 		if 0 < idx < len(cSSRs):
 			d = distance(cSSRs[idx-1], ssr)
 			if d > 0:
@@ -114,7 +136,7 @@ def join_compound_SSRs(cSSRs):
 	smotif = "-".join(smotif)
 	cssrs = ",".join(map(str,cssrs))
 	seq = "-".join(seq)
-	return SSR(
+	return Data(
 		ID = None,
 		sequence = sequence,
 		start = start,
@@ -122,6 +144,7 @@ def join_compound_SSRs(cSSRs):
 		motif = motif,
 		smotif = smotif,
 		complexity = complexity,
+		length = size,
 		cssrs = cssrs,
 		compound = seq
 	)
@@ -154,8 +177,6 @@ class CSSRDetector:
 			if len(cSSRs) > 1:
 				yield join_compound_SSRs(cSSRs)
 
-
-	
 
 if __name__ == '__main__':
 	start_time = time.time()
