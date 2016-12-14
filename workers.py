@@ -30,7 +30,7 @@ class SSRSearchWorker(QThread):
 
 			#get all sequence names
 			for name in detector.fastas.keys():
-				self.seq_table.insert(Data(ID=None, name=name, fasta=fasta.ID))
+				self.seq_table.insert(Data(sid=None, name=name, fid=fasta.fid))
 
 			#start search perfect SSRs
 			self.update_message.emit("Searching perfect SSRs...")

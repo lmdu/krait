@@ -11,6 +11,7 @@ def open_database(dbname=':memory:'):
 		raise Exception("Can not connect to database %s" % dbname)
 	query = QSqlQuery()
 	query.exec_("PRAGMA synchronous=OFF;")
+	return db
 
 class SSRTable(QObject):
 	table = None
@@ -87,14 +88,14 @@ class CompoundSSRTable(SSRTable):
 class FastaSSRTable(SSRTable):
 	table = 'fasta'
 	fields = [
-		("ID", "INTEGER PRIMARY KEY", int),
+		("fid", "INTEGER PRIMARY KEY", int),
 		("path", "TEXT", str)
 	]
 
 class SequenceSSRTable(SSRTable):
 	table = 'sequence'
 	fields = [
-		("ID", "INTEGER PRIMARY KEY", int),
+		("sid", "INTEGER PRIMARY KEY", int),
 		("name", "TEXT", str),
-		("fasta", "INTEGER", int)
+		("fid", "INTEGER", int)
 	]

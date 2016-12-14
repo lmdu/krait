@@ -3,10 +3,11 @@
 from PySide.QtCore import *
 from PySide.QtGui import *
 from PySide.QtSql import *
+from PySide.QtWebKit import *
 
-from utils import Data
+from utils import Data, get_ssr_sequence
 from workers import SSRSearchWorker,CSSRSearchWorker
-from db import FastaSSRTable
+from db import FastaSSRTable, open_database
 
 class SSRMainWindow(QMainWindow):
 	def __init__(self):
@@ -15,12 +16,12 @@ class SSRMainWindow(QMainWindow):
 		self.setWindowTitle("Krait v0.0.1")
 		self.setWindowIcon(QIcon(QPixmap("logo.png")))
 		
-		self.table = QTableView()
-		self.table.verticalHeader().hide()
-		self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-		self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-		self.table.setSortingEnabled(True)
-		self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.table = SSRTableView()
+		#self.table.verticalHeader().hide()
+		#self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		##self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		#self.table.setSortingEnabled(True)
+		#self.table.setContextMenuPolicy(Qt.CustomContextMenu)
 		self.table.doubleClicked.connect(self.showSSRSequence)
 		self.model = SSRTableModel()
 		self.model.refreshed.connect(self.changeRowCount)
@@ -267,20 +268,20 @@ class SSRMainWindow(QMainWindow):
 	def openProject(self):
 		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
 		if not dbfile: return
-		DB.setDatabaseName(dbfile)
-		DB.open()
+		open_database(dbfile)
 		self.showPerfectSSRs()
 
 	def saveProject(self):
-		if not DB.databaseName():
-			DB.commit()
+		db = QSqlDatabase.database()
+		if not db.databaseName():
+			db.commit()
 			return
 
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
 		if not dbfile: return
 		query = QSqlQuery()
 		query.exec_("ATTACH DATABASE '%s' AS 'filedb'" % dbfile)
-		for table in DB.tables():
+		for table in db.tables():
 			query.exec_("CREATE TABLE filedb.%s AS SELECT * FROM %s" % (table, table))
 		query.exec_("DETACH DATABASE filedb")
 
@@ -289,12 +290,14 @@ class SSRMainWindow(QMainWindow):
 		if not dbfile: return
 		query = QSqlQuery()
 		query.exec_("ATTACH DATABASE '%s' AS 'filedb'" % dbfile)
-		for table in DB.tables():
+		db = QSqlDatabase.database()
+		for table in db.tables():
 			query.exec_("CREATE TABLE filedb.%s AS SELECT * FROM %s" % (table, table))
 		query.exec_("DETACH DATABASE filedb")
 
 	def closeProject(self):
-		DB.close()
+		db = QSqlDatabase.database()
+		db.close()
 		del self.model
 		self.model = SSRTableModel()
 		self.table.setModel(self.model)
@@ -305,7 +308,7 @@ class SSRMainWindow(QMainWindow):
 		'''
 		fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta);;All files (*.*)")
 		if not fasta: return
-		self.fasta_table.insert(Data(ID=None, path=fasta))
+		self.fasta_table.insert(Data(fid=None, path=fasta))
 		self.message("Import fasta %s" % fasta)
 
 	def importFastas(self):
@@ -317,7 +320,7 @@ class SSRMainWindow(QMainWindow):
 		folder = QDir(directory)
 		count = 0
 		for fasta in  folder.entryList(QDir.Files):
-			self.fasta_table.insert(Data(ID=None, path=folder.absoluteFilePath(fasta)))
+			self.fasta_table.insert(Data(fid=None, path=folder.absoluteFilePath(fasta)))
 			count += 1
 		self.message("Import %s fastas in %s" % (count, directory))
 
@@ -408,12 +411,27 @@ class SSRMainWindow(QMainWindow):
 		'''
 		The row in table double clicked, show the sequence of SSR
 		'''
-		record = self.model.record(index.row())
+		table = self.model.tableName()
+		if table not in ['ssr', 'cssr']:
+			return
+		
 		flank = int(self.settings.value('flank', 50))
-		
-		
+		record = self.model.record(index.row())
+		ssr = Data(record.fieldName(i): record.value(i) for i in range(record.count()))
+		sql = "SELECT f.path FROM fasta AS f, sequence AS s WHERE f.fid=s.fid AND s.name='%s'"
+		query = QSqlQuery(sql % ssr.sequence)
+		query.next()
+		seq_file = query.value(0)
+		start = int(record.value('start'))
+		stop = int(record.value('stop'))
+		html = get_ssr_sequence(seq_file, seq_name, start, stop, flank)
+		#print ssr_seq
+		dialog = BrowserDialog(self, html)
+		if dialog.exec_() == QDialog.Accepted:
+			pass
 
-
+		with open('test.html', 'w') as op:
+			op.write(html)
 
 	def getMicrosatelliteRules(self):
 		return {
@@ -448,6 +466,16 @@ class SSRTableModel(QSqlTableModel):
 	def refresh(self):
 		self.select()
 		self.refreshed.emit()
+
+
+class SSRTableView(QTableView):
+	def __init__(self):
+		super(SSRTableView, self).__init__()
+		self.verticalHeader().hide()
+		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.setSelectionMode(QAbstractItemView.ContiguousSelection)
+		self.setSortingEnabled(True)
 
 
 class PreferenceDialog(QDialog):
@@ -542,7 +570,27 @@ class PreferenceDialog(QDialog):
 		self.settings.setValue('hexa', self.hexaValue.value())
 		self.settings.setValue('dmax', self.distanceValue.value())
 		self.settings.setValue('flank', self.flankValue.value())
+
+
+class BrowserDialog(QDialog):
+	def __init__(self, parent=None, html=None):
+		super(BrowserDialog, self).__init__(parent)
+		self.webview = QWebView(self)
+		self.webview.setHtml(html)
+
+		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		buttonBox.accepted.connect(self.accept)
+		buttonBox.rejected.connect(self.reject)
 		
+		mainLayout = QVBoxLayout()
+		mainLayout.addWidget(self.webview)
+		mainLayout.addWidget(buttonBox)
+		self.resize(600, 400)
+
+		self.setLayout(mainLayout)
+
+
+
 #class SSRTableModel(QSqlTableModel):
 #	def __init__(self):
 #		super(SSRTableModel, self).__init__()
