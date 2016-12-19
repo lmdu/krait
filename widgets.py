@@ -6,7 +6,7 @@ from PySide.QtSql import *
 from PySide.QtWebKit import *
 
 from utils import Data, get_ssr_sequence
-from workers import SSRSearchWorker,CSSRSearchWorker
+from workers import SSRSearchWorker,CSSRSearchWorker, SatelliteSearchWorker
 from db import FastaSSRTable, open_database
 
 class SSRMainWindow(QMainWindow):
@@ -15,10 +15,12 @@ class SSRMainWindow(QMainWindow):
 
 		self.setWindowTitle("Krait v0.0.1")
 		self.setWindowIcon(QIcon(QPixmap("logo.png")))
+
+		#self.browser = SSRWebView()
 		
 		self.table = SSRTableView()
 		#self.table.verticalHeader().hide()
-		#self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		#self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)s
 		##self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		#self.table.setSortingEnabled(True)
 		#self.table.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -27,6 +29,7 @@ class SSRMainWindow(QMainWindow):
 		self.model.refreshed.connect(self.changeRowCount)
 		self.table.setModel(self.model)
 		self.setCentralWidget(self.table)
+		#self.setCentralWidget(self.browser)
 
 		#search text input
 		self.filter = QLineEdit(self)
@@ -44,7 +47,6 @@ class SSRMainWindow(QMainWindow):
 		self.readSettings()
 
 		self.show()
-
 
 	def readSettings(self):
 		self.settings = QSettings("config.ini", QSettings.IniFormat)
@@ -116,11 +118,11 @@ class SSRMainWindow(QMainWindow):
 		#search perfect ssrs tool button
 		self.perfectAct = QAction(QIcon("icons/tandem.png"), self.tr("Search SSRs"), self)
 		self.perfectAct.setToolTip(self.tr("Search perfect microsatellites"))
-		self.perfectAct.triggered.connect(self.searchPerfectSSRs)
+		self.perfectAct.triggered.connect(self.searchMicrosatellites)
 		self.perfectMenuAct = QAction(self.tr("Perform SSR search"), self)
-		self.perfectMenuAct.triggered.connect(self.searchPerfectSSRs)
+		self.perfectMenuAct.triggered.connect(self.searchMicrosatellites)
 		self.perfectResultAct = QAction(self.tr("Show perfect SSRs"), self)
-		self.perfectResultAct.triggered.connect(self.showPerfectSSRs)
+		self.perfectResultAct.triggered.connect(self.showMicrosatellites)
 		self.perfectRemoveAct = QAction(self.tr("Remove perfect SSRs"), self)
 		self.perfectRemoveAct.triggered.connect(self.removePerfectSSRs)
 		self.minRepeatAct = QAction(self.tr("Minimum repeats"), self)
@@ -140,6 +142,17 @@ class SSRMainWindow(QMainWindow):
 		self.bestDmaxAct.triggered.connect(self.estimateBestMaxDistance)
 		self.maxDistanceAct = QAction(self.tr("Maximal allowed distance"), self)
 		self.maxDistanceAct.triggered.connect(self.setPreference)
+
+		#search satellite dna
+		self.satelliteAct = QAction(QIcon("icons/statistics.png"), self.tr("Detect satellites"), self)
+		self.satelliteAct.setToolTip(self.tr("Detect satellites"))
+		self.satelliteAct.triggered.connect(self.detectSatellites)
+		self.satelliteMenuAct = QAction(self.tr("Detect satellites"), self)
+		self.satelliteMenuAct.triggered.connect(self.detectSatellites)
+		self.satelliteResultAct = QAction(self.tr("Show satellites"), self)
+		self.satelliteResultAct.triggered.connect(self.showSatellites)
+		self.satelliteRemoveAct = QAction(self.tr("Remove satellites"), self)
+		self.satelliteRemoveAct.triggered.connect(self.removeSatellites)
 
 		#about action
 		self.aboutAct = QAction(self.tr("About"), self)
@@ -177,12 +190,15 @@ class SSRMainWindow(QMainWindow):
 
 		self.searchMenu.addAction(self.perfectMenuAct)
 		self.searchMenu.addAction(self.compoundMenuAct)
+		self.searchMenu.addAction(self.satelliteMenuAct)
 
 		self.viewMenu.addAction(self.perfectResultAct)
 		self.viewMenu.addAction(self.compoundResultAct)
+		self.viewMenu.addAction(self.satelliteResultAct)
 		self.viewMenu.addSeparator()
 		self.viewMenu.addAction(self.perfectRemoveAct)
 		self.viewMenu.addAction(self.compoundRemoveAct)
+		self.viewMenu.addAction(self.satelliteRemoveAct)
 
 		self.toolMenu.addAction(self.bestDmaxAct)
 
@@ -208,6 +224,11 @@ class SSRMainWindow(QMainWindow):
 		self.compoundMenu.addSeparator()
 		self.compoundMenu.addAction(self.bestDmaxAct)
 		self.compoundMenu.addAction(self.maxDistanceAct)
+
+		self.satelliteMenu = QMenu()
+		self.satelliteMenu.addAction(self.satelliteMenuAct)
+		self.satelliteMenu.addAction(self.satelliteResultAct)
+		self.satelliteMenu.addAction(self.satelliteRemoveAct)
 		
 
 	def createToolBars(self):
@@ -222,6 +243,9 @@ class SSRMainWindow(QMainWindow):
 
 		self.compoundAct.setMenu(self.compoundMenu)
 		self.toolBar.addAction(self.compoundAct)
+
+		self.satelliteAct.setMenu(self.satelliteMenu)
+		self.toolBar.addAction(self.satelliteAct)
 
 		self.annotToolBtn = QAction(QIcon("icons/annotation.png"), self.tr("Locate SSRs"), self)
 		#self.annotToolBtn.setDisabled(True)
@@ -269,7 +293,7 @@ class SSRMainWindow(QMainWindow):
 		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
 		if not dbfile: return
 		open_database(dbfile)
-		self.showPerfectSSRs()
+		self.showMicrosatellites()
 
 	def saveProject(self):
 		db = QSqlDatabase.database()
@@ -353,7 +377,7 @@ class SSRMainWindow(QMainWindow):
 		if dialog.exec_() == QDialog.Accepted:
 			dialog.saveSettings()
 
-	def searchPerfectSSRs(self):
+	def searchMicrosatellites(self):
 		#if self.db.isTableExists('ssr'):
 		#	status = QMessageBox.warning(self, 
 		#		self.tr("Warning"), 
@@ -365,13 +389,13 @@ class SSRMainWindow(QMainWindow):
 			
 		rules = self.getMicrosatelliteRules()
 		fastas = [fasta for fasta in self.fasta_table.fetchAll()]
-		worker = SSRSearchWorker(self, fastas, rules)
+		worker = MicrosatelliteWorker(self, fastas, rules)
 		worker.update_message.connect(self.message)
 		worker.update_progress.connect(self.setProgress)
-		worker.finished.connect(self.showPerfectSSRs)
+		worker.finished.connect(self.showMicrosatellites)
 		worker.start()
 
-	def showPerfectSSRs(self):
+	def showMicrosatellites(self):
 		self.model.setTable('ssr')
 		self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
 		self.model.refresh()
@@ -393,6 +417,21 @@ class SSRMainWindow(QMainWindow):
 		self.model.refresh()
 
 	def removeCompoundSSRs(self):
+		pass
+
+	def detectSatellites(self):
+		fastas = [fasta for fasta in self.fasta_table.fetchAll()]
+		worker = SatelliteSearchWorker(self, fastas, (7,20), 3)
+		worker.update_message.connect(self.message)
+		worker.update_progress.connect(self.setProgress)
+		worker.finished.connect(self.showSatellites)
+		worker.start()
+
+	def showSatellites(self):
+		self.model.setTable('satellite')
+		self.model.refresh()
+
+	def removeSatellites(self):
 		pass
 
 	def estimateBestMaxDistance(self):
@@ -417,7 +456,7 @@ class SSRMainWindow(QMainWindow):
 		
 		flank = int(self.settings.value('flank', 50))
 		record = self.model.record(index.row())
-		ssr = Data(record.fieldName(i): record.value(i) for i in range(record.count()))
+		ssr = Data({record.fieldName(i) : record.value(i) for i in range(record.count())})
 		sql = "SELECT f.path FROM fasta AS f, sequence AS s WHERE f.fid=s.fid AND s.name='%s'"
 		query = QSqlQuery(sql % ssr.sequence)
 		query.next()
@@ -457,6 +496,17 @@ class SSRMainWindow(QMainWindow):
 
 	def about(self):
 		pass
+
+class SSRWebView(QWebView):
+	def __init__(self, parent=None):
+		super(SSRWebView, self).__init__(parent)
+		self.load(QUrl('http://www.baidu.com'))
+		self.page().setLinkDelegationPolicy(QWebPage.DelegateAllLinks)
+		self.linkClicked.connect(self.openUrl)
+
+	def openUrl(self, url):
+		QDesktopServices.openUrl(url)
+
 
 class SSRTableModel(QSqlTableModel):
 	refreshed = Signal()
