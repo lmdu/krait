@@ -238,7 +238,7 @@ class SatelliteDetector:
 		for fasta in self.fastas:
 			self.processed_sequences += 1
 			sequence = fasta[:].seq
-			self.current_sequence_length = len(seq)
+			self.current_sequence_length = len(sequence)
 			
 			for tandem in self.pattern.finditer(sequence):
 				ssr, motif = tandem.group(0,1)
@@ -263,7 +263,7 @@ class SatelliteDetector:
 
 				yield Data(
 					sid = None,
-					sequence = name,
+					sequence = fasta.name,
 					start = start,
 					stop = stop,
 					motif = motif,

@@ -5,9 +5,10 @@ from PySide.QtGui import *
 from PySide.QtSql import *
 from PySide.QtWebKit import *
 
-from utils import Data, get_ssr_sequence
-from workers import SSRSearchWorker,CSSRSearchWorker, SatelliteSearchWorker
-from db import FastaSSRTable, open_database
+from utils import *
+from workers import *
+
+from db import *
 
 class SSRMainWindow(QMainWindow):
 	def __init__(self):
@@ -37,7 +38,7 @@ class SSRMainWindow(QMainWindow):
 		self.filter.returnPressed.connect(self.filterTable)
 
 		#create fasta table
-		self.fasta_table = FastaSSRTable()
+		self.fasta_table = FastaTable()
 
 		self.createActions()
 		self.createMenus()
@@ -116,7 +117,7 @@ class SSRMainWindow(QMainWindow):
 
 		#toolbar actions
 		#search perfect ssrs tool button
-		self.perfectAct = QAction(QIcon("icons/tandem.png"), self.tr("Search SSRs"), self)
+		self.perfectAct = QAction(QIcon("icons/ssr.png"), self.tr("Search SSRs"), self)
 		self.perfectAct.setToolTip(self.tr("Search perfect microsatellites"))
 		self.perfectAct.triggered.connect(self.searchMicrosatellites)
 		self.perfectMenuAct = QAction(self.tr("Perform SSR search"), self)
@@ -129,7 +130,7 @@ class SSRMainWindow(QMainWindow):
 		self.minRepeatAct.triggered.connect(self.setPreference)
 		
 		#search compound ssrs tool button
-		self.compoundAct = QAction(QIcon("icons/compound.png"), self.tr("Identify cSSRs"), self)
+		self.compoundAct = QAction(QIcon("icons/cssr.png"), self.tr("Identify cSSRs"), self)
 		self.compoundAct.setToolTip(self.tr("Identify compound microsatellites using dMax"))
 		self.compoundAct.triggered.connect(self.searchCompoundSSRs)
 		self.compoundMenuAct = QAction(self.tr("Perform cSSRs search"), self)
@@ -144,7 +145,7 @@ class SSRMainWindow(QMainWindow):
 		self.maxDistanceAct.triggered.connect(self.setPreference)
 
 		#search satellite dna
-		self.satelliteAct = QAction(QIcon("icons/statistics.png"), self.tr("Detect satellites"), self)
+		self.satelliteAct = QAction(QIcon("icons/satellite.png"), self.tr("Detect satellites"), self)
 		self.satelliteAct.setToolTip(self.tr("Detect satellites"))
 		self.satelliteAct.triggered.connect(self.detectSatellites)
 		self.satelliteMenuAct = QAction(self.tr("Detect satellites"), self)
@@ -153,6 +154,10 @@ class SSRMainWindow(QMainWindow):
 		self.satelliteResultAct.triggered.connect(self.showSatellites)
 		self.satelliteRemoveAct = QAction(self.tr("Remove satellites"), self)
 		self.satelliteRemoveAct.triggered.connect(self.removeSatellites)
+
+		#search imperfect microsatellites
+		self.imperfectAct = QAction(QIcon("icons/issr.png"), self.tr("Find iSSRs"), self)
+		self.imperfectAct.setToolTip(self.tr("Find imperfect microsatellites"))
 
 		#about action
 		self.aboutAct = QAction(self.tr("About"), self)
@@ -247,15 +252,9 @@ class SSRMainWindow(QMainWindow):
 		self.satelliteAct.setMenu(self.satelliteMenu)
 		self.toolBar.addAction(self.satelliteAct)
 
-		self.annotToolBtn = QAction(QIcon("icons/annotation.png"), self.tr("Locate SSRs"), self)
-		#self.annotToolBtn.setDisabled(True)
-		self.annotToolBtnMenu = QMenu()
-		self.annotToolBtnMenu.addAction("Settings")
-		self.annotToolBtnMenu.addAction("Testings")
-		self.annotToolBtn.setMenu(self.annotToolBtnMenu)
-		self.toolBar.addAction(self.annotToolBtn)
+		self.toolBar.addAction(self.imperfectAct)
 
-		self.statToolBtn = QAction(QIcon("icons/statistics.png"), self.tr("Analysis"), self)
+		self.statToolBtn = QAction(QIcon("icons/primer.png"), self.tr("Primer design"), self)
 		#self.statToolBtn.setDisabled(True)
 		self.statToolBtnMenu = QMenu()
 		self.statToolBtnMenu.addAction("Settings")
@@ -333,7 +332,7 @@ class SSRMainWindow(QMainWindow):
 		fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta);;All files (*.*)")
 		if not fasta: return
 		self.fasta_table.insert(Data(fid=None, path=fasta))
-		self.message("Import fasta %s" % fasta)
+		self.setStatusMessage("Import fasta %s" % fasta)
 
 	def importFastas(self):
 		'''
@@ -346,7 +345,7 @@ class SSRMainWindow(QMainWindow):
 		for fasta in  folder.entryList(QDir.Files):
 			self.fasta_table.insert(Data(fid=None, path=folder.absoluteFilePath(fasta)))
 			count += 1
-		self.message("Import %s fastas in %s" % (count, directory))
+		self.setStatusMessage("Import %s fastas in %s" % (count, directory))
 
 	def doCopy(self):
 		focus = QApplication.focusWidget()
@@ -390,14 +389,14 @@ class SSRMainWindow(QMainWindow):
 		rules = self.getMicrosatelliteRules()
 		fastas = [fasta for fasta in self.fasta_table.fetchAll()]
 		worker = MicrosatelliteWorker(self, fastas, rules)
-		worker.update_message.connect(self.message)
+		worker.update_message.connect(self.setStatusMessage)
 		worker.update_progress.connect(self.setProgress)
 		worker.finished.connect(self.showMicrosatellites)
 		worker.start()
 
 	def showMicrosatellites(self):
 		self.model.setTable('ssr')
-		self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
+		#self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
 		self.model.refresh()
 
 	def removePerfectSSRs(self):
@@ -405,8 +404,8 @@ class SSRMainWindow(QMainWindow):
 
 	def searchCompoundSSRs(self):
 		dmax = int(self.settings.value('dmax', 10))
-		worker = CSSRSearchWorker(self, dmax)
-		worker.update_message.connect(self.message)
+		worker = CompoundWorker(self, dmax)
+		worker.update_message.connect(self.setStatusMessage)
 		worker.update_progress.connect(self.setProgress)
 		worker.finished.connect(self.showCompoundSSRs)
 		worker.start()
@@ -421,8 +420,8 @@ class SSRMainWindow(QMainWindow):
 
 	def detectSatellites(self):
 		fastas = [fasta for fasta in self.fasta_table.fetchAll()]
-		worker = SatelliteSearchWorker(self, fastas, (7,20), 3)
-		worker.update_message.connect(self.message)
+		worker = SatelliteWorker(self, fastas, (7,20), 3)
+		worker.update_message.connect(self.setStatusMessage)
 		worker.update_progress.connect(self.setProgress)
 		worker.finished.connect(self.showSatellites)
 		worker.start()
@@ -463,7 +462,7 @@ class SSRMainWindow(QMainWindow):
 		seq_file = query.value(0)
 		start = int(record.value('start'))
 		stop = int(record.value('stop'))
-		html = get_ssr_sequence(seq_file, seq_name, start, stop, flank)
+		html = get_ssr_sequence(seq_file, record.value('sequence'), start, stop, flank)
 		#print ssr_seq
 		dialog = BrowserDialog(self, html)
 		if dialog.exec_() == QDialog.Accepted:
@@ -491,7 +490,7 @@ class SSRMainWindow(QMainWindow):
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)
 
-	def message(self, msg):
+	def setStatusMessage(self, msg):
 		self.statusBar.showMessage(msg)
 
 	def about(self):

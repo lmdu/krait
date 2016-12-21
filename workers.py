@@ -64,7 +64,7 @@ class CompoundWorker(Worker):
 		self.update_message.emit("Search compound SSRs...")
 		for cssr in CompoundDetector(ssrs, self.dmax):
 			self.cssr_table.insert(cssr)
-			progress = round(int(cssr.cssrs.split(',')[-1])/total_ssrs*100)
+			progress = round(int(cssr.component.split(',')[-1])/total_ssrs*100)
 			self.update_progress.emit(progress)
 
 		self.update_progress.emit(100)
