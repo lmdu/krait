@@ -14,8 +14,8 @@ class SSRMainWindow(QMainWindow):
 	def __init__(self):
 		super(SSRMainWindow, self).__init__()
 
-		self.setWindowTitle("Krait v0.0.1")
-		self.setWindowIcon(QIcon(QPixmap("logo.png")))
+		self.setWindowTitle("Niblet v0.0.1")
+		self.setWindowIcon(QIcon('logo.ico'))
 
 		#self.browser = SSRWebView()
 		
@@ -117,7 +117,7 @@ class SSRMainWindow(QMainWindow):
 
 		#toolbar actions
 		#search perfect ssrs tool button
-		self.perfectAct = QAction(QIcon("icons/ssr.png"), self.tr("Search SSRs"), self)
+		self.perfectAct = QAction(QIcon("icons/ssr.png"), self.tr("SSRs"), self)
 		self.perfectAct.setToolTip(self.tr("Search perfect microsatellites"))
 		self.perfectAct.triggered.connect(self.searchMicrosatellites)
 		self.perfectMenuAct = QAction(self.tr("Perform SSR search"), self)
@@ -130,7 +130,7 @@ class SSRMainWindow(QMainWindow):
 		self.minRepeatAct.triggered.connect(self.setPreference)
 		
 		#search compound ssrs tool button
-		self.compoundAct = QAction(QIcon("icons/cssr.png"), self.tr("Identify cSSRs"), self)
+		self.compoundAct = QAction(QIcon("icons/cssr.png"), self.tr("cSSRs"), self)
 		self.compoundAct.setToolTip(self.tr("Identify compound microsatellites using dMax"))
 		self.compoundAct.triggered.connect(self.searchCompoundSSRs)
 		self.compoundMenuAct = QAction(self.tr("Perform cSSRs search"), self)
@@ -145,7 +145,7 @@ class SSRMainWindow(QMainWindow):
 		self.maxDistanceAct.triggered.connect(self.setPreference)
 
 		#search satellite dna
-		self.satelliteAct = QAction(QIcon("icons/satellite.png"), self.tr("Detect satellites"), self)
+		self.satelliteAct = QAction(QIcon("icons/satellite.png"), self.tr("Satellites"), self)
 		self.satelliteAct.setToolTip(self.tr("Detect satellites"))
 		self.satelliteAct.triggered.connect(self.detectSatellites)
 		self.satelliteMenuAct = QAction(self.tr("Detect satellites"), self)
@@ -156,7 +156,7 @@ class SSRMainWindow(QMainWindow):
 		self.satelliteRemoveAct.triggered.connect(self.removeSatellites)
 
 		#search imperfect microsatellites
-		self.imperfectAct = QAction(QIcon("icons/issr.png"), self.tr("Find iSSRs"), self)
+		self.imperfectAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
 		self.imperfectAct.setToolTip(self.tr("Find imperfect microsatellites"))
 
 		#about action
@@ -254,7 +254,7 @@ class SSRMainWindow(QMainWindow):
 
 		self.toolBar.addAction(self.imperfectAct)
 
-		self.statToolBtn = QAction(QIcon("icons/primer.png"), self.tr("Primer design"), self)
+		self.statToolBtn = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
 		#self.statToolBtn.setDisabled(True)
 		self.statToolBtnMenu = QMenu()
 		self.statToolBtnMenu.addAction("Settings")
