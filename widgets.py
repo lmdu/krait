@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import sys
+import platform
+
 from PySide.QtCore import *
 from PySide.QtGui import *
 from PySide.QtSql import *
@@ -161,7 +164,11 @@ class SSRMainWindow(QMainWindow):
 
 		#about action
 		self.aboutAct = QAction(self.tr("About"), self)
-		self.aboutAct.triggered.connect(self.about)
+		self.aboutAct.triggered.connect(self.openAboutMessage)
+
+		#documentation action
+		self.documentAct = QAction(self.tr("Documentation"), self)
+		self.documentAct.triggered.connect(self.openDocumentation)
 		
 
 	def createMenus(self):
@@ -207,6 +214,8 @@ class SSRMainWindow(QMainWindow):
 
 		self.toolMenu.addAction(self.bestDmaxAct)
 
+		self.helpMenu.addAction(self.documentAct)
+		self.helpMenu.addSeparator()
 		self.helpMenu.addAction(self.aboutAct)
 
 
@@ -493,8 +502,29 @@ class SSRMainWindow(QMainWindow):
 	def setStatusMessage(self, msg):
 		self.statusBar.showMessage(msg)
 
-	def about(self):
-		pass
+	def openAboutMessage(self):
+		system_info = "%s%s %s" % (platform.system(), platform.release(), platform.architecture()[0])
+		python_info = sys.version.split()[0]
+		about_message =	"""
+			<p><b>Niblet for finding tandem repeats</b></p>
+			<p>Version v0.1.0 Build 20170104<p>
+			<p>System {system} Python {python}</p>
+			<p>Niblet is a user-friendly tool that allows user to extract perfect microsatellites,
+			compound microsatellites, imperfect microsatellites and tandem repeats with any length
+			of motif from DNA fasta sequences and batch design PCR primers and statistics analysis.</p>
+			<p>GUI was written by <a href="https://pypi.python.org/pypi/PySide/1.2.4">PySide</a>. 
+			Fasta sequences are extracted by using <a href="https://github.com/mdshw5/pyfaidx">pyfaidx</a>.
+			Primer design are performed by using <a href="https://github.com/libnano/primer3-py">primer3-py</a>.
+			</p>
+			<p><b>Cite:</b> Du L. Liu Q. and Yue B. Niblet: a flexible tool for genome-wide survey
+			of tandem repeats.2017</p>
+		""".format(system=system_info, python=python_info)
+
+		QMessageBox.about(self, "About niblet", about_message)
+
+	def openDocumentation(self):
+		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/niblet"))
+
 
 class SSRWebView(QWebView):
 	def __init__(self, parent=None):
