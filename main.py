@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
+#do not generate pyc file
+sys.dont_write_bytecode = True
+
 from PySide.QtGui import QApplication
 from PySide.QtSql import QSqlDatabase, QSqlQuery
 from widgets import SSRMainWindow
