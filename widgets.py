@@ -569,7 +569,7 @@ class PreferenceDialog(QDialog):
 		#self.setMinimumWidth(500)
 
 		tabWidget = QTabWidget()
-		tabWidget.addTab(GeneralTab(self.settings), 'Search SSRs')
+		tabWidget.addTab(GeneralTab(self.settings), 'SSR search')
 		tabWidget.addTab(PrimerTab(self.settings), 'Primer design')
 
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
@@ -639,17 +639,17 @@ class GeneralTab(QWidget):
 		distanceGroup.setLayout(distanceLayout)
 
 		satelliteGroup = QGroupBox(self.tr("Satellite"))
-		min_tandem_label = QLabel("Minimum length of repeat unit:")
+		min_tandem_label = QLabel("Minimum length of repeat unit ")
 		self.min_tandem_motif = QSpinBox()
 		self.min_tandem_motif.setMinimum(7)
 		self.min_tandem_motif.setSuffix(' bp')
 
-		max_tandem_label = QLabel("Maximum:")
+		max_tandem_label = QLabel("Maximum ")
 		self.max_tandem_motif = QSpinBox()
 		self.max_tandem_motif.setMinimum(7)
 		self.max_tandem_motif.setSuffix(' bp')
 
-		repeat_tandem_label = QLabel("Minimum allowed repeats: ")
+		repeat_tandem_label = QLabel("Minimum allowed repeats ")
 		self.min_tandem_repeat = QSpinBox()
 		self.min_tandem_repeat.setMinimum(2)
 		self.min_tandem_repeat.setSuffix(' bp')
@@ -663,6 +663,26 @@ class GeneralTab(QWidget):
 		satelliteLayout.addWidget(self.min_tandem_repeat, 1, 1)
 		satelliteGroup.setLayout(satelliteLayout)
 
+		level_group = QGroupBox(self.tr("Motif standardization level"))
+		level_label = QLabel(self.tr("Standard level"))
+		level_select = QComboBox()
+		level_select.currentIndexChanged.connect(self.showStandardLevelDetail)
+		self.level_detail = QLabel()
+		standard_level = [
+			"Level 0  No standard",
+			"Level 1  Similar motifs",
+			"Level 2  Reverse complementary motifs",
+			"Level 3  complementary motifs",
+			"Level 4  Reverse motifs"
+		]
+		level_select.addItems(standard_level)
+		level_select.setCurrentIndex(3)
+		level_layout = QGridLayout()
+		level_layout.setColumnStretch(1, 1)
+		level_layout.addWidget(level_label, 0, 0)
+		level_layout.addWidget(level_select, 0, 1)
+		level_layout.addWidget(self.level_detail, 1, 1)
+		level_group.setLayout(level_layout)
 
 		flankGroup = QGroupBox(self.tr("Flanking sequence"))
 		flankLabel = QLabel("Flanking sequence length: ")
@@ -678,6 +698,7 @@ class GeneralTab(QWidget):
 		mainLayout.addWidget(repeatsGroup)
 		mainLayout.addWidget(distanceGroup)
 		mainLayout.addWidget(satelliteGroup)
+		mainLayout.addWidget(level_group)
 		mainLayout.addWidget(flankGroup)
 		self.setLayout(mainLayout)
 		self.getSettings()
@@ -703,15 +724,34 @@ class GeneralTab(QWidget):
 		self.settings.setValue('dmax', self.distanceValue.value())
 		self.settings.setValue('flank', self.flankValue.value())
 
+	def showStandardLevelDetail(self, idx):
+		if idx == 0:
+			detail = 'No standard'
+
+		elif idx == 1:
+			detail = 'standard similar motifs'
+
+		elif idx == 2:
+			detail = 'Level 1 + reverse complementary motifs'
+
+		elif idx == 3:
+			detail = 'Level 2 + complementary motifs'
+
+		elif idx == 4:
+			detail = 'Level 3 + reverse motifs (not recommend)'
+		
+		self.level_detail.setText(detail)
+
+
 class PrimerTab(QWidget):
 	def __init__(self, settings, parent=None):
 		super(PrimerTab, self).__init__(parent)
-		product_size_label = QLabel(self.tr('Product size range'))
+		product_size_label = QLabel(self.tr('PRIMER_PRODUCT_SIZE_RANGE'))
 		product_size = QLineEdit('100-300')
 		product_size_tip = (
-			"if you want PCR products to be between 100 to 150 bases (inclusive) "
-			"then you would set this parameter to 100-150. If you desire PCR products "
-			"in either the range from 100 to 150 bases or in the range from 200 to 250 "
+			"if you want PCR products to be between 100 to 150 bases (inclusive) then\n"
+			"you would set this parameter to 100-150. If you desire PCR products in\n"
+			"either the range from 100 to 150 bases or in the range from 200 to 250\n"
 			"bases then you would set this parameter to 100-150 200-250"
 		)
 		product_size.setToolTip(product_size_tip)
@@ -723,11 +763,93 @@ class PrimerTab(QWidget):
 		product_size_layout.addWidget(prodcut_size_detail, 1, 1)
 		product_size_group.setLayout(product_size_layout)
 
+		primer_size_group = QGroupBox(self.tr("Primer size and melting temperature"))
+		primer_size_layout = QGridLayout()
+		primer_size_min = QSpinBox()
+		primer_size_min.setSuffix(' bp')
+		primer_size_opt = QSpinBox()
+		primer_size_opt.setSuffix(' bp')
+		primer_size_max = QSpinBox()
+		primer_size_max.setSuffix(' bp')
+		primer_temp_min = QSpinBox()
+		primer_temp_min.setSuffix(' %sC' % chr(0260))
+		primer_temp_opt = QSpinBox()
+		primer_temp_opt.setSuffix(' %sC' % chr(0260))
+		primer_temp_max = QSpinBox()
+		primer_temp_max.setSuffix(' %sC' % chr(0260))
+		primer_size_layout.addWidget(QLabel("PRIMER_MIN_SIZE"), 0, 0)
+		primer_size_layout.addWidget(primer_size_min, 0, 1)
+		primer_size_layout.addWidget(QLabel("PRIMER_OPT_SIZE"), 0, 2)
+		primer_size_layout.addWidget(primer_size_opt, 0, 3)
+		primer_size_layout.addWidget(QLabel("PRIMER_MAX_SIZE"), 0, 4)
+		primer_size_layout.addWidget(primer_size_max, 0, 5)
+		primer_size_layout.addWidget(QLabel("PRIMER_MIN_TM"), 1, 0)
+		primer_size_layout.addWidget(primer_temp_min, 1, 1)
+		primer_size_layout.addWidget(QLabel("PRIMER_OPT_TM"), 1, 2)
+		primer_size_layout.addWidget(primer_temp_opt, 1, 3)
+		primer_size_layout.addWidget(QLabel("PRIMER_MAX_TM"), 1, 4)
+		primer_size_layout.addWidget(primer_temp_max, 1, 5)
+		primer_size_group.setLayout(primer_size_layout)
 
+		primer_gc_group = QGroupBox(self.tr("Primer GC content"))
+		primer_gc_layout = QGridLayout()
+		primer_gc_min = QSpinBox()
+		primer_gc_min.setSuffix(' %')
+		primer_gc_max = QSpinBox()
+		primer_gc_max.setSuffix(' %')
+		primer_gc_clamp = QSpinBox()
+		primer_gc_end = QSpinBox()
+		primer_gc_layout.addWidget(QLabel("PRIMER_MIN_GC"), 0, 0)
+		primer_gc_layout.addWidget(primer_gc_min, 0, 1)
+		primer_gc_layout.addWidget(QLabel("PRIMER_GC_CLAMP"), 0, 2)
+		primer_gc_layout.addWidget(primer_gc_clamp, 0, 3)
+		primer_gc_layout.addWidget(QLabel("PRIMER_MAX_GC"), 1, 0)
+		primer_gc_layout.addWidget(primer_gc_max, 1, 1)
+		primer_gc_layout.addWidget(QLabel("PRIMER_PAIR_MAX_DIFF_TM"), 1, 2)
+		primer_gc_layout.addWidget(primer_gc_end, 1, 3)
+		primer_gc_group.setLayout(primer_gc_layout)
+
+		primer_bind_group = QGroupBox(self.tr("Self-binding"))
+		primer_bind_layout = QGridLayout()
+		primer_max_self_any = QSpinBox()
+		primer_pair_max_compl_any = QSpinBox()
+		primer_max_self_end = QSpinBox()
+		primer_pair_max_compl_end = QSpinBox()
+		primer_max_hairpin = QSpinBox()
+		primer_bind_layout.addWidget(QLabel("PRIMER_MAX_SELF_ANY_TH"), 0, 0)
+		primer_bind_layout.addWidget(primer_max_self_any, 0, 1)
+		primer_bind_layout.addWidget(QLabel("PRIMER_PAIR_MAX_COMPL_ANY_TH"), 0, 2)
+		primer_bind_layout.addWidget(primer_pair_max_compl_any, 0, 3)
+		primer_bind_layout.addWidget(QLabel("PRIMER_MAX_SELF_END_TH"), 1, 0)
+		primer_bind_layout.addWidget(primer_max_self_end, 1, 1)
+		primer_bind_layout.addWidget(QLabel("PRIMER_PAIR_MAX_COMPL_END_TH"), 1, 2)
+		primer_bind_layout.addWidget(primer_pair_max_compl_end, 1, 3)
+		primer_bind_layout.addWidget(QLabel("PRIMER_MAX_HAIRPIN_TH"), 2, 0)
+		primer_bind_layout.addWidget(primer_max_hairpin, 2, 1)
+		primer_bind_group.setLayout(primer_bind_layout)
+
+		primer_other_group = QGroupBox(self.tr("PolyX and Other"))
+		primer_other_layout = QGridLayout()
+		primer_max_end_stability = QSpinBox()
+		primer_max_ns_accepted = QSpinBox()
+		primer_max_poly_x = QSpinBox()
+		primer_num_return = QSpinBox()
+		primer_other_layout.addWidget(QLabel("PRIMER_MAX_END_STABILITY"), 0, 0)
+		primer_other_layout.addWidget(primer_max_end_stability, 0, 1)
+		primer_other_layout.addWidget(QLabel("PRIMER_MAX_POLY_X"), 0, 2)
+		primer_other_layout.addWidget(primer_max_poly_x, 0, 3)
+		primer_other_layout.addWidget(QLabel("PRIMER_MAX_NS_ACCEPTED"), 1, 0)
+		primer_other_layout.addWidget(primer_max_ns_accepted, 1, 1)
+		primer_other_layout.addWidget(QLabel("PRIMER_NUM_RETURN"), 1, 2)
+		primer_other_layout.addWidget(primer_num_return, 1, 3)
+		primer_other_group.setLayout(primer_other_layout)
 
 		mainLayout = QVBoxLayout()
 		mainLayout.addWidget(product_size_group)
-
+		mainLayout.addWidget(primer_size_group)
+		mainLayout.addWidget(primer_gc_group)
+		mainLayout.addWidget(primer_bind_group)
+		mainLayout.addWidget(primer_other_group)
 
 		self.setLayout(mainLayout)
 
