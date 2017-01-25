@@ -5,7 +5,7 @@ import re
 import sys
 import time
 import pyfaidx
-from motif import normalize
+from motif import StandardMotif
 from utils import Data
 
 __all__ = [

@@ -19,7 +19,7 @@ QToolBar{
 	border-bottom:1px solid #a6a6a6;
 	spacing: 8px;
 }
-QLineEdit{
+SSRFilterInput{
 	border:1px solid #a9a9a9;
 	padding:4px 18px 4px 4px;
 	border-radius: 2px;

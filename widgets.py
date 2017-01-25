@@ -36,8 +36,7 @@ class SSRMainWindow(QMainWindow):
 		#self.setCentralWidget(self.browser)
 
 		#search text input
-		self.filter = QLineEdit(self)
-		self.filter.setPlaceholderText("Filter data in table e.g. motif=AT and repeat>10")
+		self.filter = SSRFilterInput(self)
 		self.filter.returnPressed.connect(self.filterTable)
 
 		#create fasta table
@@ -525,6 +524,11 @@ class SSRMainWindow(QMainWindow):
 	def openDocumentation(self):
 		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/niblet"))
 
+class SSRFilterInput(QLineEdit):
+	def __init__(self, parent=None):
+		super(SSRFilterInput, self).__init__(parent)
+		self.setPlaceholderText("Filter data in table e.g. motif=AT and repeat>10")
+
 
 class SSRWebView(QWebView):
 	def __init__(self, parent=None):
@@ -562,21 +566,50 @@ class PreferenceDialog(QDialog):
 		super(PreferenceDialog, self).__init__(parent)
 		self.settings = settings
 		self.setWindowTitle(self.tr("Preferences"))
-		self.setMinimumWidth(400)
+		#self.setMinimumWidth(500)
 
-		repeatsGroup = QGroupBox(self.tr("Minimum repeats"))
+		tabWidget = QTabWidget()
+		tabWidget.addTab(GeneralTab(self.settings), 'Search SSRs')
+		tabWidget.addTab(PrimerTab(self.settings), 'Primer design')
+
+		buttonBox = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+		buttonBox.accepted.connect(self.accept)
+		buttonBox.rejected.connect(self.reject)
+
+		spacerItem = QSpacerItem(10, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+		mainLayout = QVBoxLayout()
+		mainLayout.addWidget(tabWidget)
+		mainLayout.addItem(spacerItem)
+		mainLayout.addWidget(buttonBox)
+
+		self.setLayout(mainLayout)
+
+
+class GeneralTab(QWidget):
+	def __init__(self, settings, parent=None):
+		super(GeneralTab, self).__init__(parent)
+		self.settings = settings
+
+		repeatsGroup = QGroupBox(self.tr("Microsatellite minimum repeats"))
 		monoLabel = QLabel("Mono-nucleotide")
 		self.monoValue = QSpinBox()
+		self.monoValue.setSuffix(' bp')
 		diLabel = QLabel("Di-nucleotide")
 		self.diValue = QSpinBox()
+		self.diValue.setSuffix(' bp')
 		triLabel = QLabel("Tri-nucleotide")
 		self.triValue = QSpinBox()
+		self.triValue.setSuffix(' bp')
 		tetraLabel = QLabel("Tetra-nucleotide")
 		self.tetraValue = QSpinBox()
+		self.tetraValue.setSuffix(' bp')
 		pentaLabel = QLabel("Penta-nucleotide")
 		self.pentaValue = QSpinBox()
+		self.pentaValue.setSuffix(' bp')
 		hexaLabel = QLabel("Hexa-nucleotide")
 		self.hexaValue = QSpinBox()
+		self.hexaValue.setSuffix(' bp')
 		repeatLayout = QGridLayout()
 		repeatLayout.setVerticalSpacing(10)
 		repeatLayout.setHorizontalSpacing(10)
@@ -596,37 +629,57 @@ class PreferenceDialog(QDialog):
 		repeatLayout.addWidget(self.hexaValue, 2, 3)
 		repeatsGroup.setLayout(repeatLayout)
 
-		distanceGroup = QGroupBox(self.tr("Compound SSR maximal distance"))
-		distanceLabel = QLabel("Maximal distance (dmax): ")
+		distanceGroup = QGroupBox(self.tr("Compound microsatellite"))
+		distanceLabel = QLabel("Maximal allowed distance between two SSRs (dMAX): ")
 		self.distanceValue = QSpinBox()
+		self.distanceValue.setSuffix(' bp')
 		distanceLayout = QHBoxLayout()
 		distanceLayout.addWidget(distanceLabel)
 		distanceLayout.addWidget(self.distanceValue, 1)
 		distanceGroup.setLayout(distanceLayout)
 
+		satelliteGroup = QGroupBox(self.tr("Satellite"))
+		min_tandem_label = QLabel("Minimum length of repeat unit:")
+		self.min_tandem_motif = QSpinBox()
+		self.min_tandem_motif.setMinimum(7)
+		self.min_tandem_motif.setSuffix(' bp')
+
+		max_tandem_label = QLabel("Maximum:")
+		self.max_tandem_motif = QSpinBox()
+		self.max_tandem_motif.setMinimum(7)
+		self.max_tandem_motif.setSuffix(' bp')
+
+		repeat_tandem_label = QLabel("Minimum allowed repeats: ")
+		self.min_tandem_repeat = QSpinBox()
+		self.min_tandem_repeat.setMinimum(2)
+		self.min_tandem_repeat.setSuffix(' bp')
+
+		satelliteLayout = QGridLayout()
+		satelliteLayout.addWidget(min_tandem_label, 0, 0)
+		satelliteLayout.addWidget(self.min_tandem_motif, 0, 1)
+		satelliteLayout.addWidget(max_tandem_label, 0, 2)
+		satelliteLayout.addWidget(self.max_tandem_motif, 0, 3)
+		satelliteLayout.addWidget(repeat_tandem_label, 1, 0)
+		satelliteLayout.addWidget(self.min_tandem_repeat, 1, 1)
+		satelliteGroup.setLayout(satelliteLayout)
+
+
 		flankGroup = QGroupBox(self.tr("Flanking sequence"))
 		flankLabel = QLabel("Flanking sequence length: ")
 		self.flankValue = QSpinBox()
+		self.flankValue.setSuffix(' bp')
 		self.flankValue.setMaximum(1000)
 		flankLayout = QHBoxLayout()
 		flankLayout.addWidget(flankLabel)
 		flankLayout.addWidget(self.flankValue, 1)
 		flankGroup.setLayout(flankLayout)
-
-		buttonBox = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-		buttonBox.accepted.connect(self.accept)
-		buttonBox.rejected.connect(self.reject)
-
-		spacerItem = QSpacerItem(10, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
+		
 		mainLayout = QVBoxLayout()
 		mainLayout.addWidget(repeatsGroup)
 		mainLayout.addWidget(distanceGroup)
+		mainLayout.addWidget(satelliteGroup)
 		mainLayout.addWidget(flankGroup)
-		mainLayout.addItem(spacerItem)
-		mainLayout.addWidget(buttonBox)
 		self.setLayout(mainLayout)
-
 		self.getSettings()
 
 	def getSettings(self):
@@ -649,6 +702,34 @@ class PreferenceDialog(QDialog):
 		self.settings.setValue('hexa', self.hexaValue.value())
 		self.settings.setValue('dmax', self.distanceValue.value())
 		self.settings.setValue('flank', self.flankValue.value())
+
+class PrimerTab(QWidget):
+	def __init__(self, settings, parent=None):
+		super(PrimerTab, self).__init__(parent)
+		product_size_label = QLabel(self.tr('Product size range'))
+		product_size = QLineEdit('100-300')
+		product_size_tip = (
+			"if you want PCR products to be between 100 to 150 bases (inclusive) "
+			"then you would set this parameter to 100-150. If you desire PCR products "
+			"in either the range from 100 to 150 bases or in the range from 200 to 250 "
+			"bases then you would set this parameter to 100-150 200-250"
+		)
+		product_size.setToolTip(product_size_tip)
+		product_size_group = QGroupBox(self.tr('Primer product size'))
+		prodcut_size_detail = QLabel("a space separated list of ranges e.g. 100-150 200-250")
+		product_size_layout = QGridLayout()
+		product_size_layout.addWidget(product_size_label, 0, 0)
+		product_size_layout.addWidget(product_size, 0, 1)
+		product_size_layout.addWidget(prodcut_size_detail, 1, 1)
+		product_size_group.setLayout(product_size_layout)
+
+
+
+		mainLayout = QVBoxLayout()
+		mainLayout.addWidget(product_size_group)
+
+
+		self.setLayout(mainLayout)
 
 
 class BrowserDialog(QDialog):
