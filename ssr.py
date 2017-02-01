@@ -20,9 +20,10 @@ class MicrosatelliteDetector:
 	@para fasta str, input fasta file
 	@para rules dict, minimal repeats for each ssr types
 	'''
-	def __init__(self, fasta, rules={1:12, 2:7, 3:5, 4:4, 5:4, 6:4}):
+	def __init__(self, fasta, rules={1:12, 2:7, 3:5, 4:4, 5:4, 6:4}, level=0):
 		self.fasta_file = fasta
 		self.rules = rules
+		self.motifs = StandardMotif(level)
 
 		#information of current processing fasta sequences
 		self.total_sequences = 0
@@ -97,7 +98,7 @@ class MicrosatelliteDetector:
 				start += 1
 
 				#standardize the motif of ssr
-				standard = normalize(motif)
+				standard = self.motifs.standard(motif)
 
 				#get current sequence location
 				self.current_sequence_location = stop
@@ -181,7 +182,7 @@ class CompoundDetector:
 					yield self.compound()
 				self.new(ssr)
 		
-		if len(cSSRs) > 1:
+		if len(self.cssrs) > 1:
 			yield self.compound()
 
 class SatelliteDetector:
@@ -190,9 +191,10 @@ class SatelliteDetector:
 	@para motif tuple, minimal motif length and maximal motif length
 	@para repeat int, the minimal tande repeats allowed
 	'''
-	def __init__(self, fasta, motifs=(7, 30), repeats=2):
+	def __init__(self, fasta, min_motif, max_motif, repeats=2):
 		self.fasta_file = fasta
-		self.motifs = motifs
+		self.min_motif = min_motif
+		self.max_motif = max_motif
 		self.repeats = repeats
 
 		#information of current processing fasta sequences
@@ -211,7 +213,7 @@ class SatelliteDetector:
 		'''
 		create microsatellite search regular expression pattern
 		'''
-		self.pattern = re.compile(r'([ATGC]{1,%s}?)\1{%s,}' % (self.motifs[1], self.repeats-1))
+		self.pattern = re.compile(r'([ATGC]{1,%s}?)\1{%s,}' % (self.max_motif, self.repeats-1))
 
 	def _createFastaIndex(self):
 		if not os.path.exists(self.fasta_file):
@@ -245,7 +247,7 @@ class SatelliteDetector:
 				#get motif length
 				mlen = len(motif)
 
-				if mlen < self.motifs[0] or mlen > self.motifs[1]:
+				if not self.min_motif <= mlen <= self.max_motif:
 					continue
 
 				#get length of ssr sequence

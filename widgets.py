@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 import sys
 import platform
 
@@ -128,7 +129,7 @@ class SSRMainWindow(QMainWindow):
 		self.perfectResultAct.triggered.connect(self.showMicrosatellites)
 		self.perfectRemoveAct = QAction(self.tr("Remove perfect SSRs"), self)
 		self.perfectRemoveAct.triggered.connect(self.removePerfectSSRs)
-		self.minRepeatAct = QAction(self.tr("Minimum repeats"), self)
+		self.minRepeatAct = QAction(self.tr("Set minimum repeats"), self)
 		self.minRepeatAct.triggered.connect(self.setPreference)
 		
 		#search compound ssrs tool button
@@ -143,7 +144,7 @@ class SSRMainWindow(QMainWindow):
 		self.compoundRemoveAct.triggered.connect(self.removeCompoundSSRs)
 		self.bestDmaxAct = QAction(self.tr("Estimate best dMax"), self)
 		self.bestDmaxAct.triggered.connect(self.estimateBestMaxDistance)
-		self.maxDistanceAct = QAction(self.tr("Maximal allowed distance"), self)
+		self.maxDistanceAct = QAction(self.tr("Set Maximum distance dMAX"), self)
 		self.maxDistanceAct.triggered.connect(self.setPreference)
 
 		#search satellite dna
@@ -156,6 +157,8 @@ class SSRMainWindow(QMainWindow):
 		self.satelliteResultAct.triggered.connect(self.showSatellites)
 		self.satelliteRemoveAct = QAction(self.tr("Remove satellites"), self)
 		self.satelliteRemoveAct.triggered.connect(self.removeSatellites)
+		self.satelliteRuleAct = QAction(self.tr("Set search parameter"), self)
+		self.satelliteRuleAct.triggered.connect(self.setPreference)
 
 		#search imperfect microsatellites
 		self.imperfectAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
@@ -242,6 +245,8 @@ class SSRMainWindow(QMainWindow):
 		self.satelliteMenu.addAction(self.satelliteMenuAct)
 		self.satelliteMenu.addAction(self.satelliteResultAct)
 		self.satelliteMenu.addAction(self.satelliteRemoveAct)
+		self.satelliteMenu.addSeparator()
+		self.satelliteMenu.addAction(self.satelliteRuleAct)
 		
 
 	def createToolBars(self):
@@ -394,13 +399,22 @@ class SSRMainWindow(QMainWindow):
 
 		#	if status == QMessageBox.Cancel:
 			
-		rules = self.getMicrosatelliteRules()
+		rules = {
+			1: int(self.settings.value('ssr/mono')),
+			2: int(self.settings.value('ssr/di')),
+			3: int(self.settings.value('ssr/tri')), 
+			4: int(self.settings.value('ssr/tetra')),
+			5: int(self.settings.value('ssr/penta')),
+			6: int(self.settings.value('ssr/hexa'))
+		}
+		level = int(self.settings.value('ssr/level'))
 		fastas = [fasta for fasta in self.fasta_table.fetchAll()]
-		worker = MicrosatelliteWorker(self, fastas, rules)
+		worker = MicrosatelliteWorker(self, fastas, rules, level)
 		worker.update_message.connect(self.setStatusMessage)
 		worker.update_progress.connect(self.setProgress)
 		worker.finished.connect(self.showMicrosatellites)
 		worker.start()
+	
 
 	def showMicrosatellites(self):
 		self.model.setTable('ssr')
@@ -411,7 +425,7 @@ class SSRMainWindow(QMainWindow):
 		pass
 
 	def searchCompoundSSRs(self):
-		dmax = int(self.settings.value('dmax', 10))
+		dmax = int(self.settings.value('ssr/dmax', 10))
 		worker = CompoundWorker(self, dmax)
 		worker.update_message.connect(self.setStatusMessage)
 		worker.update_progress.connect(self.setProgress)
@@ -427,8 +441,12 @@ class SSRMainWindow(QMainWindow):
 		pass
 
 	def detectSatellites(self):
+		min_motif = int(self.settings.value('ssr/smin'))
+		max_motif = int(self.settings.value('ssr/smax'))
+		min_repeat = int(self.settings.value('ssr/srep'))
+
 		fastas = [fasta for fasta in self.fasta_table.fetchAll()]
-		worker = SatelliteWorker(self, fastas, (7,20), 3)
+		worker = SatelliteWorker(self, fastas, min_motif, max_motif, min_repeat)
 		worker.update_message.connect(self.setStatusMessage)
 		worker.update_progress.connect(self.setProgress)
 		worker.finished.connect(self.showSatellites)
@@ -476,24 +494,15 @@ class SSRMainWindow(QMainWindow):
 		if dialog.exec_() == QDialog.Accepted:
 			pass
 
-		with open('test.html', 'w') as op:
-			op.write(html)
-
-	def getMicrosatelliteRules(self):
-		return {
-			1: int(self.settings.value('mono', 12)),
-			2: int(self.settings.value('di', 7)),
-			3: int(self.settings.value('tri', 5)), 
-			4: int(self.settings.value('tetra', 4)),
-			5: int(self.settings.value('penta', 3)),
-			6: int(self.settings.value('hexa', 3))
-		}
 
 	def changeRowCount(self):
-		while self.model.canFetchMore():
-			self.model.fetchMore()
-		counts = self.model.rowCount()
-		self.rowCounts.setText("Rows: %s" % counts)
+		#while self.model.canFetchMore():
+		#	self.model.fetchMore()
+		#counts = self.model.rowCount()
+		sql = self.model.selectStatement()
+		query = QSqlQuery("SELECT COUNT(1) FROM %s" % sql.split('FROM')[1].strip())
+		query.next()
+		self.rowCounts.setText("Rows: %s" % query.value(0))
 		
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)
@@ -568,9 +577,12 @@ class PreferenceDialog(QDialog):
 		self.setWindowTitle(self.tr("Preferences"))
 		#self.setMinimumWidth(500)
 
+		self.general_tab = GeneralTab(self.settings)
+		self.primer_tab = PrimerTab(self.settings)
+
 		tabWidget = QTabWidget()
-		tabWidget.addTab(GeneralTab(self.settings), 'SSR search')
-		tabWidget.addTab(PrimerTab(self.settings), 'Primer design')
+		tabWidget.addTab(self.general_tab, 'SSR search')
+		tabWidget.addTab(self.primer_tab, 'Primer design')
 
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
 		buttonBox.accepted.connect(self.accept)
@@ -584,6 +596,10 @@ class PreferenceDialog(QDialog):
 		mainLayout.addWidget(buttonBox)
 
 		self.setLayout(mainLayout)
+
+	def saveSettings(self):
+		self.general_tab.saveSettings()
+		self.primer_tab.saveSettings()
 
 
 class GeneralTab(QWidget):
@@ -652,7 +668,6 @@ class GeneralTab(QWidget):
 		repeat_tandem_label = QLabel("Minimum allowed repeats ")
 		self.min_tandem_repeat = QSpinBox()
 		self.min_tandem_repeat.setMinimum(2)
-		self.min_tandem_repeat.setSuffix(' bp')
 
 		satelliteLayout = QGridLayout()
 		satelliteLayout.addWidget(min_tandem_label, 0, 0)
@@ -665,8 +680,8 @@ class GeneralTab(QWidget):
 
 		level_group = QGroupBox(self.tr("Motif standardization level"))
 		level_label = QLabel(self.tr("Standard level"))
-		level_select = QComboBox()
-		level_select.currentIndexChanged.connect(self.showStandardLevelDetail)
+		self.level_select = QComboBox()
+		self.level_select.currentIndexChanged.connect(self.showStandardLevelDetail)
 		self.level_detail = QLabel()
 		standard_level = [
 			"Level 0  No standard",
@@ -675,12 +690,11 @@ class GeneralTab(QWidget):
 			"Level 3  complementary motifs",
 			"Level 4  Reverse motifs"
 		]
-		level_select.addItems(standard_level)
-		level_select.setCurrentIndex(3)
+		self.level_select.addItems(standard_level)
 		level_layout = QGridLayout()
 		level_layout.setColumnStretch(1, 1)
 		level_layout.addWidget(level_label, 0, 0)
-		level_layout.addWidget(level_select, 0, 1)
+		level_layout.addWidget(self.level_select, 0, 1)
 		level_layout.addWidget(self.level_detail, 1, 1)
 		level_group.setLayout(level_layout)
 
@@ -704,25 +718,34 @@ class GeneralTab(QWidget):
 		self.getSettings()
 
 	def getSettings(self):
-		self.monoValue.setValue(int(self.settings.value('mono', 12)))
-		self.diValue.setValue(int(self.settings.value('di', 7)))
-		self.triValue.setValue(int(self.settings.value('tri', 5)))
-		self.tetraValue.setValue(int(self.settings.value('tetra', 4)))
-		self.pentaValue.setValue(int(self.settings.value('penta', 3)))
-		self.hexaValue.setValue(int(self.settings.value('hexa', 3)))
-		self.distanceValue.setValue(int(self.settings.value('dmax', 10)))
-		self.flankValue.setValue(int(self.settings.value('flank', 100)))
+		self.monoValue.setValue(int(self.settings.value('ssr/mono', 12)))
+		self.diValue.setValue(int(self.settings.value('ssr/di', 7)))
+		self.triValue.setValue(int(self.settings.value('ssr/tri', 5)))
+		self.tetraValue.setValue(int(self.settings.value('ssr/tetra', 4)))
+		self.pentaValue.setValue(int(self.settings.value('ssr/penta', 4)))
+		self.hexaValue.setValue(int(self.settings.value('ssr/hexa', 4)))
+		self.distanceValue.setValue(int(self.settings.value('ssr/dmax', 10)))
+		self.flankValue.setValue(int(self.settings.value('ssr/flank', 100)))
+		self.min_tandem_motif.setValue(int(self.settings.value('ssr/smin', 7)))
+		self.max_tandem_motif.setValue(int(self.settings.value('ssr/smax', 30)))
+		self.min_tandem_repeat.setValue(int(self.settings.value('ssr/srep', 2)))
+		self.level_select.setCurrentIndex(int(self.settings.value('ssr/level', 3)))
 
 
 	def saveSettings(self):
-		self.settings.setValue('mono', self.monoValue.value())
-		self.settings.setValue('di', self.diValue.value())
-		self.settings.setValue('tri', self.triValue.value())
-		self.settings.setValue('tetra', self.tetraValue.value())
-		self.settings.setValue('penta', self.pentaValue.value())
-		self.settings.setValue('hexa', self.hexaValue.value())
-		self.settings.setValue('dmax', self.distanceValue.value())
-		self.settings.setValue('flank', self.flankValue.value())
+		self.settings.setValue('ssr/mono', self.monoValue.value())
+		self.settings.setValue('ssr/di', self.diValue.value())
+		self.settings.setValue('ssr/tri', self.triValue.value())
+		self.settings.setValue('ssr/tetra', self.tetraValue.value())
+		self.settings.setValue('ssr/penta', self.pentaValue.value())
+		self.settings.setValue('ssr/hexa', self.hexaValue.value())
+		self.settings.setValue('ssr/dmax', self.distanceValue.value())
+		self.settings.setValue('ssr/flank', self.flankValue.value())
+		self.settings.setValue('ssr/smin', self.min_tandem_motif.value())
+		self.settings.setValue('ssr/smax', self.max_tandem_motif.value())
+		self.settings.setValue('ssr/srep', self.min_tandem_repeat.value())
+		self.settings.setValue('ssr/level', self.level_select.currentIndex())
+
 
 	def showStandardLevelDetail(self, idx):
 		if idx == 0:
@@ -746,102 +769,95 @@ class GeneralTab(QWidget):
 class PrimerTab(QWidget):
 	def __init__(self, settings, parent=None):
 		super(PrimerTab, self).__init__(parent)
-		product_size_label = QLabel(self.tr('PRIMER_PRODUCT_SIZE_RANGE'))
-		product_size = QLineEdit('100-300')
-		product_size_tip = (
-			"if you want PCR products to be between 100 to 150 bases (inclusive) then\n"
-			"you would set this parameter to 100-150. If you desire PCR products in\n"
-			"either the range from 100 to 150 bases or in the range from 200 to 250\n"
-			"bases then you would set this parameter to 100-150 200-250"
-		)
-		product_size.setToolTip(product_size_tip)
+		self.settings = settings
+		
+		product_size_label = PrimerTagLabel('PRIMER_PRODUCT_SIZE_RANGE')
+		self.product_size = QLineEdit()
 		product_size_group = QGroupBox(self.tr('Primer product size'))
-		prodcut_size_detail = QLabel("a space separated list of ranges e.g. 100-150 200-250")
-		product_size_layout = QGridLayout()
-		product_size_layout.addWidget(product_size_label, 0, 0)
-		product_size_layout.addWidget(product_size, 0, 1)
-		product_size_layout.addWidget(prodcut_size_detail, 1, 1)
+		product_size_layout = QHBoxLayout()
+		product_size_layout.addWidget(product_size_label)
+		product_size_layout.addWidget(self.product_size, 1)
 		product_size_group.setLayout(product_size_layout)
 
 		primer_size_group = QGroupBox(self.tr("Primer size and melting temperature"))
 		primer_size_layout = QGridLayout()
-		primer_size_min = QSpinBox()
-		primer_size_min.setSuffix(' bp')
-		primer_size_opt = QSpinBox()
-		primer_size_opt.setSuffix(' bp')
-		primer_size_max = QSpinBox()
-		primer_size_max.setSuffix(' bp')
-		primer_temp_min = QSpinBox()
-		primer_temp_min.setSuffix(' %sC' % chr(0260))
-		primer_temp_opt = QSpinBox()
-		primer_temp_opt.setSuffix(' %sC' % chr(0260))
-		primer_temp_max = QSpinBox()
-		primer_temp_max.setSuffix(' %sC' % chr(0260))
-		primer_size_layout.addWidget(QLabel("PRIMER_MIN_SIZE"), 0, 0)
-		primer_size_layout.addWidget(primer_size_min, 0, 1)
-		primer_size_layout.addWidget(QLabel("PRIMER_OPT_SIZE"), 0, 2)
-		primer_size_layout.addWidget(primer_size_opt, 0, 3)
-		primer_size_layout.addWidget(QLabel("PRIMER_MAX_SIZE"), 0, 4)
-		primer_size_layout.addWidget(primer_size_max, 0, 5)
-		primer_size_layout.addWidget(QLabel("PRIMER_MIN_TM"), 1, 0)
-		primer_size_layout.addWidget(primer_temp_min, 1, 1)
-		primer_size_layout.addWidget(QLabel("PRIMER_OPT_TM"), 1, 2)
-		primer_size_layout.addWidget(primer_temp_opt, 1, 3)
-		primer_size_layout.addWidget(QLabel("PRIMER_MAX_TM"), 1, 4)
-		primer_size_layout.addWidget(primer_temp_max, 1, 5)
+		self.primer_size_min = QSpinBox()
+		self.primer_size_min.setSuffix(' bp')
+		self.primer_size_opt = QSpinBox()
+		self.primer_size_opt.setSuffix(' bp')
+		self.primer_size_max = QSpinBox()
+		self.primer_size_max.setSuffix(' bp')
+		self.primer_tm_min = QSpinBox()
+		self.primer_tm_min.setSuffix(' %sC' % chr(0260))
+		self.primer_tm_opt = QSpinBox()
+		self.primer_tm_opt.setSuffix(' %sC' % chr(0260))
+		self.primer_tm_max = QSpinBox()
+		self.primer_tm_max.setSuffix(' %sC' % chr(0260))
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MIN_SIZE"), 0, 0)
+		primer_size_layout.addWidget(self.primer_size_min, 0, 1)
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_OPT_SIZE"), 0, 2)
+		primer_size_layout.addWidget(self.primer_size_opt, 0, 3)
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MAX_SIZE"), 0, 4)
+		primer_size_layout.addWidget(self.primer_size_max, 0, 5)
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MIN_TM"), 1, 0)
+		primer_size_layout.addWidget(self.primer_tm_min, 1, 1)
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_OPT_TM"), 1, 2)
+		primer_size_layout.addWidget(self.primer_tm_opt, 1, 3)
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MAX_TM"), 1, 4)
+		primer_size_layout.addWidget(self.primer_tm_max, 1, 5)
 		primer_size_group.setLayout(primer_size_layout)
 
 		primer_gc_group = QGroupBox(self.tr("Primer GC content"))
 		primer_gc_layout = QGridLayout()
-		primer_gc_min = QSpinBox()
-		primer_gc_min.setSuffix(' %')
-		primer_gc_max = QSpinBox()
-		primer_gc_max.setSuffix(' %')
-		primer_gc_clamp = QSpinBox()
-		primer_gc_end = QSpinBox()
-		primer_gc_layout.addWidget(QLabel("PRIMER_MIN_GC"), 0, 0)
-		primer_gc_layout.addWidget(primer_gc_min, 0, 1)
-		primer_gc_layout.addWidget(QLabel("PRIMER_GC_CLAMP"), 0, 2)
-		primer_gc_layout.addWidget(primer_gc_clamp, 0, 3)
-		primer_gc_layout.addWidget(QLabel("PRIMER_MAX_GC"), 1, 0)
-		primer_gc_layout.addWidget(primer_gc_max, 1, 1)
-		primer_gc_layout.addWidget(QLabel("PRIMER_PAIR_MAX_DIFF_TM"), 1, 2)
-		primer_gc_layout.addWidget(primer_gc_end, 1, 3)
+		self.primer_gc_min = QSpinBox()
+		self.primer_gc_min.setSuffix(' %')
+		self.primer_gc_max = QSpinBox()
+		self.primer_gc_max.setSuffix(' %')
+		self.primer_gc_clamp = QSpinBox()
+		self.primer_gc_end = QSpinBox()
+		primer_gc_layout.addWidget(PrimerTagLabel("PRIMER_MIN_GC"), 0, 0)
+		primer_gc_layout.addWidget(self.primer_gc_min, 0, 1)
+		primer_gc_layout.addWidget(PrimerTagLabel("PRIMER_GC_CLAMP"), 0, 2)
+		primer_gc_layout.addWidget(self.primer_gc_clamp, 0, 3)
+		primer_gc_layout.addWidget(PrimerTagLabel("PRIMER_MAX_GC"), 1, 0)
+		primer_gc_layout.addWidget(self.primer_gc_max, 1, 1)
+		primer_gc_layout.addWidget(PrimerTagLabel("PRIMER_PAIR_MAX_DIFF_TM"), 1, 2)
+		primer_gc_layout.addWidget(self.primer_gc_end, 1, 3)
 		primer_gc_group.setLayout(primer_gc_layout)
 
 		primer_bind_group = QGroupBox(self.tr("Self-binding"))
 		primer_bind_layout = QGridLayout()
-		primer_max_self_any = QSpinBox()
-		primer_pair_max_compl_any = QSpinBox()
-		primer_max_self_end = QSpinBox()
-		primer_pair_max_compl_end = QSpinBox()
-		primer_max_hairpin = QSpinBox()
-		primer_bind_layout.addWidget(QLabel("PRIMER_MAX_SELF_ANY_TH"), 0, 0)
-		primer_bind_layout.addWidget(primer_max_self_any, 0, 1)
-		primer_bind_layout.addWidget(QLabel("PRIMER_PAIR_MAX_COMPL_ANY_TH"), 0, 2)
-		primer_bind_layout.addWidget(primer_pair_max_compl_any, 0, 3)
-		primer_bind_layout.addWidget(QLabel("PRIMER_MAX_SELF_END_TH"), 1, 0)
-		primer_bind_layout.addWidget(primer_max_self_end, 1, 1)
-		primer_bind_layout.addWidget(QLabel("PRIMER_PAIR_MAX_COMPL_END_TH"), 1, 2)
-		primer_bind_layout.addWidget(primer_pair_max_compl_end, 1, 3)
-		primer_bind_layout.addWidget(QLabel("PRIMER_MAX_HAIRPIN_TH"), 2, 0)
-		primer_bind_layout.addWidget(primer_max_hairpin, 2, 1)
+		self.primer_max_self_any = QSpinBox()
+		self.primer_pair_max_compl_any = QSpinBox()
+		self.primer_max_self_end = QSpinBox()
+		self.primer_pair_max_compl_end = QSpinBox()
+		self.primer_max_hairpin = QSpinBox()
+		primer_bind_layout.addWidget(PrimerTagLabel("PRIMER_MAX_SELF_ANY_TH"), 0, 0)
+		primer_bind_layout.addWidget(self.primer_max_self_any, 0, 1)
+		primer_bind_layout.addWidget(PrimerTagLabel("PRIMER_PAIR_MAX_COMPL_ANY_TH"), 0, 2)
+		primer_bind_layout.addWidget(self.primer_pair_max_compl_any, 0, 3)
+		primer_bind_layout.addWidget(PrimerTagLabel("PRIMER_MAX_SELF_END_TH"), 1, 0)
+		primer_bind_layout.addWidget(self.primer_max_self_end, 1, 1)
+		primer_bind_layout.addWidget(PrimerTagLabel("PRIMER_PAIR_MAX_COMPL_END_TH"), 1, 2)
+		primer_bind_layout.addWidget(self.primer_pair_max_compl_end, 1, 3)
+		primer_bind_layout.addWidget(PrimerTagLabel("PRIMER_MAX_HAIRPIN_TH"), 2, 0)
+		primer_bind_layout.addWidget(self.primer_max_hairpin, 2, 1)
 		primer_bind_group.setLayout(primer_bind_layout)
 
 		primer_other_group = QGroupBox(self.tr("PolyX and Other"))
 		primer_other_layout = QGridLayout()
-		primer_max_end_stability = QSpinBox()
-		primer_max_ns_accepted = QSpinBox()
-		primer_max_poly_x = QSpinBox()
-		primer_num_return = QSpinBox()
-		primer_other_layout.addWidget(QLabel("PRIMER_MAX_END_STABILITY"), 0, 0)
-		primer_other_layout.addWidget(primer_max_end_stability, 0, 1)
-		primer_other_layout.addWidget(QLabel("PRIMER_MAX_POLY_X"), 0, 2)
-		primer_other_layout.addWidget(primer_max_poly_x, 0, 3)
-		primer_other_layout.addWidget(QLabel("PRIMER_MAX_NS_ACCEPTED"), 1, 0)
-		primer_other_layout.addWidget(primer_max_ns_accepted, 1, 1)
-		primer_other_layout.addWidget(QLabel("PRIMER_NUM_RETURN"), 1, 2)
-		primer_other_layout.addWidget(primer_num_return, 1, 3)
+		self.primer_max_end_stability = QSpinBox()
+		self.primer_max_ns_accepted = QSpinBox()
+		self.primer_max_poly_x = QSpinBox()
+		self.primer_num_return = QSpinBox()
+		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_MAX_END_STABILITY"), 0, 0)
+		primer_other_layout.addWidget(self.primer_max_end_stability, 0, 1)
+		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_MAX_POLY_X"), 0, 2)
+		primer_other_layout.addWidget(self.primer_max_poly_x, 0, 3)
+		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_MAX_NS_ACCEPTED"), 1, 0)
+		primer_other_layout.addWidget(self.primer_max_ns_accepted, 1, 1)
+		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_NUM_RETURN"), 1, 2)
+		primer_other_layout.addWidget(self.primer_num_return, 1, 3)
 		primer_other_group.setLayout(primer_other_layout)
 
 		mainLayout = QVBoxLayout()
@@ -852,12 +868,73 @@ class PrimerTab(QWidget):
 		mainLayout.addWidget(primer_other_group)
 
 		self.setLayout(mainLayout)
+		self.getSettings()
+
+	def getSettings(self):
+		self.product_size.setText(self.settings.value('primer/PRIMER_PRODUCT_SIZE_RANGE', '100-300'))
+		self.primer_size_min.setValue(int(self.settings.value('primer/PRIMER_MIN_SIZE', 18)))
+		self.primer_size_opt.setValue(int(self.settings.value('primer/PRIMER_OPT_SIZE', 20)))
+		self.primer_size_max.setValue(int(self.settings.value('primer/PRIMER_MAX_SIZE', 27)))
+		self.primer_tm_min.setValue(int(self.settings.value('primer/PRIMER_MIN_TM', 57)))
+		self.primer_tm_opt.setValue(int(self.settings.value('primer/PRIMER_OPT_TM', 60)))
+		self.primer_tm_max.setValue(int(self.settings.value('primer/PRIMER_MAX_TM', 63)))
+		self.primer_gc_min.setValue(int(self.settings.value('primer/PRIMER_MIN_GC', 20)))
+		self.primer_gc_max.setValue(int(self.settings.value('primer/PRIMER_MAX_GC', 80)))
+		self.primer_gc_clamp.setValue(int(self.settings.value('primer/PRIMER_GC_CLAMP', 0)))
+		self.primer_gc_end.setValue(int(self.settings.value('primer/PRIMER_PAIR_MAX_DIFF_TM', 100)))
+		self.primer_max_self_any.setValue(int(self.settings.value('primer/PRIMER_MAX_SELF_ANY_TH', 47)))
+		self.primer_pair_max_compl_any.setValue(int(self.settings.value('primer/PRIMER_PAIR_MAX_COMPL_ANY_TH', 47)))
+		self.primer_max_self_end.setValue(int(self.settings.value('primer/PRIMER_MAX_SELF_END_TH', 47)))
+		self.primer_pair_max_compl_end.setValue(int(self.settings.value('primer/PRIMER_PAIR_MAX_COMPL_END_TH', 47)))
+		self.primer_max_hairpin.setValue(int(self.settings.value('primer/PRIMER_MAX_HAIRPIN_TH', 47)))
+		self.primer_max_end_stability.setValue(int(self.settings.value('primer/PRIMER_MAX_END_STABILITY', 100)))
+		self.primer_max_ns_accepted.setValue(int(self.settings.value('primer/PRIMER_MAX_POLY_X', 5)))
+		self.primer_max_poly_x.setValue(int(self.settings.value('primer/PRIMER_MAX_NS_ACCEPTED', 0)))
+		self.primer_num_return.setValue(int(self.settings.value('primer/PRIMER_NUM_RETURN', 5)))
+
+
+	def saveSettings(self):
+		self.settings.setValue('primer/PRIMER_PRODUCT_SIZE_RANGE', self.product_size.text())
+		self.settings.setValue('primer/PRIMER_MIN_SIZE', self.primer_size_min.value())
+		self.settings.setValue('primer/PRIMER_OPT_SIZE', self.primer_size_opt.value())
+		self.settings.setValue('primer/PRIMER_MAX_SIZE', self.primer_size_max.value())
+		self.settings.setValue('primer/PRIMER_MIN_TM', self.primer_tm_min.value())
+		self.settings.setValue('primer/PRIMER_OPT_TM', self.primer_tm_opt.value())
+		self.settings.setValue('primer/PRIMER_MAX_TM', self.primer_tm_max.value())
+		self.settings.setValue('primer/PRIMER_MIN_GC', self.primer_gc_min.value())
+		self.settings.setValue('primer/PRIMER_MAX_GC', self.primer_gc_max.value())
+		self.settings.setValue('primer/PRIMER_GC_CLAMP', self.primer_gc_clamp.value())
+		self.settings.setValue('primer/PRIMER_PAIR_MAX_DIFF_TM', self.primer_gc_end.value())
+		self.settings.setValue('primer/PRIMER_MAX_SELF_ANY_TH', self.primer_max_self_any.value())
+		self.settings.setValue('primer/PRIMER_PAIR_MAX_COMPL_ANY_TH', self.primer_pair_max_compl_any.value())
+		self.settings.setValue('primer/PRIMER_MAX_SELF_END_TH', self.primer_max_self_end.value())
+		self.settings.setValue('primer/PRIMER_PAIR_MAX_COMPL_END_TH', self.primer_pair_max_compl_end.value())
+		self.settings.setValue('primer/PRIMER_MAX_HAIRPIN_TH', self.primer_max_hairpin.value())
+		self.settings.setValue('primer/PRIMER_MAX_END_STABILITY', self.primer_max_end_stability.value())
+		self.settings.setValue('primer/PRIMER_MAX_POLY_X', self.primer_max_ns_accepted.value())
+		self.settings.setValue('primer/PRIMER_MAX_NS_ACCEPTED', self.primer_max_poly_x.value())
+		self.settings.setValue('primer/PRIMER_NUM_RETURN', self.primer_num_return.value())
+
+
+class PrimerTagLabel(QLabel):
+	base_url = "http://primer3.sourceforge.net/primer3_manual.htm#%s"
+	def __init__(self, tag, parent=None):
+		super(PrimerTagLabel, self).__init__(parent)
+		#self.setOpenExternalLinks(True)
+		self.tag = tag
+		self.setText('<a href="#%s">%s</a>' % (self.tag, self.tag))
+		self.linkActivated.connect(self.openLink)
+
+	def openLink(self, link):
+		url = QUrl.fromLocalFile(self.base_url % self.tag)
+		QDesktopServices.openUrl(url)
+
 
 
 class BrowserDialog(QDialog):
 	def __init__(self, parent=None, html=None):
 		super(BrowserDialog, self).__init__(parent)
-		self.webview = QWebView(self)
+		self.webview = QTextEdit(self)
 		self.webview.setHtml(html)
 
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)

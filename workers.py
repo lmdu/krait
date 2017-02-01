@@ -17,10 +17,11 @@ class MicrosatelliteWorker(Worker):
 	'''
 	perfect microsatellite search thread
 	'''
-	def __init__(self, parent, fastas, rules):
+	def __init__(self, parent, fastas, rules, level):
 		super(MicrosatelliteWorker, self).__init__(parent)
 		self.fastas = fastas
 		self.rules = rules
+		self.level = level
 		self.fasta_counts = len(self.fastas)
 		
 		self.ssr_table = MicrosatelliteTable()
@@ -34,7 +35,7 @@ class MicrosatelliteWorker(Worker):
 			
 			#use fasta and create fasta file index
 			self.update_message.emit("Building fasta index for %s." % fasta)
-			detector = MicrosatelliteDetector(fasta.path, self.rules)
+			detector = MicrosatelliteDetector(fasta.path, self.rules, self.level)
 
 			#get all sequence names
 			for name in detector.fastas.keys():
@@ -71,10 +72,11 @@ class CompoundWorker(Worker):
 		self.update_message.emit("Compound SSRs search completed.")
 
 class SatelliteWorker(Worker):
-	def __init__(self, parent, fastas, motifs, repeats):
+	def __init__(self, parent, fastas, min_motif, max_motif, repeats):
 		super(SatelliteWorker, self).__init__(parent)
 		self.fastas = fastas
-		self.motifs = motifs
+		self.min_motif = min_motif
+		self.max_motif = max_motif
 		self.repeats = repeats
 		self.fasta_counts = len(self.fastas)
 		
@@ -89,7 +91,7 @@ class SatelliteWorker(Worker):
 			
 			#use fasta and create fasta file index
 			self.update_message.emit("Building fasta index for %s." % fasta)
-			detector = SatelliteDetector(fasta.path, self.motifs, self.repeats)
+			detector = SatelliteDetector(fasta.path, self.min_motif, self.max_motif, self.repeats)
 
 			#get all sequence names
 			for name in detector.fastas.keys():

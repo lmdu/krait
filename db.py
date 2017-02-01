@@ -27,7 +27,7 @@ class SSRTable(QObject):
 	fields = []
 	
 	def __init__(self):
-		self.query = QSqlQuery()
+		self._query = QSqlQuery()
 		self._createTable()
 		self.prepareInsert()
 
@@ -37,24 +37,36 @@ class SSRTable(QObject):
 	def _createTable(self):
 		sql = ",".join(["%s %s" % (f, t) for f,t,_ in self.fields])
 		sql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (self.table, sql)
-		self.query.exec_(sql)
+		self._query.exec_(sql)
 
 	def recordCounts(self):
 		'''
 		get the number of records in the table
 		@return int, counts of records
 		'''
-		self.query.exec_("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
-		while self.query.next():
-			return int(self.query.value(0))
+		self._query.exec_("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
+		while self._query.next():
+			return int(self._query.value(0))
 
 	def fetchAll(self):
 		'''
 		get all the records in the table and return one in each time
 		'''
-		self.query.exec_("SELECT * FROM %s" % self.table)
-		while self.query.next():
-			yield Data({field[0]: field[2](self.query.value(idx)) for idx, field in enumerate(self.fields)})
+		self._query.exec_("SELECT * FROM %s" % self.table)
+		while self._query.next():
+			yield Data({field[0]: field[2](self._query.value(idx)) for idx, field in enumerate(self.fields)})
+
+	def query(self, sql):
+		self._query.exec_(sql)
+		rec = self._query.record()
+		fields = {rec.fieldName(i): i for i in rec.count()}
+		while self._query.next():
+			yield Data({field: self._query.value(fields[field]) for field in fields})
+
+	def get(self, sql):
+		self._query.exec_(sql)
+		while self._query.next():
+			self._query.value(0)
 
 	def prepareInsert(self):
 		'''
@@ -62,7 +74,7 @@ class SSRTable(QObject):
 		'''
 		sql = ",".join([":%s" % f for f,_,_ in self.fields])
 		sql = "INSERT INTO %s VALUES (%s)" % (self.table, sql)
-		self.query.prepare(sql)
+		self._query.prepare(sql)
 
 	def insert(self, data):
 		'''
@@ -70,8 +82,8 @@ class SSRTable(QObject):
 		@para data dict, a record with fields and values
 		'''
 		for field in data:
-			self.query.bindValue(":%s" % field, data[field])
-		self.query.exec_()
+			self._query.bindValue(":%s" % field, data[field])
+		self._query.exec_()
 
 
 class MicrosatelliteTable(SSRTable):
@@ -136,3 +148,23 @@ class SequenceTable(SSRTable):
 		("name", "TEXT", str),
 		("fid", "INTEGER", int)
 	]
+
+class MetaTable(SSRTable):
+	table = 'meta'
+	fields = [
+		("name", "TEXT", str),
+		("value", "TEXT", str)
+	]
+
+	def __init__(self):
+		super(MetaTable, self).__init__()
+
+	def getMeta(self, name):
+		'''
+		get the meta information 
+		@para name str, meta name
+		@return str
+		'''
+		self.query.exec_("SELECT value FROM %s WHERE name='%s' LIMIT 1" % name)
+		while self.query.next():
+			return self.query.value(0)
