@@ -6,7 +6,6 @@ sys.dont_write_bytecode = True
 
 from PySide.QtGui import QApplication
 from PySide.QtSql import QSqlDatabase, QSqlQuery
-from widgets import SSRMainWindow
 from db import open_database
 
 #create application and set properties
@@ -25,9 +24,11 @@ db.setDatabaseName(':memory:')
 db.open()
 QSqlQuery("PRAGMA synchronous=OFF;")
 
-#create main windows
-win = SSRMainWindow()
-win.show()
+if __name__ == '__main__':
+	from widgets import SSRMainWindow
+	#create main windows
+	win = SSRMainWindow()
+	win.show()
 
-#start the main loop
-sys.exit(app.exec_())
+	#start the main loop
+	sys.exit(app.exec_())

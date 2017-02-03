@@ -4,6 +4,7 @@ from __future__ import division
 from PySide.QtCore import QThread, Signal
 from ssr import *
 from db import *
+from statistics import StatisticsReport
 from utils import Data
 
 class Worker(QThread):
@@ -105,4 +106,15 @@ class SatelliteWorker(Worker):
 
 			self.update_progress.emit(100)
 			self.update_message.emit('Satellites search completed.')
+
+class StatisticsWorker(Worker):
+	def __init__(self, editor, parent):
+		super(StatisticsWorker, self).__init__(parent)
+		self.editor = editor
+
+	def run(self):
+		stat = StatisticsReport()
+		stat.sequenceSummary()
+		stat.microsatelliteSummary()
+		self.update_message.emit(stat.generateReport())
 

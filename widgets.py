@@ -36,6 +36,8 @@ class SSRMainWindow(QMainWindow):
 		self.setCentralWidget(self.table)
 		#self.setCentralWidget(self.browser)
 
+		self.reportor = QTextBrowser()
+
 		#search text input
 		self.filter = SSRFilterInput(self)
 		self.filter.returnPressed.connect(self.filterTable)
@@ -164,6 +166,12 @@ class SSRMainWindow(QMainWindow):
 		self.imperfectAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
 		self.imperfectAct.setToolTip(self.tr("Find imperfect microsatellites"))
 
+		#statistics report
+		self.statisticsAct = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
+		self.statisticsAct.triggered.connect(self.generateStatisticsReport)
+		self.statisticsMenuAct = QAction(self.tr("Perform statistics"), self)
+		self.statisticsMenuAct.triggered.connect(self.generateStatisticsReport)
+
 		#about action
 		self.aboutAct = QAction(self.tr("About"), self)
 		self.aboutAct.triggered.connect(self.openAboutMessage)
@@ -215,6 +223,7 @@ class SSRMainWindow(QMainWindow):
 		self.viewMenu.addAction(self.satelliteRemoveAct)
 
 		self.toolMenu.addAction(self.bestDmaxAct)
+		self.toolMenu.addAction(self.statisticsAct)
 
 		self.helpMenu.addAction(self.documentAct)
 		self.helpMenu.addSeparator()
@@ -247,6 +256,9 @@ class SSRMainWindow(QMainWindow):
 		self.satelliteMenu.addAction(self.satelliteRemoveAct)
 		self.satelliteMenu.addSeparator()
 		self.satelliteMenu.addAction(self.satelliteRuleAct)
+
+		self.statisticsMenu = QMenu()
+		self.statisticsMenu.addAction(self.statisticsMenuAct)
 		
 
 	def createToolBars(self):
@@ -275,13 +287,10 @@ class SSRMainWindow(QMainWindow):
 		self.statToolBtn.setMenu(self.statToolBtnMenu)
 		self.toolBar.addAction(self.statToolBtn)
 
-		self.reportToolBtn = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
+		self.statisticsAct.setMenu(self.statisticsMenu)
+		self.toolBar.addAction(self.statisticsAct)
+
 		#self.reportToolBtn.setDisabled(True)
-		self.reportToolBtnMenu = QMenu()
-		self.reportToolBtnMenu.addAction("Settings")
-		self.reportToolBtnMenu.addAction("Testings")
-		self.reportToolBtn.setMenu(self.reportToolBtnMenu)
-		self.toolBar.addAction(self.reportToolBtn)
 
 		#search input
 		#self.filter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -470,6 +479,15 @@ class SSRMainWindow(QMainWindow):
 			return
 		self.model.setFilter(filters)
 		self.model.refresh()
+
+	def generateStatisticsReport(self):
+		worker = StatisticsWorker(self.reportor, self)
+		worker.update_message.connect(self.showStatisticsReport)
+		worker.start()
+
+	def showStatisticsReport(self, html):
+		self.reportor.setHtml(html)
+		self.setCentralWidget(self.reportor)
 
 	def showSSRSequence(self, index):
 		'''

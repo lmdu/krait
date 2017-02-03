@@ -10,7 +10,8 @@ __all__ = [
 	"CompoundTable",
 	"SatelliteTable",
 	"FastaTable",
-	"SequenceTable"
+	"SequenceTable",
+	"MetaTable"
 ]
 
 def open_database(dbname=':memory:'):
@@ -44,9 +45,7 @@ class SSRTable(QObject):
 		get the number of records in the table
 		@return int, counts of records
 		'''
-		self._query.exec_("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
-		while self._query.next():
-			return int(self._query.value(0))
+		return self.get("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
 
 	def fetchAll(self):
 		'''
@@ -59,14 +58,14 @@ class SSRTable(QObject):
 	def query(self, sql):
 		self._query.exec_(sql)
 		rec = self._query.record()
-		fields = {rec.fieldName(i): i for i in rec.count()}
+		fields = {rec.fieldName(i): i for i in range(rec.count())}
 		while self._query.next():
 			yield Data({field: self._query.value(fields[field]) for field in fields})
 
 	def get(self, sql):
 		self._query.exec_(sql)
 		while self._query.next():
-			self._query.value(0)
+			return self._query.value(0)
 
 	def prepareInsert(self):
 		'''
@@ -165,6 +164,6 @@ class MetaTable(SSRTable):
 		@para name str, meta name
 		@return str
 		'''
-		self.query.exec_("SELECT value FROM %s WHERE name='%s' LIMIT 1" % name)
-		while self.query.next():
-			return self.query.value(0)
+		self._query.exec_("SELECT value FROM meta WHERE name='%s' LIMIT 1" % name)
+		while self._query.next():
+			return self._query.value(0)

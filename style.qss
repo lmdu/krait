@@ -13,6 +13,10 @@ QTableView{
 	selection-background-color: rgba(95, 186, 125, 80%);
 }
 
+QTextBrowser{
+	border: 0;
+}
+
 /* tool bar */
 QToolBar{
 	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #f2f2f2);
