@@ -843,7 +843,7 @@ class PrimerTab(QWidget):
 		primer_gc_layout.addWidget(self.primer_gc_end, 1, 3)
 		primer_gc_group.setLayout(primer_gc_layout)
 
-		primer_bind_group = QGroupBox(self.tr("Self-binding"))
+		primer_bind_group = QGroupBox(self.tr("Self-binding (primer-dimer and hairpins)"))
 		primer_bind_layout = QGridLayout()
 		self.primer_max_self_any = QSpinBox()
 		self.primer_pair_max_compl_any = QSpinBox()
