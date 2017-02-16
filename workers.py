@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import division
+import jinja2
 from PySide.QtCore import QThread, Signal
 from ssr import *
 from db import *
@@ -116,5 +117,9 @@ class StatisticsWorker(Worker):
 		stat = StatisticsReport()
 		stat.sequenceSummary()
 		stat.microsatelliteSummary()
-		self.update_message.emit(stat.generateReport())
+		stat.generateDataTable()
+		data = stat.readDataTable()
+		with open('report.html') as fh:
+			content = jinja2.Template(fh.read()).render(**data)
+		self.update_message.emit(content)
 

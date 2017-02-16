@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import division
+import json
 from PySide.QtSql import *
 import pyfaidx
 from db import *
+from utils import Data
 
 class Statistics(object):
 	meta_table = MetaTable()
@@ -114,7 +116,7 @@ class Statistics(object):
 		get the GC content of the fastas
 		'''
 		gc = self.bases['G'] + self.bases['C']
-		return round(gc/self.validsize, 2)
+		return round(gc/self.validsize*100, 2)
 
 	def ra(self, counts):
 		'''
@@ -193,57 +195,33 @@ class MicrosatelliteStatistics(Statistics):
 		return rows
 
 class StatisticsReport:
-	html = '''<html><head><style>
-	*{font-size: 13px;}
-	td,th{padding: 5px 10px;}
-	</style></head><body>%s</body></html>'''
-	
 	def __init__(self, unit='Mb', letter='ATGC'):
-		self.contents = []
-		self.stat = Statistics()
-		self.unit = unit
-		self.stat.unit = unit
-		self.stat.letter = letter
-		
+		self.data = Data()
 		self.ssr_stat = MicrosatelliteStatistics()
-	
-	def table(self, rows):
-		body = ['<table border="0" bgcolor="gray" cellpadding="0" cellspacing="1" align="center" width="80%">']
-		body.append('<tr bgcolor="#ffffff">%s</tr>' % "".join(['<th>%s</th>' % title for title in rows[0]]))
-		row_format = '<td>%s</td>' * len(rows[0])
-		for row in rows[1:]:
-			body.append('<tr bgcolor="#ffffff">%s</tr>' % row_format % row)
-		body.append('</table>')
-		return "".join(body)
 
-	def add(self, content, alignment=None):
-		if alignment:
-			self.contents.append('<p style="text-align:%s">%s</p>' % (alignment, content))
-		else:
-			self.contents.append('<p>%s</p>' % content)
+	def generateDataTable(self):
+		with open('ssr-statistics.json', 'wb') as fp:
+			json.dump(self.data, fp)
 
-	def generateReport(self):
-		return self.html % "".join(self.contents)
+	def readDataTable(self):
+		with open('ssr-statistics.json', 'rb') as fh:
+			data = json.load(fh)
+		return Data(data)
 
 	def sequenceSummary(self):
-		self.add("Total number of sequences: <b>%s</b>" % self.stat.seqcount)
-		self.add("Total length of sequences (A+T+C+G+N): <b>%s</b> bp" % self.stat.size)
-		self.add("Total valid length of sequences (A+T+C+G): <b>%s</b> bp" % self.stat.validsize)
-		self.add("Unkown bases (Ns): <b>%s<b> (<b>%s%%</b>)" % self.stat.ns)
-		self.add("GC content (G+C)/(A+T+C+G) not include Ns: <b>%s%%</b>" % self.stat.gc)
+		self.data.seqcount = self.ssr_stat.seqcount
+		self.data.size = self.ssr_stat.size
+		self.data.validsize = self.ssr_stat.validsize
+		self.data.ns = self.ssr_stat.ns
+		self.data.gc = self.ssr_stat.gc
+		self.data.unit = self.ssr_stat.unit
 
 	def microsatelliteSummary(self):
-		_ = "Total number of SSRs: <b>%s</b>, relative abundance: <b>%s</b> loci/%s"
-		self.add(_ % (self.ssr_stat.counts, self.ssr_stat.frequency, self.unit))
-		_ = "Total length of SSRs: <b>%s</b> bp, relative density: <b>%s</b> bp/%s"
-		self.add(_ % (self.ssr_stat.lengths, self.ssr_stat.density, self.unit))
-		self.add("The motif length summary:")
-		self.add(self.table(self.ssr_stat.getMotifLenStat()), alignment='center')
-		self.add("The motif type summary:")
-		self.add(self.table(self.ssr_stat.getMotifTypeStat()), alignment='center')
-		self.add("The motif repeat summary:")
-		self.add(self.table(self.ssr_stat.getMotifRepeatStat()), alignment='center')
-
-
-
+		self.data.ssrcounts = self.ssr_stat.counts
+		self.data.frequency = self.ssr_stat.frequency
+		self.data.ssrlength = self.ssr_stat.lengths
+		self.data.density = self.ssr_stat.density
+		self.data.ssrtypes = self.ssr_stat.getMotifLenStat()
+		self.data.ssrmotifs = self.ssr_stat.getMotifTypeStat()
+		self.data.ssrrepeats = self.ssr_stat.getMotifRepeatStat()
 

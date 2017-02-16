@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Statistical report</title>
+	<style type="text/css">
+		body{font-size: 13px;}
+		td{padding: 5px 10px;}
+		th{padding: 5px 0;}
+		#content{margin: 20px auto; width: 80%;}
+	</style>
+</head>
+<body>
+<div id="content">
+<p align="center"><h1 style="font-size: 18px;">Tandem repeats statistical analysis report</h1></p>
+<p>Total number of sequences: <b>{{ seqcount }}</b></p>
+<p>Total length of sequences (A+T+C+G+N): <b>{{ size }}</b> bp</p>
+<p>Total valid length of sequences (A+T+C+G): <b>{{ validsize }}</b> bp</p>
+<p>Unkown bases (Ns): <b>{{ ns[0] }}</b> (<b>{{ ns[1] }}%</b>)</p>
+<p>GC content (G+C)/(A+T+C+G) not include Ns: <b> {{ gc }}%</b></p>
+<p>Total number of SSRs: <b>{{ ssrcounts }}</b>, relative abundance: <b>{{ frequency }}</b> loci/{{ unit }}</p>
+<p>Total length of SSRs: <b>{{ ssrlength }}</b> bp, relative density: <b>{{ density }}</b> bp/{{ unit }}</p>
+
+<!-- perfect microsatellites types -->
+{% set table_no = 0 %}
+{% set figure_no = 0 %}
+
+{% macro table(title, table_no, rows) -%}
+<table border="0" bgcolor="gray" cellpadding="0" cellspacing="1" align="center" width="80%">
+<caption>Table {{ table_no }} {{ title }}</caption>
+<tr bgcolor="#ffffff">
+	{% for col in rows[0] %}
+	<th>{{ col }}</th>
+	{% endfor %}	
+</tr>
+{% for row in rows[1:] %}
+<tr bgcolor="#ffffff">
+	{% for col in row %}
+	<td>{{ col }}</td>
+	{% endfor %}	
+</tr>
+{% endfor %}
+</table>
+{%- endmacro %}
+
+{% if ssrtypes %}
+{% set table_no = table_no + 1 %}
+<p>{{ table('the motif length summary', table_no, ssrtypes) }}</p>
+{% endif %}
+
+{% if ssrmotifs %}
+{% set table_no = table_no + 1 %}
+<p>{{ table('the motif type summary', table_no, ssrmotifs) }}</p>
+{% endif %}
+
+{% if ssrrepeats %}
+{% set table_no = table_no + 1 %}
+<p>{{ table('the motif repeat summary', table_no, ssrrepeats) }}</p>
+{% endif %}
+</div>
+</body>
+</html>
