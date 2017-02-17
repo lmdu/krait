@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import pyfaidx
 
+from PySide.QtCore import QDir
+
 class Data(dict):
 	def __getattr__(self, name):
 		try:

@@ -1,11 +1,34 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import division
+import os
 import json
-from PySide.QtSql import *
+import pygal
 import pyfaidx
+
+from PySide.QtCore import QDir
+
 from db import *
 from utils import Data
+
+class Plots:
+	def __init__(self, name, data):
+		self.name = name
+		self.data = data
+
+	@property
+	def outpath(self):
+		return os.path.join(QDir.tempPath(), self.name)
+	
+	def line(self):
+		pass
+
+	def pie(self):
+		chart = pygal.Pie()
+		for item, value in self.data:
+			chart.add(item, value)
+		chart.render_to_file(self.outpath)
+
 
 class Statistics(object):
 	meta_table = MetaTable()
@@ -221,7 +244,11 @@ class StatisticsReport:
 		self.data.frequency = self.ssr_stat.frequency
 		self.data.ssrlength = self.ssr_stat.lengths
 		self.data.density = self.ssr_stat.density
+		
 		self.data.ssrtypes = self.ssr_stat.getMotifLenStat()
+		chart_data = [row[0:2] for row in self.data.ssrtypes[1:]]
+		Plots('niblet_ssr_len.svg', chart_data).pie()
+
 		self.data.ssrmotifs = self.ssr_stat.getMotifTypeStat()
 		self.data.ssrrepeats = self.ssr_stat.getMotifRepeatStat()
 
