@@ -5,7 +5,7 @@
 	<style type="text/css">
 		body{font-size: 13px;}
 		td{padding: 5px 10px;}
-		th{padding: 5px 0;}
+		th{padding: 5px 0px;}
 		#content{margin: 20px auto; width: 80%;}
 	</style>
 </head>
@@ -26,11 +26,11 @@
 
 {% macro table(title, table_no, rows) -%}
 <table border="0" bgcolor="gray" cellpadding="0" cellspacing="1" align="center" width="80%">
-<caption>Table {{ table_no }} {{ title }}</caption>
+<caption><b>Table {{ table_no }}</b> {{ title }}</caption>
 <tr bgcolor="#ffffff">
 	{% for col in rows[0] %}
 	<th>{{ col }}</th>
-	{% endfor %}	
+	{% endfor %}
 </tr>
 {% for row in rows[1:] %}
 <tr bgcolor="#ffffff">
@@ -42,10 +42,16 @@
 </table>
 {%- endmacro %}
 
+{% macro figure(title, figure_no, name) -%}
+<center><img src="{{ name }}.svg" align="middle"></center>
+<center><b>Fig. {{ figure_no }}</b> {{ title }}</center>
+{% endmacro%}
+
 {% if ssrtypes %}
 {% set table_no = table_no + 1 %}
+{% set figure_no = figure_no + 1 %}
 <p>{{ table('the motif length summary', table_no, ssrtypes) }}</p>
-<p><img src="niblet_ssr_len.svg"></p>
+<p>{{ figure('The distribution of ssr types', figure_no, 'niblet_ssr_len') }}</p>
 {% endif %}
 
 {% if ssrmotifs %}

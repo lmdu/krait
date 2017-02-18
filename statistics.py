@@ -6,6 +6,7 @@ import json
 import pygal
 import pyfaidx
 
+from pygal.style import DefaultStyle
 from PySide.QtCore import QDir
 
 from db import *
@@ -18,13 +19,26 @@ class Plots:
 
 	@property
 	def outpath(self):
-		return self.name
+		return "%s.svg" % self.name
+
+	@property
+	def style(self):
+		return DefaultStyle(
+			background='white',
+			plot_background = 'white'
+		)
 	
 	def line(self):
 		pass
 
 	def pie(self):
-		chart = pygal.Pie()
+		chart = pygal.Pie(
+			style = self.style,
+			width = 550,
+			height = 400,
+			legend_at_bottom = True,
+			legend_at_bottom_columns=6
+		)
 		for item, value in self.data:
 			chart.add(item, value)
 		chart.render_to_file(self.outpath)
@@ -247,7 +261,7 @@ class StatisticsReport:
 		
 		self.data.ssrtypes = self.ssr_stat.getMotifLenStat()
 		chart_data = [row[0:2] for row in self.data.ssrtypes[1:]]
-		Plots('niblet_ssr_len.svg', chart_data).pie()
+		Plots('niblet_ssr_len', chart_data).pie()
 
 		self.data.ssrmotifs = self.ssr_stat.getMotifTypeStat()
 		self.data.ssrrepeats = self.ssr_stat.getMotifRepeatStat()
