@@ -18,7 +18,7 @@ class Plots:
 
 	@property
 	def outpath(self):
-		return os.path.join(QDir.tempPath(), self.name)
+		return self.name
 	
 	def line(self):
 		pass

@@ -37,7 +37,6 @@ class SSRMainWindow(QMainWindow):
 		#self.setCentralWidget(self.browser)
 
 		self.reportor = QTextBrowser()
-		self.reportor.setSearchPaths(QDir.tempPath())
 
 		#search text input
 		self.filter = SSRFilterInput(self)
