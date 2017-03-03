@@ -7,12 +7,13 @@ sys.dont_write_bytecode = True
 from PySide.QtGui import QApplication
 from PySide.QtSql import QSqlDatabase, QSqlQuery
 from db import open_database
+import config
 
 #create application and set properties
 app = QApplication(sys.argv)
 app.setOrganizationName('Chengdu University')
 app.setOrganizationDomain('http://www.cdu.edu.cn')
-app.setApplicationName('Krait')
+app.setApplicationName('Niblet')
 
 #set style sheet like css
 with open('style.qss') as qss:
@@ -20,7 +21,7 @@ with open('style.qss') as qss:
 
 #connect to sqlite database
 db = QSqlDatabase.addDatabase('QSQLITE')
-db.setDatabaseName(':memory:')
+db.setDatabaseName(config.SSR_DB)
 db.open()
 QSqlQuery("PRAGMA synchronous=OFF;")
 

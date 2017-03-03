@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import sys
+import inspect
 from PySide.QtCore import QObject
 from PySide.QtSql import QSqlDatabase, QSqlQuery
 from utils import Data
@@ -23,12 +25,12 @@ def open_database(dbname=':memory:'):
 	query.exec_("PRAGMA synchronous=OFF;")
 	return db
 
+
 class SSRTable(QObject):
 	table = None
 	fields = []
 	
 	def __init__(self):
-		self._query = QSqlQuery()
 		self._createTable()
 		self.prepareInsert()
 
@@ -38,7 +40,7 @@ class SSRTable(QObject):
 	def _createTable(self):
 		sql = ",".join(["%s %s" % (f, t) for f,t,_ in self.fields])
 		sql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (self.table, sql)
-		self._query.exec_(sql)
+		QSqlQuery(sql)
 
 	def recordCounts(self):
 		'''
@@ -47,25 +49,26 @@ class SSRTable(QObject):
 		'''
 		return self.get("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
 
+
 	def fetchAll(self):
 		'''
 		get all the records in the table and return one in each time
 		'''
-		self._query.exec_("SELECT * FROM %s" % self.table)
-		while self._query.next():
-			yield Data({field[0]: field[2](self._query.value(idx)) for idx, field in enumerate(self.fields)})
+		query = QSqlQuery("SELECT * FROM %s" % self.table)
+		while query.next():
+			yield Data({field[0]: field[2](query.value(idx)) for idx, field in enumerate(self.fields)})
 
 	def query(self, sql):
-		self._query.exec_(sql)
-		rec = self._query.record()
+		query = QSqlQuery(sql)
+		rec = query.record()
 		fields = {rec.fieldName(i): i for i in range(rec.count())}
-		while self._query.next():
-			yield Data({field: self._query.value(fields[field]) for field in fields})
+		while query.next():
+			yield Data({field: query.value(fields[field]) for field in fields})
 
 	def get(self, sql):
-		self._query.exec_(sql)
-		while self._query.next():
-			return self._query.value(0)
+		query = QSqlQuery(sql)
+		while query.next():
+			return query.value(0)
 
 	def prepareInsert(self):
 		'''
@@ -73,6 +76,7 @@ class SSRTable(QObject):
 		'''
 		sql = ",".join([":%s" % f for f,_,_ in self.fields])
 		sql = "INSERT INTO %s VALUES (%s)" % (self.table, sql)
+		self._query = QSqlQuery()
 		self._query.prepare(sql)
 
 	def insert(self, data):

@@ -7,6 +7,7 @@ from ssr import *
 from db import *
 from statistics import StatisticsReport
 from utils import Data
+from config import MAX_ROWS
 
 class Worker(QThread):
 	update_progress = Signal(int)
@@ -119,6 +120,12 @@ class StatisticsWorker(Worker):
 		stat.microsatelliteSummary()
 		stat.generateDataTable()
 		data = stat.readDataTable()
+		#change the rows of ssr motif statistics
+		if data.ssrmotifs:
+			rows = sorted(data.ssrmotifs[1:], key=lambda x: -x[1])
+			data.ssrmotifs = [data.ssrmotifs[0]]
+			data.ssrmotifs.extend(rows[0:MAX_ROWS])
+
 		with open('report.html') as fh:
 			content = jinja2.Template(fh.read()).render(**data)
 		self.update_message.emit(content)

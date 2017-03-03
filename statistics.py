@@ -2,50 +2,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import os
-import json
-import pygal
+import simplejson as json
 import pyfaidx
-
-from pygal.style import DefaultStyle
-from PySide.QtCore import QDir
 
 from db import *
 from utils import Data
-
-class Plots:
-	def __init__(self, name, data):
-		self.name = name
-		self.data = data
-
-	@property
-	def outpath(self):
-		return "%s.svg" % self.name
-
-	@property
-	def style(self):
-		return DefaultStyle(
-			background='white',
-			plot_background = 'white'
-		)
-	
-	def line(self):
-		pass
-
-	def pie(self):
-		chart = pygal.Pie(
-			style = self.style,
-			width = 550,
-			height = 400,
-			legend_at_bottom = True,
-			legend_at_bottom_columns=6
-		)
-		for item, value in self.data:
-			chart.add(item, value)
-		chart.render_to_file(self.outpath)
-
+from plot import Plots
+from config import STAT_JSON
 
 class Statistics(object):
-	meta_table = MetaTable()
 	_bases = {}
 	_total_sequences = None
 	_total_bases = None
@@ -53,14 +18,15 @@ class Statistics(object):
 	letter = 'ATGC'
 	
 	def __init__(self):
-		self.table = FastaTable()
+		self.meta_table = MetaTable()
+		self.fasta_table = FastaTable()
 		
 	def _calc_bases(self):
 		'''
 		calculate the number of bases A,T,G,C
 		'''
 		self._total_bases = 0
-		for fasta_file in self.table.fetchAll():
+		for fasta_file in self.fasta_table.fetchAll():
 			fastas = pyfaidx.Fasta(fasta_file.path, sequence_always_upper=True)
 			for fasta in fastas:
 				seq = fasta[:].seq
@@ -168,12 +134,12 @@ class Statistics(object):
 		return round(lengths/self.transize, 2)
 
 class MicrosatelliteStatistics(Statistics):
-	ssr_table = MicrosatelliteTable()
 	_ssr_counts = None
 	_ssr_length = None
 	
 	def __init__(self):
 		super(MicrosatelliteStatistics, self).__init__()
+		self.ssr_table = MicrosatelliteTable()
 
 	@property
 	def counts(self):
@@ -203,32 +169,35 @@ class MicrosatelliteStatistics(Statistics):
 	def getMotifLenStat(self):
 		types = {1: 'Mono-', 2: 'Di-', 3: 'Tri-', 4: 'Tetra-', 5: 'Penta-', 6: 'Hexa-'}
 		sql = "SELECT length(motif) AS type, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY type ORDER BY type"
-		rows = [('Type', 'Counts', 'Length (bp)', 'Percent (%)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
+		rows = [('Type', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
 		for row in self.ssr_table.query(sql):
 			percent = round(row.count/self.counts*100, 2)
+			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
-			rows.append((types[row.type], row.count, row.length, percent, frequency, density))
+			rows.append((types[row.type], row.count, row.length, percent, average, frequency, density))
 		return rows
 
 	def getMotifTypeStat(self):
 		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY standard ORDER BY length(motif),standard"
-		rows = [('Motif', 'Counts', 'Length (bp)', 'Percent (%)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
+		rows = [('Motif', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
 		for row in self.ssr_table.query(sql):
 			percent = round(row.count/self.counts*100, 2)
+			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
-			rows.append((row.standard, row.count, row.length, percent, frequency, density))
+			rows.append((row.standard, row.count, row.length, percent, average, frequency, density))
 		return rows
 
 	def getMotifRepeatStat(self):
 		sql = "SELECT repeat, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY repeat ORDER BY repeat"
-		rows = [('Repeat', 'Counts', 'Length (bp)', 'Percent (%)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
+		rows = [('Repeat', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
 		for row in self.ssr_table.query(sql):
 			percent = round(row.count/self.counts*100, 2)
+			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
-			rows.append((row.repeat, row.count, row.length, percent, frequency, density))
+			rows.append((row.repeat, row.count, row.length, percent, average, frequency, density))
 		return rows
 
 class StatisticsReport:
@@ -237,11 +206,11 @@ class StatisticsReport:
 		self.ssr_stat = MicrosatelliteStatistics()
 
 	def generateDataTable(self):
-		with open('ssr-statistics.json', 'wb') as fp:
+		with open(STAT_JSON, 'wb') as fp:
 			json.dump(self.data, fp)
 
 	def readDataTable(self):
-		with open('ssr-statistics.json', 'rb') as fh:
+		with open(STAT_JSON, 'rb') as fh:
 			data = json.load(fh)
 		return Data(data)
 
@@ -260,9 +229,15 @@ class StatisticsReport:
 		self.data.density = self.ssr_stat.density
 		
 		self.data.ssrtypes = self.ssr_stat.getMotifLenStat()
-		chart_data = [row[0:2] for row in self.data.ssrtypes[1:]]
-		Plots('niblet_ssr_len', chart_data).pie()
+		Plots.SSRLenPie(self.data.ssrtypes)
 
 		self.data.ssrmotifs = self.ssr_stat.getMotifTypeStat()
+		Plots.SSRMotifScatter(self.data.ssrmotifs)
+		Plots.mostMoitfBar(self.data.ssrmotifs)
+
+
+
+
+
 		self.data.ssrrepeats = self.ssr_stat.getMotifRepeatStat()
 

@@ -9,10 +9,10 @@ from PySide.QtGui import *
 from PySide.QtSql import *
 from PySide.QtWebKit import *
 
+from db import *
 from utils import *
 from workers import *
-
-from db import *
+from config import *
 
 class SSRMainWindow(QMainWindow):
 	def __init__(self):
@@ -37,6 +37,10 @@ class SSRMainWindow(QMainWindow):
 		#self.setCentralWidget(self.browser)
 
 		self.reportor = QTextBrowser()
+		self.reportor.setSearchPaths([CACHE_PATH])
+		self.reportor.setOpenLinks(False)
+		self.reportor.setOpenExternalLinks(False)
+		self.reportor.anchorClicked.connect(self.saveStatTableFigure)
 
 		#search text input
 		self.filter = SSRFilterInput(self)
@@ -50,9 +54,27 @@ class SSRMainWindow(QMainWindow):
 		self.createToolBars()
 		self.createStatusBar()
 
+		#read settings
 		self.readSettings()
 
 		self.show()
+
+	def saveStatTableFigure(self, url):
+		action = url.toString()
+		name = QFileDialog.getSaveFileName(self, directory=action, filter="SVG image (*.svg)")
+		if not name: return
+		print name
+
+	def setDatabase(self, db_name):
+		try:
+			db = open_database(db_name)
+		except Exception, e:
+			QMessageBox.critical(self,
+				self.tr('Error occurred'),
+				self.tr(str(e))
+			)
+			return False
+		return True
 
 	def readSettings(self):
 		self.settings = QSettings("config.ini", QSettings.IniFormat)
@@ -312,8 +334,10 @@ class SSRMainWindow(QMainWindow):
 
 	def openProject(self):
 		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
-		if not dbfile: return
-		open_database(dbfile)
+		if not dbfile:
+			return
+		
+		self.setDatabase(dbfile)
 		self.showMicrosatellites()
 
 	def saveProject(self):
@@ -323,7 +347,9 @@ class SSRMainWindow(QMainWindow):
 			return
 
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
-		if not dbfile: return
+		if not dbfile:
+			return
+
 		query = QSqlQuery()
 		query.exec_("ATTACH DATABASE '%s' AS 'filedb'" % dbfile)
 		for table in db.tables():
@@ -332,7 +358,9 @@ class SSRMainWindow(QMainWindow):
 
 	def saveProjectAs(self):
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
-		if not dbfile: return
+		if not dbfile:
+			return
+		
 		query = QSqlQuery()
 		query.exec_("ATTACH DATABASE '%s' AS 'filedb'" % dbfile)
 		db = QSqlDatabase.database()
@@ -517,7 +545,7 @@ class SSRMainWindow(QMainWindow):
 		#while self.model.canFetchMore():
 		#	self.model.fetchMore()
 		#counts = self.model.rowCount()
-		sql = self.model.selectStatement()
+		sql = str(self.model.selectStatement())
 		query = QSqlQuery("SELECT COUNT(1) FROM %s" % sql.split('FROM')[1].strip())
 		query.next()
 		self.rowCounts.setText("Rows: %s" % query.value(0))
