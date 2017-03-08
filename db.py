@@ -1,10 +1,90 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
-import inspect
+import apsw
 from PySide.QtCore import QObject
 from PySide.QtSql import QSqlDatabase, QSqlQuery
-from utils import Data
+
+import config
+import utils
+
+sql = """
+CREATE TABLE IF NOT EXISTS `ssr`(
+	sid INTEGER PRIMARY KEY,
+	sequence TEXT,
+	start INTEGER,
+	stop INTEGER,
+	motif TEXT,
+	standard TEXT,
+	type INTEGER,
+	repeat INTEGER,
+	length INTEGER
+);
+CREATE TABLE IF NOT EXISTS `cssr`(
+	cid INTEGER PRIMARY KEY
+	sequence TEXT,
+	start INTEGER,
+	stop INTEGER,
+	motif TEXT,
+	standard TEXT,
+	complexity INTEGER,
+	length INTEGER,
+	component TEXT,
+	structure TEXT
+);
+
+CREATE TABLE IF NOT EXISTS `ltr`(
+	lid INTEGER PRIMARY KEY,
+	sequence TEXT,
+	start INTEGER,
+	stop INTEGER,
+	motif TEXT,
+	type INTEGER,
+	repeat INTEGER,
+	length INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS `issr`(
+	iid INTEGER PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS `fasta`(
+	fid INTEGER PRIMARY KEY,
+	path TEXT
+);
+
+CREATE TABLE IF NOT EXISTS `sequence`(
+	sid INTEGER PRIMARY KEY,
+	name TEXT,
+	fid INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS `meta`(
+	name, TEXT,
+	value, TEXT
+);
+
+"""
+
+
+class DB:
+	_conn = None
+	def __init__(self):
+		if self._conn is None:
+			self._conn = apsw.Connection(config.DATABASE)
+
+	def getCursor(self):
+		return self._conn.cursor()
+
+	def __del__(self):
+		self._conn.close()
+
+
+
+
+
+
+
 
 __all__ = [
 	"open_database",

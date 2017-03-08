@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import apsw
 import platform
 
 from PySide.QtCore import *
@@ -336,8 +337,13 @@ class SSRMainWindow(QMainWindow):
 		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
 		if not dbfile:
 			return
-		
-		self.setDatabase(dbfile)
+		source = apsw.Connection(dbfile)
+		target = apsw.Connection(DATABASE)
+
+		with target.backup('main', source, 'main') as b:
+			while not b.done:
+				b.step(100)
+
 		self.showMicrosatellites()
 
 	def saveProject(self):
@@ -546,9 +552,10 @@ class SSRMainWindow(QMainWindow):
 		#	self.model.fetchMore()
 		#counts = self.model.rowCount()
 		sql = str(self.model.selectStatement())
-		query = QSqlQuery("SELECT COUNT(1) FROM %s" % sql.split('FROM')[1].strip())
-		query.next()
-		self.rowCounts.setText("Rows: %s" % query.value(0))
+		print sql
+		#query = QSqlQuery("SELECT COUNT(1) FROM %s" % sql.split('FROM')[1].strip())
+		#query.next()
+		#self.rowCounts.setText("Rows: %s" % query.value(0))
 		
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)

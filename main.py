@@ -21,7 +21,7 @@ with open('style.qss') as qss:
 
 #connect to sqlite database
 db = QSqlDatabase.addDatabase('QSQLITE')
-db.setDatabaseName(config.SSR_DB)
+db.setDatabaseName(config.DATABASE)
 db.open()
 QSqlQuery("PRAGMA synchronous=OFF;")
 

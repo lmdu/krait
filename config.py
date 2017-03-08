@@ -8,7 +8,7 @@ ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 CACHE_PATH = os.path.join(ROOT_PATH, 'cache')
 
 #Default sqlite3 database file
-SSR_DB = os.path.join(CACHE_PATH, 'ssr.db')
+DATABASE = 'file:ssr?mode=memory&cache=shared'
 
 #statistical json data store file
 STAT_JSON = os.path.join(CACHE_PATH, 'stat.json')
