@@ -341,8 +341,10 @@ class SSRMainWindow(QMainWindow):
 		target = apsw.Connection(DATABASE)
 
 		with target.backup('main', source, 'main') as b:
-			while not b.done:
-				b.step(100)
+			b.step()
+
+		source.close()
+		target.close()
 
 		self.showMicrosatellites()
 

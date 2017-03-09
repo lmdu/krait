@@ -4,12 +4,14 @@ import sys
 #do not generate pyc file
 sys.dont_write_bytecode = True
 
+from PySide.QtCore import Qt
 from PySide.QtGui import QApplication
 from PySide.QtSql import QSqlDatabase, QSqlQuery
 from db import open_database
 import config
 
 #create application and set properties
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 app = QApplication(sys.argv)
 app.setOrganizationName('Chengdu University')
 app.setOrganizationDomain('http://www.cdu.edu.cn')

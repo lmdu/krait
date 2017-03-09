@@ -8,93 +8,35 @@ from PySide.QtSql import QSqlDatabase, QSqlQuery
 import config
 import utils
 
-sql = """
-CREATE TABLE IF NOT EXISTS `ssr`(
-	sid INTEGER PRIMARY KEY,
-	sequence TEXT,
-	start INTEGER,
-	stop INTEGER,
-	motif TEXT,
-	standard TEXT,
-	type INTEGER,
-	repeat INTEGER,
-	length INTEGER
-);
-CREATE TABLE IF NOT EXISTS `cssr`(
-	cid INTEGER PRIMARY KEY
-	sequence TEXT,
-	start INTEGER,
-	stop INTEGER,
-	motif TEXT,
-	standard TEXT,
-	complexity INTEGER,
-	length INTEGER,
-	component TEXT,
-	structure TEXT
-);
-
-CREATE TABLE IF NOT EXISTS `ltr`(
-	lid INTEGER PRIMARY KEY,
-	sequence TEXT,
-	start INTEGER,
-	stop INTEGER,
-	motif TEXT,
-	type INTEGER,
-	repeat INTEGER,
-	length INTEGER
-);
-
-CREATE TABLE IF NOT EXISTS `issr`(
-	iid INTEGER PRIMARY KEY
-);
-
-CREATE TABLE IF NOT EXISTS `fasta`(
-	fid INTEGER PRIMARY KEY,
-	path TEXT
-);
-
-CREATE TABLE IF NOT EXISTS `sequence`(
-	sid INTEGER PRIMARY KEY,
-	name TEXT,
-	fid INTEGER
-);
-
-CREATE TABLE IF NOT EXISTS `meta`(
-	name, TEXT,
-	value, TEXT
-);
-
-"""
-
-
-class DB:
+class Database:
 	_conn = None
 	def __init__(self):
 		if self._conn is None:
 			self._conn = apsw.Connection(config.DATABASE)
-
-	def getCursor(self):
-		return self._conn.cursor()
+			self._create_table()
 
 	def __del__(self):
 		self._conn.close()
 
+	def _create_table(self):
+		self.cursor().execute(config.CREATE_TABLES_SQL)
 
+	def cursor(self):
+		return self._conn.cursor()
+	
+	def query(self, sql, data=None):
+		if data is None:
+			return self.cursor().execute(sql)
 
+		if isinstance(list, data):
+			self.cursor().executemany(sql, data)
+		else:
+			self.cursor().execute(sql, data)
 
+	def get(self, sql):
+		for row in self.cursor().execute():
+			if row: return row[0]
 
-
-
-
-__all__ = [
-	"open_database",
-	"MicrosatelliteTable",
-	"CompoundTable",
-	"SatelliteTable",
-	"FastaTable",
-	"SequenceTable",
-	"MetaTable"
-]
 
 def open_database(dbname=':memory:'):
 	db = QSqlDatabase.database()
