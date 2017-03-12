@@ -34,8 +34,8 @@ class SSRMainWindow(QMainWindow):
 		#self.table.doubleClicked.connect(self.showSSRSequence)
 		#self.model = SSRTableModel()
 		self.model = TableModel()
-		self.model.row_col.connect(self.changeRowColCount)
 		self.table.setModel(self.model)
+		self.model.row_col.connect(self.changeRowColCount)
 		self.setCentralWidget(self.table)
 		#self.setCentralWidget(self.browser)
 
@@ -356,16 +356,14 @@ class SSRMainWindow(QMainWindow):
 		if not dbfile:
 			return
 
-		for p in self.db.save(dbfile):
-			self.setProgress(p)
+		self.db.save(dbfile)
 
 	def saveProjectAs(self):
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
 		if not dbfile:
 			return
 
-		for p in self.db.save(dbfile):
-			self.setProgress(p)
+		self.db.save(dbfile)
 
 	def closeProject(self):
 		self.db.drop_tables()
@@ -508,6 +506,7 @@ class SSRMainWindow(QMainWindow):
 
 	def filterTable(self):
 		filters = str(self.filter.text())
+
 		if filters.startswith('db'):
 			self.model.setTable(filters.split('=')[1])
 			return
@@ -547,6 +546,7 @@ class SSRMainWindow(QMainWindow):
 
 
 	def changeRowColCount(self, count):
+		self.table.setColumnWidth(0, 30)
 		self.rowCounts.setText("Row: %s" % count[0])
 		self.colCounts.setText("Col: %s" % count[1])
 	
@@ -613,7 +613,7 @@ class SSRTableView(QTableView):
 		super(SSRTableView, self).__init__(parent)
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
-		self.setEditTriggers(QAbstractItemView.EditTrigger)
+		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setSelectionMode(QAbstractItemView.SingleSelection)
 		self.setSortingEnabled(True)
@@ -645,7 +645,8 @@ class TableModel(QAbstractTableModel):
 	def sort(self, column, order):
 		if column == 0:
 			return
-		col = self.headers[column]
+		
+		col = self.headers[column-1]
 		if order == Qt.SortOrder.DescendingOrder:
 			self.query[2] = "ORDER BY %s DESC" % (col)
 			self.select()
@@ -658,7 +659,7 @@ class TableModel(QAbstractTableModel):
 		self.beginResetModel()
 		self.dataset = self.db.get_column(sql)
 		self.read_row = 0
-		self.selected = set([0,1])
+		self.selected = set()
 		self.endResetModel()
 		self.row_col.emit((len(self.dataset), len(self.headers)))
 
@@ -711,6 +712,10 @@ class TableModel(QAbstractTableModel):
 
 
 	def headerData(self, section, orientation, role=Qt.DisplayRole):
+		if role == Qt.SizeHintRole:
+			if section == 0:
+				return QSize(20, -1)
+
 		if role != Qt.DisplayRole:
 			return None
 
@@ -726,11 +731,11 @@ class TableModel(QAbstractTableModel):
 		if not index.isValid():
 			return False
 
-		if index.column != 0:
+		if index.column() != 0:
 			return False
 
 		if role == Qt.CheckStateRole:
-			if int(value) == Qt.Checked:
+			if value == Qt.Checked:
 				self.selected.add(index.row())
 			else:
 				if index.row() in self.selected:
@@ -753,7 +758,7 @@ class TableModel(QAbstractTableModel):
 		return flag
 
 	def canFetchMore(self, parent):
-		return not parent.isValid() and (self.read_row < len(self.dataset))
+		return self.read_row < len(self.dataset)
 
 	def fetchMore(self, parent):
 		remainder = len(self.dataset) - self.read_row
