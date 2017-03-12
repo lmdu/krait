@@ -8,7 +8,7 @@ ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 CACHE_PATH = os.path.join(ROOT_PATH, 'cache')
 
 #Default sqlite3 database file
-DATABASE = 'file:ssr?mode=memory&cache=shared'
+DATABASE = os.path.join(CACHE_PATH, 'ssr.db')
 
 #statistical json data store file
 STAT_JSON = os.path.join(CACHE_PATH, 'stat.json')
@@ -19,21 +19,21 @@ MAX_ROWS = 20
 #create tables in database
 CREATE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS `ssr`(
-	sid INTEGER PRIMARY KEY,
+	id INTEGER PRIMARY KEY,
 	sequence TEXT,
-	start INTEGER,
-	stop INTEGER,
-	motif TEXT,
 	standard TEXT,
+	motif TEXT,
 	type INTEGER,
 	repeat INTEGER,
+	start INTEGER,
+	end INTEGER,
 	length INTEGER
 );
 CREATE TABLE IF NOT EXISTS `cssr`(
-	cid INTEGER PRIMARY KEY
+	id INTEGER PRIMARY KEY,
 	sequence TEXT,
 	start INTEGER,
-	stop INTEGER,
+	end INTEGER,
 	motif TEXT,
 	standard TEXT,
 	complexity INTEGER,
@@ -42,11 +42,11 @@ CREATE TABLE IF NOT EXISTS `cssr`(
 	structure TEXT
 );
 
-CREATE TABLE IF NOT EXISTS `ltr`(
-	lid INTEGER PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS `vntr`(
+	id INTEGER PRIMARY KEY,
 	sequence TEXT,
 	start INTEGER,
-	stop INTEGER,
+	end INTEGER,
 	motif TEXT,
 	type INTEGER,
 	repeat INTEGER,
@@ -54,23 +54,23 @@ CREATE TABLE IF NOT EXISTS `ltr`(
 );
 
 CREATE TABLE IF NOT EXISTS `issr`(
-	iid INTEGER PRIMARY KEY
+	id INTEGER PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS `fasta`(
-	fid INTEGER PRIMARY KEY,
+	id INTEGER PRIMARY KEY,
 	path TEXT
 );
 
-CREATE TABLE IF NOT EXISTS `sequence`(
-	sid INTEGER PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS `seq`(
+	id INTEGER PRIMARY KEY,
 	name TEXT,
 	fid INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS `meta`(
-	name, TEXT,
-	value, TEXT
+	name TEXT,
+	value TEXT
 );
 
 """

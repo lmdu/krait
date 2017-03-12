@@ -1,57 +1,83 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import division
+import time
 import jinja2
-from PySide.QtCore import QThread, Signal
+import pyfaidx
+from PySide.QtCore import *
+
+import fasta
+import motif
+import tandem
 from ssr import *
 from db import *
 from statistics import StatisticsReport
 from utils import Data
 from config import MAX_ROWS
 
-class Worker(QThread):
+class Worker(QObject):
 	update_progress = Signal(int)
 	update_message = Signal(str)
-	
-	def __init__(self, parent):
-		super(Worker, self).__init__(parent)
+	finished = Signal()
+	_db = None
 
-class MicrosatelliteWorker(Worker):
+	@property
+	def db(self):
+		if self._db is None:
+			self._db = Database()
+		return self._db
+
+class SSRWorker(Worker):
 	'''
 	perfect microsatellite search thread
 	'''
-	def __init__(self, parent, fastas, rules, level):
-		super(MicrosatelliteWorker, self).__init__(parent)
+	def __init__(self, fastas, min_repeats, standard_level):
+		super(SSRWorker, self).__init__()
 		self.fastas = fastas
-		self.rules = rules
-		self.level = level
+		self.min_repeats = min_repeats
+		self.motifs = motif.StandardMotif(standard_level)
 		self.fasta_counts = len(self.fastas)
-		
-		self.ssr_table = MicrosatelliteTable()
-		self.seq_table = SequenceTable()
 
-	def run(self):
+	@Slot()
+	def process(self):
+		start = time.time()
 		current_fastas = 0
-		for fasta in self.fastas:
+		for _, fasta_file in self.fastas:
 			current_fastas += 1
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
-			self.update_message.emit("Building fasta index for %s." % fasta)
-			detector = MicrosatelliteDetector(fasta.path, self.rules, self.level)
+			self.update_message.emit("Building fasta index for %s" % fasta_file)
+			seqs = fasta.Fasta(fasta_file)
+			#insert ssr to database
+			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
 
-			#get all sequence names
-			for name in detector.fastas.keys():
-				self.seq_table.insert(Data(sid=None, name=name, fid=fasta.fid))
+			current_seqs = 0
+			seq_counts = len(seqs)
+			#start search perfect microsatellites
+			for name, seq in seqs:
+				self.update_message.emit("Search perfect SSRs from %s" % name)
+				current_seqs += 1
+				seq_progress = current_seqs/seq_counts
+				ssrs = tandem.search_ssr(seq, self.min_repeats)
+				
+				def values():
+					for ssr in ssrs:
+						row = [None, name, self.motifs.standard(ssr[0])]
+						row.extend(ssr)
+						yield row
 
-			#start search perfect SSRs
-			self.update_message.emit("Searching perfect SSRs...")
-			for ssr in detector:
-				self.ssr_table.insert(ssr)
-				self.update_progress.emit(round(fasta_progress*detector.progress*100))
-
-			self.update_progress.emit(100)
-			self.update_message.emit('Perfect SSRs search completed.')
+				self.update_message.emit("Insert SSRs to database")
+				cursor = self.db.get_cursor()
+				cursor.execute("BEGIN TRANSACTION;")
+				cursor.executemany(sql, values())
+				cursor.execute("COMMIT;")
+				self.update_progress.emit(int(seq_progress*fasta_progress*100))
+				del seq
+		self.update_progress.emit(100)
+		self.update_message.emit('Perfect SSRs search completed')
+		self.finished.emit()
+		print time.time() - start
 
 
 class CompoundWorker(Worker):

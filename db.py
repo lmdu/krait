@@ -2,41 +2,65 @@
 # -*- coding: utf-8 -*-
 import sys
 import apsw
+import random
 from PySide.QtCore import QObject
 from PySide.QtSql import QSqlDatabase, QSqlQuery
 
 import config
 import utils
 
-class Database:
-	_conn = None
-	def __init__(self):
-		if self._conn is None:
-			self._conn = apsw.Connection(config.DATABASE)
-			self._create_table()
+conn = apsw.Connection(':memory:')
 
-	def __del__(self):
-		self._conn.close()
+class Database:
+	def __init__(self):
+		if not self.get_tables():
+			self._create_table()
+		self.get_cursor().execute("PRAGMA synchronous=OFF;")
 
 	def _create_table(self):
-		self.cursor().execute(config.CREATE_TABLES_SQL)
+		self.get_cursor().execute(config.CREATE_TABLES_SQL)
 
-	def cursor(self):
-		return self._conn.cursor()
-	
-	def query(self, sql, data=None):
-		if data is None:
-			return self.cursor().execute(sql)
+	def get_columns(self, table):
+		cursor = self.get_cursor()
+		for row in cursor.execute("SELECT * FROM %s" % table):
+			return [col[0] for col in cursor.getdescription()]
 
-		if isinstance(list, data):
-			self.cursor().executemany(sql, data)
-		else:
-			self.cursor().execute(sql, data)
+	def drop_tables(self):
+		for table in self.get_tables():
+			self.get_cursor().execute("DROP TABLE %s" % table)
 
-	def get(self, sql):
-		for row in self.cursor().execute():
-			if row: return row[0]
+	def get_tables(self):
+		sql = "SELECT name FROM sqlite_master WHERE type='table'"
+		return [row[0] for row in self.get_cursor().execute(sql)]
 
+	def get_cursor(self):
+		return conn.cursor()
+
+	def get_one(self, sql):
+		for row in self.get_cursor().execute(sql):
+			if row:
+				if len(row) == 1:
+					return row[0]
+				else:
+					return row
+			return None
+
+
+	def get_all(self, sql):
+		return self.get_cursor().execute(sql).fetchall()
+
+	def get_column(self, sql):
+		return [row[0] for row in self.get_cursor().execute(sql)]
+
+	def open(self, dbfile):
+		source = apsw.Connection(dbfile)
+		with conn.backup("main", source, "main") as b:
+			b.step()
+
+	def save(self, dbfile):
+		target = apsw.Connection(dbfile)
+		with target.backup("main", conn, "main") as b:
+			b.step()
 
 def open_database(dbname=':memory:'):
 	db = QSqlDatabase.database()

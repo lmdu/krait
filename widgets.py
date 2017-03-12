@@ -4,6 +4,7 @@ import os
 import sys
 import apsw
 import platform
+import numpy as np
 
 from PySide.QtCore import *
 from PySide.QtGui import *
@@ -30,9 +31,10 @@ class SSRMainWindow(QMainWindow):
 		##self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		#self.table.setSortingEnabled(True)
 		#self.table.setContextMenuPolicy(Qt.CustomContextMenu)
-		self.table.doubleClicked.connect(self.showSSRSequence)
-		self.model = SSRTableModel()
-		self.model.refreshed.connect(self.changeRowCount)
+		#self.table.doubleClicked.connect(self.showSSRSequence)
+		#self.model = SSRTableModel()
+		self.model = TableModel()
+		self.model.row_col.connect(self.changeRowColCount)
 		self.table.setModel(self.model)
 		self.setCentralWidget(self.table)
 		#self.setCentralWidget(self.browser)
@@ -54,6 +56,9 @@ class SSRMainWindow(QMainWindow):
 		self.createMenus()
 		self.createToolBars()
 		self.createStatusBar()
+
+		#connect to database
+		self.db = Database()
 
 		#read settings
 		self.readSettings()
@@ -323,10 +328,13 @@ class SSRMainWindow(QMainWindow):
 		self.statusBar = self.statusBar()
 		self.statusBar.showMessage("Genome-wide microsatellites analysis tool.")
 		
-		#add row counts widget
-		self.rowCounts = QLabel("Rows: 0", self)
+		#add row and column counts widget
+		self.rowCounts = QLabel("Row: 0", self)
 		self.rowCounts.setStyleSheet("margin-right:20px;")
 		self.statusBar.addPermanentWidget(self.rowCounts)
+		self.colCounts = QLabel("Col: 0", self)
+		self.colCounts.setStyleSheet("margin-right:20px;")
+		self.statusBar.addPermanentWidget(self.colCounts)
 		
 		#add progressing bar
 		self.progressBar = QProgressBar(self)
@@ -337,51 +345,31 @@ class SSRMainWindow(QMainWindow):
 		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
 		if not dbfile:
 			return
-		source = apsw.Connection(dbfile)
-		target = apsw.Connection(DATABASE)
 
-		with target.backup('main', source, 'main') as b:
-			b.step()
-
-		source.close()
-		target.close()
+		self.db.drop_tables()
+		self.db.open(dbfile)
 
 		self.showMicrosatellites()
 
 	def saveProject(self):
-		db = QSqlDatabase.database()
-		if not db.databaseName():
-			db.commit()
-			return
-
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
 		if not dbfile:
 			return
 
-		query = QSqlQuery()
-		query.exec_("ATTACH DATABASE '%s' AS 'filedb'" % dbfile)
-		for table in db.tables():
-			query.exec_("CREATE TABLE filedb.%s AS SELECT * FROM %s" % (table, table))
-		query.exec_("DETACH DATABASE filedb")
+		for p in self.db.save(dbfile):
+			self.setProgress(p)
 
 	def saveProjectAs(self):
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
 		if not dbfile:
 			return
-		
-		query = QSqlQuery()
-		query.exec_("ATTACH DATABASE '%s' AS 'filedb'" % dbfile)
-		db = QSqlDatabase.database()
-		for table in db.tables():
-			query.exec_("CREATE TABLE filedb.%s AS SELECT * FROM %s" % (table, table))
-		query.exec_("DETACH DATABASE filedb")
+
+		for p in self.db.save(dbfile):
+			self.setProgress(p)
 
 	def closeProject(self):
-		db = QSqlDatabase.database()
-		db.close()
-		del self.model
-		self.model = SSRTableModel()
-		self.table.setModel(self.model)
+		self.db.drop_tables()
+		self.model.select()
 	
 	def importFasta(self):
 		'''
@@ -389,7 +377,8 @@ class SSRMainWindow(QMainWindow):
 		'''
 		fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta);;All files (*.*)")
 		if not fasta: return
-		self.fasta_table.insert(Data(fid=None, path=fasta))
+		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, fasta))
+		#self.fasta_table.insert(Data(fid=None, path=fasta))
 		self.setStatusMessage("Import fasta %s" % fasta)
 
 	def importFastas(self):
@@ -434,6 +423,15 @@ class SSRMainWindow(QMainWindow):
 		if dialog.exec_() == QDialog.Accepted:
 			dialog.saveSettings()
 
+	def execute(self, worker):
+		self.thread = QThread()
+		self.thread.started.connect(worker.process)
+		worker.finished.connect(self.thread.quit)
+		worker.finished.connect(worker.deleteLater)
+		self.thread.finished.connect(self.thread.deleteLater)
+		worker.moveToThread(self.thread)
+		self.thread.start()
+
 	def searchMicrosatellites(self):
 		#if self.db.isTableExists('ssr'):
 		#	status = QMessageBox.warning(self, 
@@ -444,27 +442,28 @@ class SSRMainWindow(QMainWindow):
 
 		#	if status == QMessageBox.Cancel:
 			
-		rules = {
-			1: int(self.settings.value('ssr/mono')),
-			2: int(self.settings.value('ssr/di')),
-			3: int(self.settings.value('ssr/tri')), 
-			4: int(self.settings.value('ssr/tetra')),
-			5: int(self.settings.value('ssr/penta')),
-			6: int(self.settings.value('ssr/hexa'))
-		}
+		rules = [
+			int(self.settings.value('ssr/mono')),
+			int(self.settings.value('ssr/di')),
+			int(self.settings.value('ssr/tri')), 
+			int(self.settings.value('ssr/tetra')),
+			int(self.settings.value('ssr/penta')),
+			int(self.settings.value('ssr/hexa'))
+		]
 		level = int(self.settings.value('ssr/level'))
-		fastas = [fasta for fasta in self.fasta_table.fetchAll()]
-		worker = MicrosatelliteWorker(self, fastas, rules, level)
-		worker.update_message.connect(self.setStatusMessage)
-		worker.update_progress.connect(self.setProgress)
-		worker.finished.connect(self.showMicrosatellites)
-		worker.start()
+		fastas = self.db.get_all("SELECT * FROM fasta")
+		self.worker = SSRWorker(fastas, rules, level)
+		self.worker.update_message.connect(self.setStatusMessage)
+		self.worker.update_progress.connect(self.setProgress)
+		self.worker.finished.connect(self.showMicrosatellites)
+		self.execute(self.worker)
 	
-
+	@Slot()
 	def showMicrosatellites(self):
 		self.model.setTable('ssr')
 		#self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
-		self.model.refresh()
+		#self.model.refresh()
+		self.model.select()
 
 	def removePerfectSSRs(self):
 		pass
@@ -511,10 +510,8 @@ class SSRMainWindow(QMainWindow):
 		filters = str(self.filter.text())
 		if filters.startswith('db'):
 			self.model.setTable(filters.split('=')[1])
-			self.model.select()
 			return
 		self.model.setFilter(filters)
-		self.model.refresh()
 
 	def generateStatisticsReport(self):
 		worker = StatisticsWorker(self.reportor, self)
@@ -549,19 +546,15 @@ class SSRMainWindow(QMainWindow):
 			pass
 
 
-	def changeRowCount(self):
-		#while self.model.canFetchMore():
-		#	self.model.fetchMore()
-		#counts = self.model.rowCount()
-		sql = str(self.model.selectStatement())
-		print sql
-		#query = QSqlQuery("SELECT COUNT(1) FROM %s" % sql.split('FROM')[1].strip())
-		#query.next()
-		#self.rowCounts.setText("Rows: %s" % query.value(0))
-		
+	def changeRowColCount(self, count):
+		self.rowCounts.setText("Row: %s" % count[0])
+		self.colCounts.setText("Col: %s" % count[1])
+	
+	@Slot(int)
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)
 
+	@Slot(str)
 	def setStatusMessage(self, msg):
 		self.statusBar.showMessage(msg)
 
@@ -616,14 +609,158 @@ class SSRTableModel(QSqlTableModel):
 
 
 class SSRTableView(QTableView):
-	def __init__(self):
-		super(SSRTableView, self).__init__()
+	def __init__(self, parent=None):
+		super(SSRTableView, self).__init__(parent)
 		self.verticalHeader().hide()
-		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.horizontalHeader().setHighlightSections(False)
+		self.setEditTriggers(QAbstractItemView.EditTrigger)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
-		self.setSelectionMode(QAbstractItemView.ContiguousSelection)
+		self.setSelectionMode(QAbstractItemView.SingleSelection)
 		self.setSortingEnabled(True)
 
+class TableModel(QAbstractTableModel):
+	row_col = Signal(tuple)
+	def __init__(self, parent=None):
+		super(TableModel, self).__init__(parent)
+		self.headers = []
+		self.dataset = []
+		self.selected = set()
+		self.read_row = 0
+		self.db = Database()
+		self.query = ['', '', '']
+
+	def setTable(self, table):
+		self.table = table
+		self.headers = self.db.get_columns(self.table)
+		self.query[0] = "SELECT id FROM %s" % self.table
+
+	def setFilter(self, condition=''):
+		if condition:
+			self.query[1] = "WHERE %s" % condition
+			self.select()
+		else:
+			self.query[1] = ''
+			self.select()
+
+	def sort(self, column, order):
+		if column == 0:
+			return
+		col = self.headers[column]
+		if order == Qt.SortOrder.DescendingOrder:
+			self.query[2] = "ORDER BY %s DESC" % (col)
+			self.select()
+		else:
+			self.query[2] = ''
+			self.select()
+
+	def select(self):
+		sql = " ".join(self.query)
+		self.beginResetModel()
+		self.dataset = self.db.get_column(sql)
+		self.read_row = 0
+		self.selected = set([0,1])
+		self.endResetModel()
+		self.row_col.emit((len(self.dataset), len(self.headers)))
+
+	def clear(self):
+		self.dataset = []
+		self.headers = []
+		self.selected = set()
+
+	def value(self, index):
+		ID = self.dataset[index.row()]
+		col = self.headers[index.column()-1]
+		return self.db.get_one("SELECT %s FROM %s WHERE id=%s" % (col, self.table, ID))
+
+	def rowCount(self, parent=QModelIndex()):
+		if parent.isValid():
+			return 0
+
+		return self.read_row
+
+	def columnCount(self, parent=QModelIndex()):
+		if parent.isValid():
+			return 0
+
+		if len(self.headers) > 0:
+			return len(self.headers) + 1
+
+		return len(self.headers)
+
+	def data(self, index, role=Qt.DisplayRole):
+		if not index.isValid():
+			return None
+
+		if not 0 <= index.row() < self.rowCount():
+			return None
+
+		elif role == Qt.DisplayRole:
+			if index.column() > 0:
+				return self.value(index)
+			else:
+				return None
+
+		elif role == Qt.CheckStateRole:
+			if index.column() == 0:
+				if index.row() in self.selected:
+					return Qt.Checked
+				else:
+					return Qt.Unchecked
+
+		return None
+
+
+	def headerData(self, section, orientation, role=Qt.DisplayRole):
+		if role != Qt.DisplayRole:
+			return None
+
+		if orientation == Qt.Horizontal:
+			if section == 0:
+				return ''
+			else:
+				return self.headers[section-1]
+
+		return None
+
+	def setData(self, index, value, role):
+		if not index.isValid():
+			return False
+
+		if index.column != 0:
+			return False
+
+		if role == Qt.CheckStateRole:
+			if int(value) == Qt.Checked:
+				self.selected.add(index.row())
+			else:
+				if index.row() in self.selected:
+					self.selected.remove(index.row())
+			
+			self.dataChanged.emit(index, index)
+			return True
+
+		return False
+
+	def flags(self, index):
+		if not index.isValid():
+			return QAbstractItemModel.flags(index)
+
+		flag = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+		if index.column() == 0:
+			return flag | Qt.ItemIsUserCheckable
+
+		return flag
+
+	def canFetchMore(self, parent):
+		return not parent.isValid() and (self.read_row < len(self.dataset))
+
+	def fetchMore(self, parent):
+		remainder = len(self.dataset) - self.read_row
+		fetch_row = min(100, remainder)
+		self.beginInsertRows(QModelIndex(), self.read_row, self.read_row+fetch_row)
+		self.read_row += fetch_row
+		self.endInsertRows()
 
 class PreferenceDialog(QDialog):
 	def __init__(self, parent=None, settings=None):
