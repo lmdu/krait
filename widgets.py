@@ -4,7 +4,6 @@ import os
 import sys
 import apsw
 import platform
-import numpy as np
 
 from PySide.QtCore import *
 from PySide.QtGui import *
@@ -195,6 +194,11 @@ class SSRMainWindow(QMainWindow):
 		self.imperfectAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
 		self.imperfectAct.setToolTip(self.tr("Find imperfect microsatellites"))
 
+		#design primer
+		self.primerAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
+		self.primerAct.setToolTip(self.tr("Design primers"))
+		self.primerAct.triggered.connect(self.designPrimers)
+
 		#statistics report
 		self.statisticsAct = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
 		self.statisticsAct.triggered.connect(self.generateStatisticsReport)
@@ -286,6 +290,10 @@ class SSRMainWindow(QMainWindow):
 		self.satelliteMenu.addSeparator()
 		self.satelliteMenu.addAction(self.satelliteRuleAct)
 
+		self.imperfectMenu = QMenu()
+
+		self.primerMenu = QMenu()
+
 		self.statisticsMenu = QMenu()
 		self.statisticsMenu.addAction(self.statisticsMenuAct)
 		
@@ -306,15 +314,11 @@ class SSRMainWindow(QMainWindow):
 		self.satelliteAct.setMenu(self.satelliteMenu)
 		self.toolBar.addAction(self.satelliteAct)
 
+		self.imperfectAct.setMenu(self.imperfectMenu)
 		self.toolBar.addAction(self.imperfectAct)
 
-		self.statToolBtn = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
-		#self.statToolBtn.setDisabled(True)
-		self.statToolBtnMenu = QMenu()
-		self.statToolBtnMenu.addAction("Settings")
-		self.statToolBtnMenu.addAction("Testings")
-		self.statToolBtn.setMenu(self.statToolBtnMenu)
-		self.toolBar.addAction(self.statToolBtn)
+		self.primerAct.setMenu(self.primerMenu)
+		self.toolBar.addAction(self.primerAct)
 
 		self.statisticsAct.setMenu(self.statisticsMenu)
 		self.toolBar.addAction(self.statisticsAct)
@@ -462,7 +466,6 @@ class SSRMainWindow(QMainWindow):
 		self.worker.finished.connect(self.showMicrosatellites)
 		self.execute(self.worker)
 	
-	@Slot()
 	def showMicrosatellites(self):
 		self.model.setTable('ssr')
 		#self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
@@ -505,6 +508,16 @@ class SSRMainWindow(QMainWindow):
 		self.model.refresh()
 
 	def removeSatellites(self):
+		pass
+
+	def designPrimers(self):
+		print self.model.selected
+		sql = (
+			"SELECT f.path,t.id,t.motif,t.start,t.end FROM fasta AS f,sequence AS s,%s AS t"
+			""
+		)
+
+	def showPrimers(self):
 		pass
 
 	def estimateBestMaxDistance(self):
