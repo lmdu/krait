@@ -36,6 +36,7 @@ class SSRMainWindow(QMainWindow):
 		self.model = TableModel()
 		self.table.setModel(self.model)
 		self.model.row_col.connect(self.changeRowColCount)
+		self.model.sel_row.connect(self.changeSelectCount)
 		self.setCentralWidget(self.table)
 		#self.setCentralWidget(self.browser)
 
@@ -330,11 +331,16 @@ class SSRMainWindow(QMainWindow):
 		
 		#add row and column counts widget
 		self.rowCounts = QLabel("Row: 0", self)
-		self.rowCounts.setStyleSheet("margin-right:20px;")
+		self.rowCounts.setStyleSheet("margin-right:10px;")
 		self.statusBar.addPermanentWidget(self.rowCounts)
-		self.colCounts = QLabel("Col: 0", self)
-		self.colCounts.setStyleSheet("margin-right:20px;")
+		
+		self.colCounts = QLabel("Column: 0", self)
+		self.colCounts.setStyleSheet("margin-right:10px;")
 		self.statusBar.addPermanentWidget(self.colCounts)
+
+		self.selectCounts = QLabel("Select: 0", self)
+		self.selectCounts.setStyleSheet("margin-right:10px;")
+		self.statusBar.addPermanentWidget(self.selectCounts)
 		
 		#add progressing bar
 		self.progressBar = QProgressBar(self)
@@ -546,9 +552,13 @@ class SSRMainWindow(QMainWindow):
 
 
 	def changeRowColCount(self, count):
-		self.table.setColumnWidth(0, 30)
+		#self.table.setColumnWidth(0, 30)
+		self.table.resizeColumnToContents(0)
 		self.rowCounts.setText("Row: %s" % count[0])
-		self.colCounts.setText("Col: %s" % count[1])
+		self.colCounts.setText("Column: %s" % count[1])
+
+	def changeSelectCount(self, count):
+		self.selectCounts.setText("Select: %s" % count)
 	
 	@Slot(int)
 	def setProgress(self, percent):
@@ -620,6 +630,7 @@ class SSRTableView(QTableView):
 
 class TableModel(QAbstractTableModel):
 	row_col = Signal(tuple)
+	sel_row = Signal(int)
 	def __init__(self, parent=None):
 		super(TableModel, self).__init__(parent)
 		self.headers = []
@@ -742,6 +753,7 @@ class TableModel(QAbstractTableModel):
 					self.selected.remove(index.row())
 			
 			self.dataChanged.emit(index, index)
+			self.sel_row.emit(len(self.selected))
 			return True
 
 		return False

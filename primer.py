@@ -31,7 +31,7 @@ class PrimerDesign:
 	def __iter__(self):
 		return self.designer()
 
-	@property 
+	@property
 	def cmd(self):
 		command = ['primer3_core']
 		if self.setting_file is not None:
