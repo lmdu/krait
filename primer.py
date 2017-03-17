@@ -4,6 +4,8 @@ import time
 import psutil
 import subprocess
 
+import config
+
 def format_boulder_io(boulder_list):
 	records = []
 	for boulder in boulder_list:
@@ -13,6 +15,7 @@ def format_boulder_io(boulder_list):
 	return ''.join(records)
 
 def parse_boulder_io(boulder_lines):
+	print boulder_lines
 	res = {}
 	for line in boulder_lines:
 		k,v = line.strip().split('=')
@@ -33,14 +36,16 @@ class PrimerDesign:
 
 	@property
 	def cmd(self):
-		command = ['primer3_core']
+		command = [config.PRIMER3_EXE]
 		if self.setting_file is not None:
 			command.append('-p3_settings_file=%s' % self.setting_file)
+
+		return command
 
 	def designer(self):
 		proc = psutil.Popen(self.cmd, 
 			stdout=subprocess.PIPE,
-			stdin=subprocess.PIPE, 
+			stdin=subprocess.PIPE,
 			stderr=subprocess.STDOUT
 		)
 		boulder_str = format_boulder_io(self.boulder_list)

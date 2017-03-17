@@ -11,9 +11,11 @@ from PySide.QtSql import *
 from PySide.QtWebKit import *
 
 from db import *
+from fasta import *
 from utils import *
 from workers import *
 from config import *
+from primer import *
 
 class SSRMainWindow(QMainWindow):
 	def __init__(self):
@@ -178,7 +180,7 @@ class SSRMainWindow(QMainWindow):
 		self.maxDistanceAct.triggered.connect(self.setPreference)
 
 		#search satellite dna
-		self.satelliteAct = QAction(QIcon("icons/satellite.png"), self.tr("Satellites"), self)
+		self.satelliteAct = QAction(QIcon("icons/satellite.png"), self.tr("VNTRs"), self)
 		self.satelliteAct.setToolTip(self.tr("Detect satellites"))
 		self.satelliteAct.triggered.connect(self.detectSatellites)
 		self.satelliteMenuAct = QAction(self.tr("Detect satellites"), self)
@@ -198,6 +200,14 @@ class SSRMainWindow(QMainWindow):
 		self.primerAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
 		self.primerAct.setToolTip(self.tr("Design primers"))
 		self.primerAct.triggered.connect(self.designPrimers)
+		self.primerAllAct = QAction(self.tr("Design primer for all rows"), self)
+		self.primerAllAct.setToolTip(self.tr("Design primer for all rows in table"))
+		self.primerAllAct.triggered.connect(self.designPrimerForTable)
+		self.primerSelectAct = QAction(self.tr("Design primer for selected rows"), self)
+		self.primerSelectAct.setToolTip(self.tr("Design primer for selected rows in table"))
+		self.primerSelectAct.triggered.connect(self.designPrimerForSelected)
+		self.primerShowAct = QAction(self.tr("Show designed primers"), self)
+		self.primerRemoveAct = QAction(self.tr("Remove designed primers"), self)
 
 		#statistics report
 		self.statisticsAct = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
@@ -293,6 +303,10 @@ class SSRMainWindow(QMainWindow):
 		self.imperfectMenu = QMenu()
 
 		self.primerMenu = QMenu()
+		self.primerMenu.addAction(self.primerAllAct)
+		self.primerMenu.addAction(self.primerSelectAct)
+		self.primerMenu.addAction(self.primerShowAct)
+		self.primerMenu.addAction(self.primerRemoveAct)
 
 		self.statisticsMenu = QMenu()
 		self.statisticsMenu.addAction(self.statisticsMenuAct)
@@ -398,7 +412,7 @@ class SSRMainWindow(QMainWindow):
 		folder = QDir(directory)
 		count = 0
 		for fasta in  folder.entryList(QDir.Files):
-			self.fasta_table.insert(Data(fid=None, path=folder.absoluteFilePath(fasta)))
+			self.db.get_cursor().execute("INSERT INTO fasta VALUES (?,?)", (None, folder.absoluteFilePath(fasta)))
 			count += 1
 		self.setStatusMessage("Import %s fastas in %s" % (count, directory))
 
@@ -510,12 +524,38 @@ class SSRMainWindow(QMainWindow):
 	def removeSatellites(self):
 		pass
 
-	def designPrimers(self):
-		print self.model.selected
-		sql = (
-			"SELECT f.path,t.id,t.motif,t.start,t.end FROM fasta AS f,sequence AS s,%s AS t"
-			""
+	def getPrimer3Settings(self):
+		p3_settings = dict(
+			PRIMER_TASK = 'generic',
+			PRIMER_PICK_LEFT_PRIMER = 1,
+			PRIMER_PICK_INTERNAL_OLIGO = 0,
+			PRIMER_PICK_RIGHT_PRIMER = 1
 		)
+		self.settings.beginGroup("primer")
+		keys = self.settings.childKeys()
+		for key in keys:
+			p3_settings[key] = self.settings.value(key)
+		return p3_settings
+
+	def designPrimers(self):
+		rows = self.model.dataset
+		table = self.model.table
+		flank = min_motif = int(self.settings.value('ssr/flank'))
+		primer3_settings = self.getPrimer3Settings()
+		self.worker = PrimerWorker(table, rows, flank, primer3_settings)
+		self.execute(self.worker)
+
+	def designPrimerForTable(self):
+		rows = self.model.dataset
+		table = self.model.table
+
+
+	def designPrimerForSelected(self):
+		rows = self.model.getSelectedRows()
+		table = self.model.table
+
+
+
 
 	def showPrimers(self):
 		pass
@@ -691,6 +731,10 @@ class TableModel(QAbstractTableModel):
 		self.dataset = []
 		self.headers = []
 		self.selected = set()
+
+	def getSelectedRows(self):
+		if self.selected:
+			return [self.dataset[idx] for idx in self.selected]
 
 	def value(self, index):
 		ID = self.dataset[index.row()]

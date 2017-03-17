@@ -10,6 +10,12 @@ CACHE_PATH = os.path.join(ROOT_PATH, 'cache')
 #Default sqlite3 database file
 DATABASE = os.path.join(CACHE_PATH, 'ssr.db')
 
+#primer3 exetutable
+PRIMER3_EXE = os.path.join(ROOT_PATH, 'primer3_core.exe')
+
+#primer3 temp configure file
+PRIMER3_SETTINGS = os.path.join(CACHE_PATH, 'primer3.conf')
+
 #statistical json data store file
 STAT_JSON = os.path.join(CACHE_PATH, 'stat.json')
 

@@ -9,8 +9,10 @@ from PySide.QtCore import *
 import fasta
 import motif
 import tandem
+import primer3
 from ssr import *
 from db import *
+from fasta import *
 from statistics import StatisticsReport
 from utils import Data
 from config import MAX_ROWS
@@ -27,6 +29,22 @@ class Worker(QObject):
 			self._db = Database()
 		return self._db
 
+	def build_fasta_index(self, fasta_id, fasta_path):
+		'''
+		build index for fasta file and write fasta sequence to database
+		@para fasta_id int, the fasta file id in database
+		@para fasta_path str, the file path of fasta
+		@return object, a Fasta object
+		'''
+		seqs = fasta.Fasta(fasta_path)
+		sql = "SELECT * FROM seq WHERE name='%s'" % seqs.keys()[0]
+		if not self.db.get_one(sql):
+			rows = [(None, name, fasta_id) for name in seqs.keys()]
+			sql = "INSERT INTO seq VALUES (?,?,?)"
+			self.db.get_cursor().executemany(sql, rows)
+
+		return seqs
+
 class SSRWorker(Worker):
 	'''
 	perfect microsatellite search thread
@@ -38,17 +56,16 @@ class SSRWorker(Worker):
 		self.motifs = motif.StandardMotif(standard_level)
 		self.fasta_counts = len(self.fastas)
 
-	@Slot()
 	def process(self):
 		start = time.time()
 		current_fastas = 0
-		for _, fasta_file in self.fastas:
+		for fasta_id, fasta_file in self.fastas:
 			current_fastas += 1
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
 			self.update_message.emit("Building fasta index for %s" % fasta_file)
-			seqs = fasta.Fasta(fasta_file)
+			seqs = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
 
@@ -73,7 +90,7 @@ class SSRWorker(Worker):
 				cursor.executemany(sql, values())
 				cursor.execute("COMMIT;")
 				self.update_progress.emit(int(seq_progress*fasta_progress*100))
-				del seq
+				
 		self.update_progress.emit(100)
 		self.update_message.emit('Perfect SSRs search completed')
 		self.finished.emit()
@@ -156,3 +173,49 @@ class StatisticsWorker(Worker):
 			content = jinja2.Template(fh.read()).render(**data)
 		self.update_message.emit(content)
 
+
+class PrimerWorker(Worker):
+	def __init__(self, table, ids, flank, primer3_settings):
+		'''
+		design primers for select row or all rows
+		@para table str, the table names in database
+		@para ids list, the selected row id
+		@para flank int, the length of flanking sequence used to design primer
+		@para primer3_settings str, the path of primer3 settings file
+		'''
+		super(PrimerWorker, self).__init__()
+		self.table = table
+		self.ids = ids
+		self.flank = flank
+		self.primer3_settings = primer3_settings
+
+	def process(self):
+		primer3.setP3Globals(self.primer3_settings)
+		sql = (
+			"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
+			"fasta AS f,seq AS s,%s AS t WHERE f.id=s.fid AND "
+			"t.sequence=s.name AND t.id IN (%s)"
+		)
+		sql = sql % (self.table, ",".join(map(str, self.ids)))
+
+		seqs = None
+		for item in self.db.get_cursor().execute(sql):
+			if seqs is None or item[2] not in seqs:
+				seqs = Fasta(item[0])
+			
+			start = item[3] - self.flank
+			if start < 1:
+				start = 1
+			end = item[4] + self.flank
+			
+			primer = {}
+			primer['SEQUENCE_ID'] = "%s-%s" % (self.table, item[1])
+			primer['SEQUENCE_TEMPLATE'] = seqs.get_sequence_by_loci(item[2], start, end)
+			primer['SEQUENCE_TARGET'] = '%s,%s' % (item[3]-start, item[5])
+			primer['SEQUENCE_INTERNAL_EXCLUDED_REGION'] = primer['SEQUENCE_TARGET']
+
+			primer3.setP3SeqArgs(primer)
+			res = primer3.runP3Design()
+			print res
+
+		self.finished.emit()
