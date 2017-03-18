@@ -9,7 +9,7 @@ from PySide.QtCore import *
 import fasta
 import motif
 import tandem
-import primer3
+import primerdesign
 from ssr import *
 from db import *
 from fasta import *
@@ -190,7 +190,7 @@ class PrimerWorker(Worker):
 		self.primer3_settings = primer3_settings
 
 	def process(self):
-		primer3.setP3Globals(self.primer3_settings)
+		primerdesign.setP3Globals(self.primer3_settings)
 		sql = (
 			"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
 			"fasta AS f,seq AS s,%s AS t WHERE f.id=s.fid AND "
@@ -214,8 +214,8 @@ class PrimerWorker(Worker):
 			primer['SEQUENCE_TARGET'] = '%s,%s' % (item[3]-start, item[5])
 			primer['SEQUENCE_INTERNAL_EXCLUDED_REGION'] = primer['SEQUENCE_TARGET']
 
-			primer3.setP3SeqArgs(primer)
-			res = primer3.runP3Design()
+			primerdesign.setP3SeqArgs(primer)
+			res = primerdesign.runP3Design()
 			print res
 
 		self.finished.emit()

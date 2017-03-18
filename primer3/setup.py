@@ -7,14 +7,18 @@ setup(
 		Extension('primerdesign',
 			sources = [
 				'primerdesign_py.c',
-				'thal.c',
-				'oligotm.c',
-				'p3_seq_lib.c',
-				'libprimer3.c',
-				'dpal.c',
+				'libprimer3/thal.c',
+				'libprimer3/oligotm.c',
+				'libprimer3/p3_seq_lib.c',
+				'libprimer3/libprimer3.c',
+				'libprimer3/dpal.c',
 				'primerdesign_helpers.c'
 			],
-			include_dirs = ['.', r'C:\winbuild\include', r'C:\winbuild\include\c++\4.8.3\ext', r'C:\winbuild\include\c++\4.8.3\backward']
+			library_dirs = [
+			],
+			include_dirs = [
+				'libprimer3',
+			]
 		)
 	]
 )

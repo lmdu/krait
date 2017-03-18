@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ctype.h> /* toupper */
 
 #ifdef __GNUC__
-#include <hash_map>
+#include <ext/hash_map>
 #else
 #include <hash_map>
 #endif
