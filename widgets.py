@@ -613,11 +613,9 @@ class SSRMainWindow(QMainWindow):
 	def changeSelectCount(self, count):
 		self.selectCounts.setText("Select: %s" % count)
 	
-	@Slot(int)
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)
 
-	@Slot(str)
 	def setStatusMessage(self, msg):
 		self.statusBar.showMessage(msg)
 
