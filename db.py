@@ -14,15 +14,15 @@ conn = apsw.Connection(':memory:')
 class Database:
 	def __init__(self):
 		if not self.get_tables():
-			self._create_table()
+			self.create_table()
 		self.get_cursor().execute("PRAGMA synchronous=OFF;")
 
-	def _create_table(self):
+	def create_table(self):
 		self.get_cursor().execute(config.CREATE_TABLES_SQL)
 
-	def get_columns(self, table):
+	def get_fields(self, table):
 		cursor = self.get_cursor()
-		for row in cursor.execute("SELECT * FROM %s" % table):
+		for row in cursor.execute("SELECT * FROM %s LIMIT 1" % table):
 			return [col[0] for col in cursor.getdescription()]
 
 	def drop_tables(self):
@@ -49,13 +49,14 @@ class Database:
 	def get_all(self, sql):
 		return self.get_cursor().execute(sql).fetchall()
 
-	def get_column(self, sql):
+	def get_columns(self, sql):
 		return [row[0] for row in self.get_cursor().execute(sql)]
 
 	def open(self, dbfile):
 		source = apsw.Connection(dbfile)
 		with conn.backup("main", source, "main") as b:
 			b.step()
+		self.create_table()
 
 	def save(self, dbfile):
 		target = apsw.Connection(dbfile)

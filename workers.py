@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import time
+import json
 import jinja2
 import pyfaidx
 from PySide.QtCore import *
@@ -13,9 +14,9 @@ import primerdesign
 from ssr import *
 from db import *
 from fasta import *
+from config import *
 from statistics import StatisticsReport
 from utils import Data
-from config import MAX_ROWS
 
 class Worker(QObject):
 	update_progress = Signal(int)
@@ -190,7 +191,8 @@ class PrimerWorker(Worker):
 		self.primer3_settings = primer3_settings
 
 	def process(self):
-		primerdesign.setP3Globals(self.primer3_settings)
+		primerdesign.loadThermoParams(PRIMER3_CONFIG)
+		primerdesign.setGlobals(self.primer3_settings, None, None)
 		sql = (
 			"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
 			"fasta AS f,seq AS s,%s AS t WHERE f.id=s.fid AND "
@@ -198,7 +200,14 @@ class PrimerWorker(Worker):
 		)
 		sql = sql % (self.table, ",".join(map(str, self.ids)))
 
+		total = len(self.ids)
+		current = 0
 		seqs = None
+
+		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?)"
+		cursor = self.db.get_cursor()
+		cursor.execute("BEGIN TRANSACTION;")
+
 		for item in self.db.get_cursor().execute(sql):
 			if seqs is None or item[2] not in seqs:
 				seqs = Fasta(item[0])
@@ -208,14 +217,30 @@ class PrimerWorker(Worker):
 				start = 1
 			end = item[4] + self.flank
 			
-			primer = {}
-			primer['SEQUENCE_ID'] = "%s-%s" % (self.table, item[1])
-			primer['SEQUENCE_TEMPLATE'] = seqs.get_sequence_by_loci(item[2], start, end)
-			primer['SEQUENCE_TARGET'] = '%s,%s' % (item[3]-start, item[5])
-			primer['SEQUENCE_INTERNAL_EXCLUDED_REGION'] = primer['SEQUENCE_TARGET']
+			target = {}
+			target['SEQUENCE_ID'] = "%s-%s" % (self.table, item[1])
+			target['SEQUENCE_TEMPLATE'] = seqs.get_sequence_by_loci(item[2], start, end)
+			target['SEQUENCE_TARGET'] = [item[3]-start, item[5]]
+			target['SEQUENCE_INTERNAL_EXCLUDED_REGION'] = target['SEQUENCE_TARGET']
 
-			primerdesign.setP3SeqArgs(primer)
-			res = primerdesign.runP3Design()
-			print res
+			primerdesign.setSeqArgs(target)
+			res = primerdesign.runDesign(False)
+			current += 1
 
+			primer_count = res['PRIMER_PAIR_NUM_RETURNED']
+			for i in range(primer_count):
+				primer = [None, target['SEQUENCE_ID'], i+1]
+				primer.append(res['PRIMER_LEFT_%s_SEQUENCE' % i])
+				primer.append(round(res['PRIMER_LEFT_%s_TM' % i], 2))
+				primer.append(round(res['PRIMER_LEFT_%s_GC_PERCENT' % i], 2))
+				primer.append(res['PRIMER_RIGHT_%s_SEQUENCE' % i])
+				primer.append(round(res['PRIMER_RIGHT_%s_TM' % i], 2))
+				primer.append(round(res['PRIMER_RIGHT_%s_GC_PERCENT' % i], 2))
+				cursor.execute(insert_sql, primer)
+		
+			self.update_progress.emit(round(current/total*100))
+
+		cursor.execute("COMMIT;")
+
+		self.update_message.emit('Primer design completed')
 		self.finished.emit()

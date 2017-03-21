@@ -8,7 +8,7 @@ import platform
 from PySide.QtCore import *
 from PySide.QtGui import *
 from PySide.QtSql import *
-from PySide.QtWebKit import *
+#from PySide.QtWebKit import *
 
 from db import *
 from fasta import *
@@ -534,7 +534,12 @@ class SSRMainWindow(QMainWindow):
 		self.settings.beginGroup("primer")
 		keys = self.settings.childKeys()
 		for key in keys:
-			p3_settings[key] = self.settings.value(key)
+			if key == 'PRIMER_PRODUCT_SIZE_RANGE':
+				sgs = self.settings.value(key)
+				p3_settings[key] = [map(int, sg.split('-')) for sg in sgs.split()]
+			else:
+				p3_settings[key] = int(self.settings.value(key))
+		self.settings.endGroup()
 		return p3_settings
 
 	def designPrimers(self):
@@ -543,6 +548,9 @@ class SSRMainWindow(QMainWindow):
 		flank = min_motif = int(self.settings.value('ssr/flank'))
 		primer3_settings = self.getPrimer3Settings()
 		self.worker = PrimerWorker(table, rows, flank, primer3_settings)
+		self.worker.update_message.connect(self.setStatusMessage)
+		self.worker.update_progress.connect(self.setProgress)
+		self.worker.finished.connect(self.showPrimers)
 		self.execute(self.worker)
 
 	def designPrimerForTable(self):
@@ -554,11 +562,13 @@ class SSRMainWindow(QMainWindow):
 		rows = self.model.getSelectedRows()
 		table = self.model.table
 
-
-
-
 	def showPrimers(self):
-		pass
+		self.model.setTable('primer')
+		self.model.select()
+
+	def removePrimers(self):
+		self.db.get_cursor().execute("DELETE FROM primer")
+		self.model.select()
 
 	def estimateBestMaxDistance(self):
 		pass
@@ -607,6 +617,7 @@ class SSRMainWindow(QMainWindow):
 	def changeRowColCount(self, count):
 		#self.table.setColumnWidth(0, 30)
 		self.table.resizeColumnToContents(0)
+		#self.table.resizeColumnsToContents()
 		self.rowCounts.setText("Row: %s" % count[0])
 		self.colCounts.setText("Column: %s" % count[1])
 
@@ -648,15 +659,14 @@ class SSRFilterInput(QLineEdit):
 		self.setPlaceholderText("Filter data in table e.g. motif=AT and repeat>10")
 
 
-class SSRWebView(QWebView):
-	def __init__(self, parent=None):
-		super(SSRWebView, self).__init__(parent)
-		self.load(QUrl('http://www.baidu.com'))
-		self.page().setLinkDelegationPolicy(QWebPage.DelegateAllLinks)
-		self.linkClicked.connect(self.openUrl)
-
-	def openUrl(self, url):
-		QDesktopServices.openUrl(url)
+#class SSRWebView(QWebView):
+#	def __init__(self, parent=None):
+#		super(SSRWebView, self).__init__(parent)
+#		self.load(QUrl('http://www.baidu.com'))
+#		self.page().setLinkDelegationPolicy(QWebPage.DelegateAllLinks)
+#		self.linkClicked.connect(self.openUrl)
+#	def openUrl(self, url):
+#		QDesktopServices.openUrl(url)
 
 
 class SSRTableModel(QSqlTableModel):
@@ -693,7 +703,8 @@ class TableModel(QAbstractTableModel):
 
 	def setTable(self, table):
 		self.table = table
-		self.headers = self.db.get_columns(self.table)
+		self.headers = self.db.get_fields(self.table)
+		self.query = ['', '', '']
 		self.query[0] = "SELECT id FROM %s" % self.table
 
 	def setFilter(self, condition=''):
@@ -719,7 +730,7 @@ class TableModel(QAbstractTableModel):
 	def select(self):
 		sql = " ".join(self.query)
 		self.beginResetModel()
-		self.dataset = self.db.get_column(sql)
+		self.dataset = self.db.get_columns(sql)
 		self.read_row = 0
 		self.selected = set()
 		self.endResetModel()

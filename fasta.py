@@ -8,7 +8,7 @@ class Fasta:
 		self.fasta_file = fasta_file
 		self.index_file = "%s.idx" % fasta_file
 		self.rebuild = rebuild
-		self.buff = {}
+		self.buff = {'name': None, 'seq': None}
 		self._check_fasta()
 		self._read_index()
 
@@ -20,8 +20,8 @@ class Fasta:
 	def __len__(self):
 		return len(self._index)
 
-	def __del__(self):
-		del self.buff
+	def __contains__(self, key):
+		return key in self._index
 
 	def _read_fasta(self):
 		if self.fasta_file.endswith('.gz'):
@@ -92,15 +92,9 @@ class Fasta:
 		@para end int, the end position
 		@return str, the extracted sequence
 		'''
-		if self.buff.get('name', None) != name:
+		if self.buff['name'] != name:
 			self.buff['name'] = name
 			self.buff['seq'] = self.get_sequence_by_name(name)
 
 		return self.buff['seq'][start-1:end]
-
-
-
-
-
-
 

@@ -16,6 +16,9 @@ PRIMER3_EXE = os.path.join(ROOT_PATH, 'primer3_core.exe')
 #primer3 temp configure file
 PRIMER3_SETTINGS = os.path.join(CACHE_PATH, 'primer3.conf')
 
+#primer3 config folder
+PRIMER3_CONFIG = os.path.join(ROOT_PATH, 'primer3_config/')
+
 #statistical json data store file
 STAT_JSON = os.path.join(CACHE_PATH, 'stat.json')
 
@@ -77,6 +80,18 @@ CREATE TABLE IF NOT EXISTS `seq`(
 CREATE TABLE IF NOT EXISTS `meta`(
 	name TEXT,
 	value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS `primer`(
+	id INTEGER PRIMARY KEY,
+	name TEXT,
+	entry INTEGER,
+	left TEXT,
+	tm1 REAL,
+	gc1 REAL,
+	right TEXT,
+	tm2 REAL,
+	gc2 REAL
 );
 
 """
