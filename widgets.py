@@ -26,7 +26,7 @@ class SSRMainWindow(QMainWindow):
 
 		#self.browser = SSRWebView()
 		
-		self.table = SSRTableView()
+		self.table = SSRTableView(self)
 		#self.table.verticalHeader().hide()
 		#self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)s
 		##self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -682,12 +682,87 @@ class SSRTableModel(QSqlTableModel):
 class SSRTableView(QTableView):
 	def __init__(self, parent=None):
 		super(SSRTableView, self).__init__(parent)
+		self.parent = parent
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setSelectionMode(QAbstractItemView.SingleSelection)
 		self.setSortingEnabled(True)
+
+	def contextMenuEvent(self, event):
+		self.current_row = self.rowAt(event.pos().y())
+		if self.current_row == -1:
+			return
+
+		self.menu = QMenu(self)
+		select_action = QAction('Select', self)
+		select_action.triggered.connect(self.selectCurrentRow)
+		deselect_action = QAction("Deselect", self)
+		deselect_action.triggered.connect(self.deselectCurrentRow)
+		select_all_action = QAction("Select All", self)
+		select_all_action.triggered.connect(self.selectAll)
+		deselect_all_action = QAction("Deselect All", self)
+		deselect_all_action.triggered.connect(self.deselectAll)
+
+		delete_action = QAction("Delete All", self)
+
+		detail_action = QAction("View Detail", self)
+		detail_action.triggered.connect(self.viewDetail)
+		
+		self.menu.addAction(select_action)
+		self.menu.addAction(deselect_action)
+		self.menu.addAction(select_all_action)
+		self.menu.addAction(deselect_all_action)
+		self.menu.addSeparator()
+		self.menu.addAction(delete_action)
+		self.menu.addSeparator()
+		self.menu.addAction(detail_action)
+		self.menu.popup(QCursor.pos())
+
+	def selectCurrentRow(self):
+		self.model().selectRow(self.current_row)
+
+	def deselectCurrentRow(self):
+		self.model().deselectRow(self.current_row)
+
+	def selectAll(self):
+		self.model().selectAll()
+
+	def deselectAll(self):
+		self.model().deselectAll()
+
+	def viewDetail(self):
+		'''
+		view sequence and detail information of tandem repeats
+		'''
+		table = self.model().table
+		flank = int(self.parent.settings.value('flank', 50))
+		_id = self.model().dataset[self.current_row]
+
+		sql = (
+			"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
+			"fasta AS f,seq AS s,%s AS t WHERE f.id=s.fid AND "
+			"t.sequence=s.name AND t.id=%s"
+		)
+
+		row = self.parent.db.get_row(sql % (table, _id))
+
+		seqs = Fasta(row[0])
+		sequence = seqs.get_sequence_by_loci(row[2], row[3], row[4])
+
+		left_start = row[3] - flank
+		if left_start < 1:
+			left_start = 1
+		left_flank = seqs.get_sequence_by_loci(row[2], left_start, row[3]-1)
+		right_flank = seqs.get_sequence_by_loci(row[2], row[4]+1, row[4]+flank)
+
+		content = '''%s<span style="text-decoration:underline overline;">%s</span>%s''' % (left_flank, sequence, right_flank)
+
+		dialog = SSRDetailDialog(self.parent, content)
+		if dialog.exec_() == QDialog.Accepted:
+			pass
+
 
 class TableModel(QAbstractTableModel):
 	row_col = Signal(tuple)
@@ -700,6 +775,28 @@ class TableModel(QAbstractTableModel):
 		self.read_row = 0
 		self.db = Database()
 		self.query = ['', '', '']
+
+	def selectRow(self, row):
+		if row not in self.selected:
+			self.beginResetModel()
+			self.selected.add(row)
+			self.endResetModel()
+
+	def deselectRow(self, row):
+		if row in self.selected:
+			self.beginResetModel()
+			self.selected.remove(row)
+			self.endResetModel()
+
+	def selectAll(self):
+		self.beginResetModel()
+		self.selected = set(range(len(self.dataset)))
+		self.endResetModel()
+
+	def deselectAll(self):
+		self.beginResetModel()
+		self.selected = set()
+		self.endResetModel()
 
 	def setTable(self, table):
 		self.table = table
@@ -1205,19 +1302,18 @@ class PrimerTagLabel(QLabel):
 		QDesktopServices.openUrl(url)
 
 
-
-class BrowserDialog(QDialog):
-	def __init__(self, parent=None, html=None):
-		super(BrowserDialog, self).__init__(parent)
-		self.webview = QTextEdit(self)
-		self.webview.setHtml(html)
+class SSRDetailDialog(QDialog):
+	def __init__(self, parent=None, content=None):
+		super(SSRDetailDialog, self).__init__(parent)
+		self.viewer = QTextEdit(self)
+		self.viewer.setHtml(content)
 
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 		buttonBox.accepted.connect(self.accept)
 		buttonBox.rejected.connect(self.reject)
 		
 		mainLayout = QVBoxLayout()
-		mainLayout.addWidget(self.webview)
+		mainLayout.addWidget(self.viewer)
 		mainLayout.addWidget(buttonBox)
 		self.resize(600, 400)
 

@@ -20,8 +20,11 @@ class Fasta:
 	def __len__(self):
 		return len(self._index)
 
-	def __contains__(self, key):
-		return key in self._index
+	def __contains__(self, name):
+		return name in self._index
+
+	def __getitem__(self, name):
+		return self.get_sequence_by_name(name)
 
 	def _read_fasta(self):
 		if self.fasta_file.endswith('.gz'):

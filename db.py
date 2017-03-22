@@ -49,6 +49,9 @@ class Database:
 	def get_all(self, sql):
 		return self.get_cursor().execute(sql).fetchall()
 
+	def get_row(self, sql):
+		return self.get_cursor().execute(sql).fetchone()
+
 	def get_columns(self, sql):
 		return [row[0] for row in self.get_cursor().execute(sql)]
 
