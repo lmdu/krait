@@ -13,6 +13,7 @@ from PySide.QtSql import *
 from db import *
 from fasta import *
 from utils import *
+from detail import *
 from workers import *
 from config import *
 from primer import *
@@ -739,25 +740,9 @@ class SSRTableView(QTableView):
 		table = self.model().table
 		flank = int(self.parent.settings.value('flank', 50))
 		_id = self.model().dataset[self.current_row]
-
-		sql = (
-			"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
-			"fasta AS f,seq AS s,%s AS t WHERE f.id=s.fid AND "
-			"t.sequence=s.name AND t.id=%s"
-		)
-
-		row = self.parent.db.get_row(sql % (table, _id))
-
-		seqs = Fasta(row[0])
-		sequence = seqs.get_sequence_by_loci(row[2], row[3], row[4])
-
-		left_start = row[3] - flank
-		if left_start < 1:
-			left_start = 1
-		left_flank = seqs.get_sequence_by_loci(row[2], left_start, row[3]-1)
-		right_flank = seqs.get_sequence_by_loci(row[2], row[4]+1, row[4]+flank)
-
-		content = '''%s<span style="text-decoration:underline overline;">%s</span>%s''' % (left_flank, sequence, right_flank)
+		content = ''
+		if table == 'ssr':
+			content = SSRDetail(_id, flank).getSSR()
 
 		dialog = SSRDetailDialog(self.parent, content)
 		if dialog.exec_() == QDialog.Accepted:
@@ -1305,7 +1290,7 @@ class PrimerTagLabel(QLabel):
 class SSRDetailDialog(QDialog):
 	def __init__(self, parent=None, content=None):
 		super(SSRDetailDialog, self).__init__(parent)
-		self.viewer = QTextEdit(self)
+		self.viewer = QTextBrowser(self)
 		self.viewer.setHtml(content)
 
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
