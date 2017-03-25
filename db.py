@@ -9,7 +9,30 @@ from PySide.QtSql import QSqlDatabase, QSqlQuery
 import config
 import utils
 
+class Row:
+	def __init__(self, names, values):
+		self.names = names
+		self.values = values
+
+	def __nonzero__(self):
+		return True if self.values else False
+
+	def __len__(self):
+		return len(self.values)
+
+	def __getitem__(self, key):
+		return self.values[key]
+
+	def __getattr__(self, name):
+		idx = self.names.index(name)
+		return self.values[idx]
+
+def row_factory(cursor, row):
+	fields = [name for name, _ in cursor.getdescription()]
+	return Row(fields, row)
+
 conn = apsw.Connection(':memory:')
+conn.setrowtrace(row_factory)
 
 class Database:
 	def __init__(self):
@@ -17,10 +40,22 @@ class Database:
 			self.create_table()
 		self.get_cursor().execute("PRAGMA synchronous=OFF;")
 
+	def get_cursor(self):
+		return conn.cursor()
+
 	def create_table(self):
 		self.get_cursor().execute(config.CREATE_TABLES_SQL)
 
+	def get_last_insert_rowid(self):
+		return conn.last_insert_rowid()
+
 	def get_fields(self, table):
+		'''
+		get all column names of table in sqlite, note: cursor
+		getdescription must fetch row can get column name
+		@para table str, table name
+		@return list, column names
+		'''
 		cursor = self.get_cursor()
 		for row in cursor.execute("SELECT * FROM %s LIMIT 1" % table):
 			return [col[0] for col in cursor.getdescription()]
@@ -33,26 +68,27 @@ class Database:
 		sql = "SELECT name FROM sqlite_master WHERE type='table'"
 		return [row[0] for row in self.get_cursor().execute(sql)]
 
-	def get_cursor(self):
-		return conn.cursor()
-
 	def get_one(self, sql):
 		for row in self.get_cursor().execute(sql):
-			if row:
-				if len(row) == 1:
-					return row[0]
-				else:
-					return row
-			return None
+			return row[0]
 
 
 	def get_all(self, sql):
+		'''
+		get data from multiple rows
+		'''
 		return self.get_cursor().execute(sql).fetchall()
 
 	def get_row(self, sql):
+		'''
+		get data from one row
+		'''
 		return self.get_cursor().execute(sql).fetchone()
 
-	def get_columns(self, sql):
+	def get_column(self, sql):
+		'''
+		get all values in a column
+		'''
 		return [row[0] for row in self.get_cursor().execute(sql)]
 
 	def open(self, dbfile):

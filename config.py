@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+from jinja2 import Environment, FileSystemLoader
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -24,6 +25,9 @@ STAT_JSON = os.path.join(CACHE_PATH, 'stat.json')
 
 #max table row display in statistical table
 MAX_ROWS = 20
+
+#create jinja template reander
+TEMPLATE_DIR = os.path.join(ROOT_PATH, 'template')
 
 #create tables in database
 CREATE_TABLES_SQL = """
@@ -84,7 +88,7 @@ CREATE TABLE IF NOT EXISTS `meta`(
 
 CREATE TABLE IF NOT EXISTS `primer`(
 	id INTEGER PRIMARY KEY,
-	name TEXT,
+	target TEXT,
 	entry INTEGER,
 	left TEXT,
 	tm1 REAL,
@@ -92,6 +96,14 @@ CREATE TABLE IF NOT EXISTS `primer`(
 	right TEXT,
 	tm2 REAL,
 	gc2 REAL
+);
+
+CREATE TABLE IF NOT EXISTS `primer_meta`(
+	pid INTEGER,
+	start1 INTEGER,
+	length1 INTEGER,
+	start2 INTEGER,
+	length2 INTEGER
 );
 
 """

@@ -738,11 +738,12 @@ class SSRTableView(QTableView):
 		view sequence and detail information of tandem repeats
 		'''
 		table = self.model().table
-		flank = int(self.parent.settings.value('flank', 50))
+		flank = int(self.parent.settings.value('ssr/flank', 50))
 		_id = self.model().dataset[self.current_row]
-		content = ''
-		if table == 'ssr':
-			content = SSRDetail(_id, flank).getSSR()
+		if table == 'primer':
+			content = PrimerDetail(table, _id, flank).generateHtml()
+		else:
+			content = SequenceDetail(table, _id, flank).generateHtml()
 
 		dialog = SSRDetailDialog(self.parent, content)
 		if dialog.exec_() == QDialog.Accepted:
@@ -812,7 +813,7 @@ class TableModel(QAbstractTableModel):
 	def select(self):
 		sql = " ".join(self.query)
 		self.beginResetModel()
-		self.dataset = self.db.get_columns(sql)
+		self.dataset = self.db.get_column(sql)
 		self.read_row = 0
 		self.selected = set()
 		self.endResetModel()
@@ -1290,7 +1291,11 @@ class PrimerTagLabel(QLabel):
 class SSRDetailDialog(QDialog):
 	def __init__(self, parent=None, content=None):
 		super(SSRDetailDialog, self).__init__(parent)
+		font_id = QFontDatabase.addApplicationFont('font/SpaceMono-Bold.ttf')
+		font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+
 		self.viewer = QTextBrowser(self)
+		self.viewer.setFontFamily(font_family)
 		self.viewer.setHtml(content)
 
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)

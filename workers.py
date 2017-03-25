@@ -227,6 +227,9 @@ class PrimerWorker(Worker):
 			res = primerdesign.runDesign(False)
 			current += 1
 
+			with open(target['SEQUENCE_ID'], 'wb') as fh:
+				json.dump(res, fh, indent=4)
+
 			primer_count = res['PRIMER_PAIR_NUM_RETURNED']
 			for i in range(primer_count):
 				primer = [None, target['SEQUENCE_ID'], i+1]
@@ -237,6 +240,11 @@ class PrimerWorker(Worker):
 				primer.append(round(res['PRIMER_RIGHT_%s_TM' % i], 2))
 				primer.append(round(res['PRIMER_RIGHT_%s_GC_PERCENT' % i], 2))
 				cursor.execute(insert_sql, primer)
+
+				meta = [self.db.get_last_insert_rowid()]
+				meta.extend(res['PRIMER_LEFT_%s' % i])
+				meta.extend(res['PRIMER_RIGHT_%s' % i])
+				cursor.execute("INSERT INTO primer_meta VALUES (?,?,?,?,?)", meta)
 		
 			self.update_progress.emit(round(current/total*100))
 

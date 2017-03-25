@@ -1,0 +1,24 @@
+<html>
+<head>
+<style>
+	body{font-size:16px;}
+	#tandem{
+		font-family: "space mono";
+		margin-top: 10px;
+	}
+	#loci{margin-top: 5px;}
+	.A{color:#5050ff;}
+	.T{color:#e6e600;}
+	.G{color:#00c000;}
+	.C{color:#e00000;}
+</style>
+</head>
+<body>
+	<div id="meta">
+		ID: {{ ssr.id }} &nbsp;&nbsp; motif: {{ ssr.motif }} &nbsp;&nbsp; repeats: {{ ssr.repeat }}
+	</div>
+	<div id="loci">{{ ssr.sequence }}: {{ ssr.start }}-{{ ssr.end }}</div>
+	<hr>
+	<div id="tandem">{{ tandem }}</div>
+</body>
+</html>

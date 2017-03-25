@@ -3,6 +3,7 @@
 import pyfaidx
 
 from PySide.QtCore import QDir
+from config import *
 
 class Data(dict):
 	def __getattr__(self, name):
@@ -13,6 +14,12 @@ class Data(dict):
 
 	def __setattr__(self, name, val):
 		self[name] = val
+
+
+env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+def template_render(template_name, **kwargs):
+	template = env.get_template(template_name)
+	return template.render(**kwargs)
 
 
 class SequenceHighlighter:
