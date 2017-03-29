@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import csv
 import apsw
 import platform
 
@@ -28,6 +29,7 @@ class SSRMainWindow(QMainWindow):
 		#self.browser = SSRWebView()
 		
 		self.table = SSRTableView(self)
+		self.createTableModel()
 		#self.table.verticalHeader().hide()
 		#self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)s
 		##self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -35,10 +37,6 @@ class SSRMainWindow(QMainWindow):
 		#self.table.setContextMenuPolicy(Qt.CustomContextMenu)
 		#self.table.doubleClicked.connect(self.showSSRSequence)
 		#self.model = SSRTableModel()
-		self.model = TableModel()
-		self.table.setModel(self.model)
-		self.model.row_col.connect(self.changeRowColCount)
-		self.model.sel_row.connect(self.changeSelectCount)
 		self.setCentralWidget(self.table)
 		#self.setCentralWidget(self.browser)
 
@@ -63,10 +61,19 @@ class SSRMainWindow(QMainWindow):
 		#connect to database
 		self.db = Database()
 
+		#opened project
+		self.opened_project = None
+
 		#read settings
 		self.readSettings()
 
 		self.show()
+
+	def createTableModel(self):
+		self.model = TableModel()
+		self.table.setModel(self.model)
+		self.model.row_col.connect(self.changeRowColCount)
+		self.model.sel_row.connect(self.changeSelectCount)
 
 	def saveStatTableFigure(self, url):
 		action = url.toString()
@@ -123,7 +130,10 @@ class SSRMainWindow(QMainWindow):
 		self.loadFastasAct.triggered.connect(self.importFastas)
 		
 		#export the Results
-		self.exportResAct = QAction(self.tr("Export Results"), self)
+		self.exportSelectedAct = QAction(self.tr("Export selected rows"), self)
+		self.exportSelectedAct.triggered.connect(self.exportSelectedRows)
+		self.exportAllAct = QAction(self.tr("Export all rows"), self)
+		self.exportAllAct.triggered.connect(self.exportAllRows)
 		
 		#exit action
 		self.exitAct = QAction(self.tr("Exit"), self)
@@ -242,7 +252,8 @@ class SSRMainWindow(QMainWindow):
 		self.fileMenu.addAction(self.loadFastaAct)
 		self.fileMenu.addAction(self.loadFastasAct)
 		self.fileMenu.addSeparator()
-		self.fileMenu.addAction(self.exportResAct)
+		self.fileMenu.addAction(self.exportSelectedAct)
+		self.fileMenu.addAction(self.exportAllAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exitAct)
 		
@@ -371,17 +382,23 @@ class SSRMainWindow(QMainWindow):
 		if not dbfile:
 			return
 
+		self.opened_project = dbfile
+
 		self.db.drop_tables()
 		self.db.open(dbfile)
 
 		self.showMicrosatellites()
 
 	def saveProject(self):
-		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
-		if not dbfile:
-			return
+		if self.opened_project is None:
+			dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
+			if not dbfile:
+				return
+			self.opened_project = dbfile
 
-		self.db.save(dbfile)
+		os.remove(self.opened_project)
+
+		self.db.save(self.opened_project)
 
 	def saveProjectAs(self):
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
@@ -392,7 +409,7 @@ class SSRMainWindow(QMainWindow):
 
 	def closeProject(self):
 		self.db.drop_tables()
-		self.model.select()
+		self.createTableModel()
 	
 	def importFasta(self):
 		'''
@@ -416,6 +433,48 @@ class SSRMainWindow(QMainWindow):
 			self.db.get_cursor().execute("INSERT INTO fasta VALUES (?,?)", (None, folder.absoluteFilePath(fasta)))
 			count += 1
 		self.setStatusMessage("Import %s fastas in %s" % (count, directory))
+
+	def exportSelectedRows(self):
+		selected_items = self.model.getSelectedIds()
+		if not selected_items:
+			QMessageBox.information(self, 'Warning', "No rows selected!")
+			return
+
+		save_file, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv);;Tabular text (*.txt)")
+
+		if not save_file:
+			return
+
+		sql = "SELECT * FROM %s WHERE id IN (%s)" % (self.model.tableName(), ",".join(map(str,selected_items)))
+
+		rows = self.db.get_cursor().execute(sql)
+
+		export_to_file(save_file, self.model.columnNames(), rows)
+		QMessageBox.information(self, "Information", "Successfully exported to %s" % save_file)
+
+	def exportAllRows(self):
+		items = self.model.getAllItems()
+		if not items:
+			QMessageBox.information(self, 'Warning', "No rows in table!")
+			return
+
+		save_file, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv);;Tabular text (*.txt)")
+
+		if not save_file:
+			return
+
+		table = self.model.tableName()
+		total_rows = self.db.get_one("SELECT COUNT(1) FROM %s" % table)
+		if total_rows == self.model.getRowCounts():
+			sql = "SELECT * FROM %s" % table
+		else:
+			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, items)))
+
+		rows = self.db.get_cursor().execute(sql)
+
+		export_to_file(save_file, self.model.columnNames(), rows)
+
+		QMessageBox.information(self, "Information", "Successfully exported to %s" % save_file)
 
 	def doCopy(self):
 		focus = QApplication.focusWidget()
@@ -762,6 +821,24 @@ class TableModel(QAbstractTableModel):
 		self.db = Database()
 		self.query = ['', '', '']
 
+	def getRowCounts(self):
+		return len(self.dataset)
+
+	def getAllItems(self):
+		return self.dataset
+
+	def getSelectedIds(self):
+		'''
+		get the selected item ids in database
+		'''
+		if not self.selected:
+			return None
+
+		selected_ids = [self.dataset[i] for i in self.selected]
+		selected_ids.sort()
+
+		return selected_ids
+
 	def selectRow(self, row):
 		if row not in self.selected:
 			self.beginResetModel()
@@ -789,6 +866,12 @@ class TableModel(QAbstractTableModel):
 		self.headers = self.db.get_fields(self.table)
 		self.query = ['', '', '']
 		self.query[0] = "SELECT id FROM %s" % self.table
+
+	def tableName(self):
+		return self.table
+
+	def columnNames(self):
+		return self.headers
 
 	def setFilter(self, condition=''):
 		if condition:
@@ -919,12 +1002,14 @@ class TableModel(QAbstractTableModel):
 		return flag
 
 	def canFetchMore(self, parent):
-		return self.read_row < len(self.dataset)
+		return not parent.isValid() and (self.read_row < len(self.dataset))
 
 	def fetchMore(self, parent):
+		if parent.isValid():
+			return
 		remainder = len(self.dataset) - self.read_row
 		fetch_row = min(100, remainder)
-		self.beginInsertRows(QModelIndex(), self.read_row, self.read_row+fetch_row)
+		self.beginInsertRows(QModelIndex(), self.read_row, self.read_row+fetch_row-1)
 		self.read_row += fetch_row
 		self.endInsertRows()
 

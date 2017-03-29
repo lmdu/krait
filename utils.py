@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import csv
 import pyfaidx
 
 from PySide.QtCore import QDir
@@ -20,6 +21,33 @@ env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 def template_render(template_name, **kwargs):
 	template = env.get_template(template_name)
 	return template.render(**kwargs)
+
+def write_to_tab(tabfile, headers, rows):
+	'''
+	write data to tabular file with \t separator
+	@tabfile str, the save file path
+	@headers tuple, the columns of the table
+	@cursor, the database cursor
+	'''
+	with open(tabfile, 'w') as tab:
+		tab.write("%s\n" % "\t".join(headers))
+		for row in rows:
+			tab.write("%s\n" % "\t".join(map(str, row)))
+
+def write_to_csv(csvfile, headers, rows):
+	with open(csvfile, 'wb') as cf:
+		writer = csv.writer(cf)
+		writer.writerow(headers)
+		for row in rows:
+			writer.writerow(row)
+
+def export_to_file(outfile, headers, rows):
+	if outfile.endswith('.csv'):
+		writer = write_to_csv
+	else:
+		writer = write_to_tab
+
+	writer(outfile, headers, rows)
 
 
 class SequenceHighlighter:

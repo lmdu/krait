@@ -14,6 +14,16 @@ class Row:
 		self.names = names
 		self.values = values
 
+	def getValues(self):
+		return self.values
+
+	def getKeys(self):
+		return self.names
+
+	def __iter__(self):
+		for v in self.values:
+			yield v
+
 	def __nonzero__(self):
 		return True if self.values else False
 
