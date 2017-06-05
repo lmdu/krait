@@ -129,6 +129,12 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 };
 
 //search imperfect microsatellites
+static int max(int a, int b, int c){
+	int d;
+	d = a>b?a:b;
+	return d>c?d:c;
+}
+
 static int extend_right_mis(char *seq, size_t seqlen, int start, int right, int mlen, char *motif, int r, int m){
 	int i;
 	int j;
@@ -142,15 +148,15 @@ static int extend_right_mis(char *seq, size_t seqlen, int start, int right, int 
 	return i;
 }
 
-static int extend_right_del(char *seq, size_t seqlen, int start, int right, int mlen, char * motif){
+static int extend_right_del(char *seq, size_t seqlen, int start, int right, int mlen, char *motif){
 	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 0, 1);
 }
 
-static int extend_right_sub(char *seq, size_t seqlen, int start, int right, int mlen, char * motif){
+static int extend_right_sub(char *seq, size_t seqlen, int start, int right, int mlen, char *motif){
 	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 1, 0);
 }
 
-static int extend_right_ins(char *seq, size_t seqlen, int start, int right, int mlen, char * motif){
+static int extend_right_ins(char *seq, size_t seqlen, int start, int right, int mlen, char *motif){
 	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 1, -1);
 }
 
@@ -161,6 +167,8 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	char *seq;
 	size_t seqlen;
 	int start;
+	int start2;
+	int end;
 	int length;
 	int repeat;
 	int score;
@@ -226,6 +234,9 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 
 					if(rsub_match>0 || rins_match>0 || rdel_match>0){
 						continuous_errors = 0;
+						max_match = max(rsub_match, rins_match, rdel_match);
+						if(max)
+
 					}
 
 					if(continuous_errors >= max_errors){
@@ -256,6 +267,8 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 					}
 
 				}
+
+
 
 				PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, start+1, start+length, length));
 
