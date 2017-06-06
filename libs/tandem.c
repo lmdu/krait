@@ -55,6 +55,7 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 			{
 				strncpy(motif, seq+start, j);
 				motif[j] = '\0';
+				length = repeat * j;
 				PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
 				//printf("%d,%d,%d,%d\n", j, repeat, start, length);
 				//return Py_BuildValue("s", motif);
@@ -115,6 +116,7 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 				motif = (char *)malloc(j+1);
 				strncpy(motif, seq+start, j);
 				motif[j] = '\0';
+				length = j*repeat;
 				PyList_Append(result, Py_BuildValue("(siiii)", motif, j, repeat, start+1, start+length));
 				i = start + length;
 				j = 0;
@@ -135,10 +137,42 @@ static int max(int a, int b, int c){
 	return d>c?d:c;
 }
 
+static int min(int a, int b, int c){
+	int d;
+	d = a<b?a:b;
+	return d<c?d:c;
+}
+//extend left deletion, insertion and mismatch
+static int extend_left_mis(char *seq, int start, int left, int mlen, char *motif, int l, int m){
+	int i = 0;
+	int j = 0;
+	left += l;
+	for(i = left; i>=0; i--){
+		j = (i - start + m) % mlen + mlen;
+		if(seq[i] != motif[j]){
+			return ++i;
+		}
+	}
+	return i;
+}
+
+static int extend_left_sub(char *seq, int start, int left, int mlen, char *motif){
+	return extend_left_mis(seq, start, left, mlen, motif, -1, 0);
+}
+
+static int extend_left_ins(char *seq, int start, int left, int mlen, char *motif){
+	return extend_left_mis(seq, start, left, mlen, motif, -1, 1);
+}
+
+static int extend_left_del(char *seq, int start, int left, int mlen, char *motif){
+	return extend_left_mis(seq, start, left, mlen, motif, 0, -1);
+}
+
+//extend right deletion, insertion and mismatch
 static int extend_right_mis(char *seq, size_t seqlen, int start, int right, int mlen, char *motif, int r, int m){
-	int i;
-	int j;
-	right += r
+	int i=0;
+	int j=0;
+	right += r;
 	for(i=right; i<seqlen; i++){
 		j = (i - start + m) % mlen;
 		if(seq[i] != motif[j]){
@@ -160,6 +194,8 @@ static int extend_right_ins(char *seq, size_t seqlen, int start, int right, int 
 	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 1, -1);
 }
 
+
+//search imperfect ssr method
 static PyObject *search_issr(PyObject *self, PyObject *args)
 {
 	int i;
@@ -167,30 +203,53 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	char *seq;
 	size_t seqlen;
 	int start;
+	int start1;
 	int start2;
 	int end;
-	int length;
+	int seed_start;
+	int seed_length;
 	int repeat;
 	int score;
 	int seed_repeats;
 	int seed_minlen;
 	int continuous_errors;
 	int max_errors;
+	int max_match;
+	int min_pos;
+	int max_pos;
 	int required_score;
 	char motif[7] = "\0";
+	int left;
+	int right;
+	
+	int matches;
 	int substitution;
 	int deleteion;
 	int insertion;
 
+	int lsub_pos;
+	int lins_pos;
+	int ldel_pos;
+	int lsub_match;
+	int lins_match;
+	int ldel_match;
+
+	int rsub_pos;
+	int rins_pos;
+	int rdel_pos;
+	int rsub_match;
+	int rins_match;
+	int rdel_match;
+
 	PyObject *result = PyList_New(0);
 
-	if (!PyArg_ParseTuple(args, "siiiii", &seq, &seed_repeats, &seed_minlen, &max_errors, &required_score)){
+	if (!PyArg_ParseTuple(args, "siiii", &seq, &seed_repeats, &seed_minlen, &max_errors, &required_score)){
 		return NULL;
 	}
 
 	seqlen = strlen(seq);
 
-	for (i=0; i<len; i++)
+	for (i=0; i<seqlen; i++)
 	{
 		if (seq[i] == 78)
 		{
@@ -199,29 +258,91 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 
 		for (j=1; j<=6; j++)
 		{
-			start = i;
-			length = j;
-			while(start+length<len && seq[i]==seq[i+j] && seq[i]!=78){
-				i++;
-				length++;
-			}
-			repeat = length/j;
-			if(repeat >= seed_repeats && length >= seed_minlen)
+			seed_start = i;
+			seed_length = j;
+			while(seed_start+seed_length<seqlen && seq[i]==seq[i+j] && seq[i]!=78)
 			{
-				strncpy(motif, seq+start, j);
+				i++;
+				seed_length++;
+			}
+			repeat = seed_length/j;
+			if(repeat >= seed_repeats && seed_length >= seed_minlen)
+			{
+				strncpy(motif, seq+seed_start, j);
 				motif[j] = '\0';
 				//PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
 				//printf("%d,%d,%d,%d\n", j, repeat, start, length);
 				//return Py_BuildValue("s", motif);
-				right = start + length;
-				start2 = start;
+				left = seed_start - 1;
+				right = seed_start + seed_length;
+				start1 = seed_start;
+				start2 = seed_start;
+				start = seed_start;
+				end = right - 1;
+				matches = seed_length;
 
-				// extend right flank sequence
+				
 				continuous_errors = 0;
 				substitution = 0;
 				deleteion = 0;
 				insertion = 0;
 
+				// extend left flank sequence
+				while(1){
+					continuous_errors++;
+					lsub_pos = extend_left_sub(seq, start1, left, j, motif);
+					lins_pos = extend_left_ins(seq, start1, left, j, motif);
+					ldel_pos = extend_left_del(seq, start1, left, j, motif);
+
+					lsub_match = left - lsub_pos;
+					lins_match = left - lins_pos;
+					ldel_match = left - ldel_pos;
+
+					min_pos = min(lsub_pos, lins_pos, ldel_pos);
+					max_match = min(lsub_match, lins_match, ldel_match);
+
+					if(max_match>2){
+						continuous_errors = 0;
+						matches += max_match;
+						start = min_pos;
+						if(max_match == lsub_match){
+							substitution++;
+						}
+						else if(max_match == lins_match)
+						{
+							insertion++;
+						}else{
+							deleteion++;
+						}
+					}
+
+					if(continuous_errors >= max_errors)
+					{
+						break;
+					}
+
+					if(min_pos == lsub_pos){
+						left = lsub_pos - 1;
+					}
+					else if(min_pos == lins_pos)
+					{
+						left = lins_pos - 1;
+						start1--;
+					}
+					else
+					{
+						left = ldel_pos - 1;
+						start1++;
+					}
+
+					if(left < 0){
+						break;
+					}
+
+				}
+
+				// extend right flank sequence
+				continuous_errors = 0;
 				while(1){
 					continuous_errors++;
 					rsub_pos = extend_right_sub(seq, seqlen, start2, right, j, motif);
@@ -232,56 +353,66 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 					rins_match = rins_pos - right;
 					rdel_match = rdel_pos - right;
 
-					if(rsub_match>0 || rins_match>0 || rdel_match>0){
-						continuous_errors = 0;
-						max_match = max(rsub_match, rins_match, rdel_match);
-						if(max)
+					max_pos = max(rsub_pos, rins_pos, rdel_pos);
+					max_match = max(rsub_match, rins_match, rdel_match);
 
+					if(max_match>2)
+					{
+						continuous_errors = 0;
+						matches += max_match;
+						end = max_pos;
+						if(max_match == rsub_match){
+							substitution++;
+						}
+						else if(max_match == rins_match)
+						{
+							insertion++;
+						}else{
+							deleteion++;
+						}
 					}
 
-					if(continuous_errors >= max_errors){
+					if(continuous_errors >= max_errors)
+					{
 						break;
 					}
 
-					if(rsub_pos >= rins_pos){
-						if(rsub_pos >= rdel_pos){
-							right = rsub_pos + 1;
-							substitution++;
-						}else{
-							right = rdel_pos + 1;
-							deleteion++;
-							start2--;
-						}
-					}else if(rins_pos > rdel_pos){
+					if(max_pos == rsub_pos){
+						right = rsub_pos + 1;
+					}
+					else if(max_pos == rins_pos)
+					{
 						right = rins_pos + 1;
-						insertion++;
 						start2++;
-					}else{
+					}
+					else
+					{
 						right = rdel_pos + 1;
-						deleteion++;
 						start2--;
 					}
 
 					if(right >= seqlen){
 						break;
 					}
-
+				}
+				int gap = insertion + deleteion;
+				score = matches - substitution -5 - (gap-1)*2;
+				
+				if(score>=required_score)
+				{
+					PyList_Append(result, Py_BuildValue("(siiiiiiiii)", motif, j, start+1, end+1, end-start+1, matches, substitution, insertion, deleteion, score));
+					i = end + 1;
+				}
+				else
+				{
+					i = seed_start + 1;
 				}
 
-
-
-				PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, start+1, start+length, length));
-
-
-
-
-
-				i = start + length;
 				j = 0;
 			}
 			else
 			{
-				i = start;
+				i = seed_start;
 			}
 		}
 	}
@@ -289,11 +420,10 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 };
 
 
-
-
 static PyMethodDef add_methods[] = {
 	{"search_ssr", search_ssr, METH_VARARGS},
 	{"search_vntr", search_vntr, METH_VARARGS},
+	{"search_issr", search_issr, METH_VARARGS},
 	{NULL, NULL, 0, NULL}
 };
 
