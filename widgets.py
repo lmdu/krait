@@ -23,8 +23,9 @@ class SSRMainWindow(QMainWindow):
 	def __init__(self):
 		super(SSRMainWindow, self).__init__()
 
-		self.setWindowTitle("Niblet v0.0.1")
-		self.setWindowIcon(QIcon('logo.ico'))
+		self.setWindowTitle("Krait - for Genome-wide survey of Microsatellites v0.0.1")
+		self.setWindowIcon(QIcon('icons/logo.png'))
+		#self.setWindowIcon(QIcon('logo.ico'))
 
 		#self.browser = SSRWebView()
 		
