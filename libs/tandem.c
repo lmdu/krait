@@ -148,7 +148,7 @@ static int extend_left_mis(char *seq, int start, int left, int mlen, char *motif
 	int j = 0;
 	left += l;
 	for(i = left; i>=0; i--){
-		j = (i - start + m) % mlen + mlen;
+		j = ((i - start + m) % mlen + mlen) % mlen;
 		if(seq[i] != motif[j]){
 			return ++i;
 		}
