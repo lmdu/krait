@@ -299,7 +299,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 					ldel_match = left - ldel_pos;
 
 					min_pos = min(lsub_pos, lins_pos, ldel_pos);
-					max_match = min(lsub_match, lins_match, ldel_match);
+					max_match = max(lsub_match, lins_match, ldel_match);
 
 					if(max_match>2){
 						continuous_errors = 0;
