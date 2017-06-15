@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 #extend left flanking
-def extend_left_mis(seq, start, left, mlen, motif, l, m):
-	i = left + l
+def extend_left_mis(seq, start, left, mlen, motif, offset1, offset2):
+	i = left + offset1
 	while i >= 0:
-		j = ((i - start + m) % mlen + mlen) % mlen
+		j = ((i - start + offset2) % mlen + mlen) % mlen
 		if seq[i] != motif[j]:
 			return i + 1
 		i -= 1
@@ -20,26 +20,26 @@ def extend_left_del(seq, start, left, mlen, motif):
 	return extend_left_mis(seq, start, left, mlen, motif, 0, -1)
 
 #extend right flank
-def extend_right_mis(seq, seqlen, start, right, mlen, motif, r, m):
-	i = right + r
-	while i < 0:
-		j = (i - start + m) % mlen
+def extend_right_mis(seq, seqlen, start, right, mlen, motif, offset1, offset2):
+	i = right + offset1
+	while i < seqlen:
+		j = (i - start + offset2) % mlen
 		if seq[i] != motif[j]:
 			return i - 1
 		i += 1
 	return i
 
 def extend_right_sub(seq, seqlen, start, right, mlen, motif):
-	return extend_right_mis(seq, seqlen, start, right, mlen, motif, -1, 0)
+	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 1, 0)
 
 def extend_right_ins(seq, seqlen, start, right, mlen, motif):
-	return extend_right_mis(seq, seqlen, start, right, mlen, motif, -1, 1)
+	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 1, -1)
 
 def extend_right_del(seq, seqlen, start, right, mlen, motif):
-	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 0, -1)
+	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 0, 1)
 
 
-sequence = 'AAGAAGAAGACGAAGAAG'
+sequence = 'AAGAAGAAGACGAGACAGAAGAAG'
 
 total_len = len(sequence)
 
@@ -124,7 +124,6 @@ while i < total_len:
 			extend_start = seed_start
 			extend_index = seed_start + seed_length
 			while 1:
-				print 'extend right'
 				if extend_index >= total_len:
 					break
 
@@ -139,8 +138,6 @@ while i < total_len:
 
 				max_index = max((sub_index, ins_index, del_index))
 				max_extend = max((sub_extend, ins_extend, del_extend))
-
-				print max_index, max_extend
 
 				if max_extend > 0:
 					errors = 0
