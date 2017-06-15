@@ -290,6 +290,10 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				// extend left flank sequence
 				while(1){
 					continuous_errors++;
+					if(left < 0){
+						break;
+					}
+
 					lsub_pos = extend_left_sub(seq, start1, left, j, motif);
 					lins_pos = extend_left_ins(seq, start1, left, j, motif);
 					ldel_pos = extend_left_del(seq, start1, left, j, motif);
@@ -316,7 +320,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 						}
 					}
 
-					if(continuous_errors >= max_errors)
+					if(continuous_errors > max_errors)
 					{
 						break;
 					}
@@ -334,16 +338,14 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 						left = ldel_pos - 1;
 						start1++;
 					}
-
-					if(left < 0){
-						break;
-					}
-
 				}
 
 				// extend right flank sequence
 				continuous_errors = 0;
 				while(1){
+					if(right >= seqlen){
+						break;
+					}
 					continuous_errors++;
 					rsub_pos = extend_right_sub(seq, seqlen, start2, right, j, motif);
 					rins_pos = extend_right_ins(seq, seqlen, start2, right, j, motif);
@@ -356,7 +358,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 					max_pos = max(rsub_pos, rins_pos, rdel_pos);
 					max_match = max(rsub_match, rins_match, rdel_match);
 
-					if(max_match>2)
+					if(max_match > 2)
 					{
 						continuous_errors = 0;
 						matches += max_match;
@@ -372,7 +374,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 						}
 					}
 
-					if(continuous_errors >= max_errors)
+					if(continuous_errors > max_errors)
 					{
 						break;
 					}
@@ -390,13 +392,9 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 						right = rdel_pos + 1;
 						start2--;
 					}
-
-					if(right >= seqlen){
-						break;
-					}
 				}
-				int gap = insertion + deleteion;
-				score = matches - substitution -5 - (gap-1)*2;
+				int gap = (insertion + deleteion - 1)*2 + 5;
+				score = matches - substitution - gap;
 				
 				if(score>=required_score)
 				{
