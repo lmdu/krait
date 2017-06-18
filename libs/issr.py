@@ -89,6 +89,7 @@ while i < total_len:
 				ins_index = extend_left_ins(sequence, extend_start, extend_index, j, motif)
 				del_index = extend_left_del(sequence, extend_start, extend_index, j, motif)
 
+				
 				sub_extend = extend_index - sub_index
 				ins_extend = extend_index - ins_index
 				del_extend = extend_index - del_index
@@ -131,10 +132,12 @@ while i < total_len:
 				sub_index = extend_right_sub(sequence, total_len, extend_start, extend_index, j, motif)
 				ins_index = extend_right_ins(sequence, total_len, extend_start, extend_index, j, motif)
 				del_index = extend_right_del(sequence, total_len, extend_start, extend_index, j, motif)
-
+				
 				sub_extend = sub_index - extend_index
 				ins_extend = ins_index - extend_index
 				del_extend = del_index - extend_index
+
+				print sub_extend, ins_extend, del_extend
 
 				max_index = max((sub_index, ins_index, del_index))
 				max_extend = max((sub_extend, ins_extend, del_extend))
