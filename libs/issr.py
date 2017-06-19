@@ -160,10 +160,10 @@ while i < total_len:
 					extend_index = sub_index + 1
 				elif max_index == ins_index:
 					extend_index = ins_index + 1
-					extend_start += 1
+					#extend_start += 1
 				else:
 					extend_index = del_index + 1
-					extend_start -= 1
+					#extend_start -= 1
 
 			gap = insertion + deletion
 			if gap:
@@ -172,7 +172,7 @@ while i < total_len:
 				score = matches - substitution
 
 			if score >= 5:
-				print motif, j, start+1, end+1, end-start+1, matches, substitution, insertion, deletion, score
+				print motif, j, start+1, end, end-start, matches, substitution, insertion, deletion, score
 				i = end + 1
 			else:
 				i = seed_start + 1
