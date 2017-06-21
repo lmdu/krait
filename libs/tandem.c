@@ -131,67 +131,87 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 };
 
 //search imperfect microsatellites
-static int max(int a, int b, int c){
-	int d;
-	d = a>b?a:b;
-	return d>c?d:c;
-}
-
 static int min(int a, int b, int c){
 	int d;
 	d = a<b?a:b;
 	return d<c?d:c;
 }
-//extend left deletion, insertion and mismatch
-static int extend_left_mis(char *seq, int start, int left, int mlen, char *motif, int l, int m){
+
+static int** initial_matrix(int size){
+	int i;
+	int j;
+	int **matrix = (int **)malloc(sizeof(int *)*size);
+	for(i=0; i<size; i++)
+		matrix[i] = (int *)malloc(sizeof(int)*size);
+
+	for(i=0; i<size; i++)
+		matrix[i][0] = i;
+
+	for(j=0; j<size; j++)
+		matrix[0][j] = j;
+
+	return matrix;
+}
+
+static int build_matrix(char *seq, char *motif, int **matrix, int start, int size, int max_error){
+	int error = 0;
 	int i = 0;
 	int j = 0;
-	left += l;
-	for(i = left; i>=0; i--){
-		j = ((i - start + m) % mlen + mlen) % mlen;
-		if(seq[i] != motif[j]){
-			return ++i;
+	int m = strlen(motif);
+	for(i=1; i<size; i++){
+		for(j=1; j<i; j++){
+			//fill columns in k row
+			if(seq[start+j-1] == motif[(i-1)%m]){
+				matrix[i][j] = matrix[i-1][j-1];
+			}else{
+				matrix[i][j] = min(matrix[i-1][j-1], matrix[i-1][j], matrix[i][j-1]) + 1;
+			}
+
+			//fill rows in k column
+			if(seq[start+i-1] == motif[(j-1)%m]){
+				matrix[j][i] = matrix[j-1][i-1];
+			}else{
+				matrix[j][i] = min(matrix[j-1][i-1], matrix[j-1][i], matrix[j][i-1]) + 1;
+			}
+
+		}
+		// fill the diagonal edit distance
+		if(seq[start+i-1] == motif[(j-1)%m]){
+			matrix[i][i] = matrix[i-1][i-1];
+			error = 0;
+		}else{
+			matrix[i][i] = min(matrix[i-1][i-1], matrix[i-1][i], matrix[i][i-1]) + 1;
+			error++;
+		}
+
+		if(error>max_error){
+			break;
 		}
 	}
-	return i;
+	return i-error;
 }
 
-static int extend_left_sub(char *seq, int start, int left, int mlen, char *motif){
-	return extend_left_mis(seq, start, left, mlen, motif, -1, 0);
-}
-
-static int extend_left_ins(char *seq, int start, int left, int mlen, char *motif){
-	return extend_left_mis(seq, start, left, mlen, motif, -1, 1);
-}
-
-static int extend_left_del(char *seq, int start, int left, int mlen, char *motif){
-	return extend_left_mis(seq, start, left, mlen, motif, 0, -1);
-}
-
-//extend right deletion, insertion and mismatch
-static int extend_right_mis(char *seq, size_t seqlen, int start, int right, int mlen, char *motif, int r, int m){
-	int i=0;
-	int j=0;
-	right += r;
-	for(i=right; i<seqlen; i++){
-		j = (i - start + m) % mlen;
-		if(seq[i] != motif[j]){
-			return --i;
+static void backtrace_matrix(int **matrix, int diagonal, int *mat, int *sub, int *ins, int *del){
+	static int match[] = {0,0,0,0};
+	int i = diagonal;
+	int j = diagonal;
+	while(i>0 && j>0){
+		if(matrix[i][j] == matrix[i][j-1]+1){
+			j--;
+			ins++;
+		}else if(matrix[i][j] == matrix[i-1][j]+1){
+			i--;
+			del++;
+		}else{
+			if(matrix[i][j] == matrix[i-1][j-1]){
+				mat++;
+			}else{
+				sub++;
+			}
+			i--;
+			j--;
 		}
 	}
-	return i;
-}
-
-static int extend_right_del(char *seq, size_t seqlen, int start, int right, int mlen, char *motif){
-	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 0, 1);
-}
-
-static int extend_right_sub(char *seq, size_t seqlen, int start, int right, int mlen, char *motif){
-	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 1, 0);
-}
-
-static int extend_right_ins(char *seq, size_t seqlen, int start, int right, int mlen, char *motif){
-	return extend_right_mis(seq, seqlen, start, right, mlen, motif, 1, -1);
 }
 
 
@@ -202,51 +222,36 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	int j;
 	char *seq;
 	size_t seqlen;
-	int start;
-	int start1;
-	int start2;
-	int end;
 	int seed_start;
 	int seed_length;
-	int repeat;
-	int score;
+	int seed_repeat;
 	int seed_repeats;
 	int seed_minlen;
-	int continuous_errors;
 	int max_errors;
-	int max_match;
-	int min_pos;
-	int max_pos;
-	int required_score;
+	int required_identity;
+	int size;
 	char motif[7] = "\0";
-	int left;
-	int right;
-	
+	//int start;
+	int end;
+	int extend_start;
+	int extend_len;
+	int extend_end;
+	int length;
 	int matches;
 	int substitution;
-	int deleteion;
 	int insertion;
-
-	int lsub_pos;
-	int lins_pos;
-	int ldel_pos;
-	int lsub_match;
-	int lins_match;
-	int ldel_match;
-
-	int rsub_pos;
-	int rins_pos;
-	int rdel_pos;
-	int rsub_match;
-	int rins_match;
-	int rdel_match;
+	int deletion;
+	float identity;
 
 	PyObject *result = PyList_New(0);
 
-	if (!PyArg_ParseTuple(args, "siiii", &seq, &seed_repeats, &seed_minlen, &max_errors, &required_score)){
+	if (!PyArg_ParseTuple(args, "siiiii", &seq, &seed_repeats, &seed_minlen, &max_errors, &required_identity, &size)){
 		return NULL;
 	}
 
+	//create edit distance matrix
+	int **matrix = initial_matrix(size);
+	
 	seqlen = strlen(seq);
 
 	for (i=0; i<seqlen; i++)
@@ -265,151 +270,40 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				i++;
 				seed_length++;
 			}
-			repeat = seed_length/j;
-			if(repeat >= seed_repeats && seed_length >= seed_minlen)
+			seed_repeat = seed_length/j;
+			if(seed_repeat >= seed_repeats && seed_length >= seed_minlen)
 			{
 				strncpy(motif, seq+seed_start, j);
 				motif[j] = '\0';
 				//PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
 				//printf("%d,%d,%d,%d\n", j, repeat, start, length);
 				//return Py_BuildValue("s", motif);
-				left = seed_start - 1;
-				right = seed_start + seed_length;
-				start1 = seed_start;
-				start2 = seed_start;
-				start = seed_start;
-				end = right - 1;
 				matches = seed_length;
-
-				
-				continuous_errors = 0;
-				substitution = 0;
-				deleteion = 0;
 				insertion = 0;
+				deletion = 0;
+				substitution = 0;
 
-				// extend left flank sequence
-				while(1){
-					continuous_errors++;
-					if(left < 0){
-						break;
-					}
-
-					lsub_pos = extend_left_sub(seq, start1, left, j, motif);
-					lins_pos = extend_left_ins(seq, start1, left, j, motif);
-					ldel_pos = extend_left_del(seq, start1, left, j, motif);
-
-					lsub_match = left - lsub_pos;
-					lins_match = left - lins_pos;
-					ldel_match = left - ldel_pos;
-
-					min_pos = min(lsub_pos, lins_pos, ldel_pos);
-					max_match = max(lsub_match, lins_match, ldel_match);
-
-					if(max_match>2){
-						continuous_errors = 0;
-						matches += max_match;
-						start = min_pos;
-						if(max_match == lsub_match){
-							substitution++;
-						}
-						else if(max_match == lins_match)
-						{
-							insertion++;
-						}else{
-							deleteion++;
-						}
-					}
-
-					if(continuous_errors > max_errors)
-					{
-						break;
-					}
-
-					if(min_pos == lsub_pos){
-						left = lsub_pos - 1;
-					}
-					else if(min_pos == lins_pos)
-					{
-						left = lins_pos - 1;
-						start1--;
-					}
-					else
-					{
-						left = ldel_pos - 1;
-						start1++;
-					}
+				//extend
+				extend_start = seed_start+seed_length;
+				extend_len = seqlen - extend_start;
+				if(extend_len > size){
+					extend_len = size;
 				}
-
-				// extend right flank sequence
-				continuous_errors = 0;
-				while(1){
-					if(right >= seqlen){
-						break;
-					}
-					continuous_errors++;
-					rsub_pos = extend_right_sub(seq, seqlen, start2, right, j, motif);
-					rins_pos = extend_right_ins(seq, seqlen, start2, right, j, motif);
-					rdel_pos = extend_right_del(seq, seqlen, start2, right, j, motif);
-
-					rsub_match = rsub_pos - right;
-					rins_match = rins_pos - right;
-					rdel_match = rdel_pos - right;
-
-					max_pos = max(rsub_pos, rins_pos, rdel_pos);
-					max_match = max(rsub_match, rins_match, rdel_match);
-
-					if(max_match > 2)
-					{
-						continuous_errors = 0;
-						matches += max_match;
-						end = max_pos;
-						if(max_match == rsub_match){
-							substitution++;
-						}
-						else if(max_match == rins_match)
-						{
-							insertion++;
-						}else{
-							deleteion++;
-						}
-					}
-
-					if(continuous_errors > max_errors)
-					{
-						break;
-					}
-
-					if(max_pos == rsub_pos){
-						right = rsub_pos + 1;
-					}
-					else if(max_pos == rins_pos)
-					{
-						right = rins_pos + 1;
-						start2++;
-					}
-					else
-					{
-						right = rdel_pos + 1;
-						start2--;
-					}
-				}
-				int gap = (insertion + deleteion - 1)*2 + 5;
-				score = matches - substitution - gap;
+				extend_end = build_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
+				backtrace_matrix(matrix, extend_end, matches, substitution, insertion, deletion);
+				end = extend_start + extend_end;
+				length = end - seed_start + 1;
+				identity = matches/length;
 				
-				if(score>=required_score)
-				{
-					PyList_Append(result, Py_BuildValue("(siiiiiiiii)", motif, j, start+1, end+1, end-start+1, matches, substitution, insertion, deleteion, score));
-					i = end + 1;
-				}
-				else
-				{
-					i = seed_start + 1;
+				if(identity>=required_identity){
+					PyList_Append(result, Py_BuildValue("(siiiiiiiii)", motif, j, seed_start+1, end+1, length, matches, substitution, insertion, deletion, identity));
+					i = end;
+				}else{
+					i = seed_start;
 				}
 
 				j = 0;
-			}
-			else
-			{
+			}else{
 				i = seed_start;
 			}
 		}
