@@ -192,21 +192,21 @@ static int build_matrix(char *seq, char *motif, int **matrix, int start, int siz
 }
 
 static void backtrace_matrix(int **matrix, int diagonal, int *mat, int *sub, int *ins, int *del){
-	static int match[] = {0,0,0,0};
+	//static int match[] = {0,0,0,0};
 	int i = diagonal;
 	int j = diagonal;
 	while(i>0 && j>0){
 		if(matrix[i][j] == matrix[i][j-1]+1){
 			j--;
-			ins++;
+			*ins += 1;
 		}else if(matrix[i][j] == matrix[i-1][j]+1){
 			i--;
-			del++;
+			*del += 1;
 		}else{
 			if(matrix[i][j] == matrix[i-1][j-1]){
-				mat++;
+				*mat += 1;
 			}else{
-				sub++;
+				*sub += 1;
 			}
 			i--;
 			j--;
@@ -290,7 +290,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 					extend_len = size;
 				}
 				extend_end = build_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
-				backtrace_matrix(matrix, extend_end, matches, substitution, insertion, deletion);
+				backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
 				end = extend_start + extend_end;
 				length = end - seed_start + 1;
 				identity = matches/length;

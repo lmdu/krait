@@ -6,7 +6,11 @@ def print_matrix(m):
 
 def edit_distance(seq, motif, start):
 	m = len(motif)
-	N = 200
+	N = 20
+	size = len(seq) - start
+
+	if size > N:
+		size = N
 
 	d = [[0]*N for i in range(N)]
 
@@ -21,7 +25,7 @@ def edit_distance(seq, motif, start):
 	substitution = 0
 	deletion = 0
 	insertion = 0
-	for k in range(1, N):
+	for k in range(1, size):
 		for l in range(1, k):
 			#fill column, k is row
 			if seq[start+l-1] == motif[(k-1)%m]:
@@ -53,37 +57,23 @@ def edit_distance(seq, motif, start):
 
 	i = m
 	j = m
-	while i>0 and j>0:
-		if d[i][j] == d[i-1][j-1] and d[i-1][j-1]<=d[i-1][j] and d[i-1][j-1]<=d[i][j-1]:
-			matches += 1
-			i -= 1
+	while i>0 or j>0:
+		if d[i][j] == d[i][j-1]+1:
 			j -= 1
-			continue
-
-		prev = d[i][j] - 1
-
-		if prev == d[i-1][j-1]:
-			substitution += 1
-			i -= 1
-			j -= 1
-		elif prev == d[i][j-1]:
 			insertion += 1
-			j -= 1
-		else:
-			deletion += 1
+		elif d[i][j] == d[i-1][j]+1:
 			i -= 1
+			deletion += 1
+		else:
+			if d[i][j] == d[i-1][j-1]:
+				matches += 1
+			else:
+				substitution += 1
+
+			i -= 1
+			j -= 1
 
 	print matches, substitution, insertion, deletion
 
-
-def	edDistRecursive(x,	y):
-	if	len(x)	==	0:	return	len(y)
-	if	len(y)	==	0:	return	len(x)
-	delt	=	1	if	x[-1]	!=	y[-1]	else	0
-	diag	=	edDistRecursive(x[:-1],	y[:-1])	+	delt
-	vert	=	edDistRecursive(x[:-1],	y)	+	1
-	horz	=	edDistRecursive(x,	y[:-1])	+	1
-	return	min(diag,	vert,	horz)
-
 if __name__ == '__main__':
-	edit_distance('AAGAAGAAGACAGAAGAGAAGAAGACGAAGTTTT', 'AAG', 0)
+	edit_distance('AAGAAGAGAAG', 'AAG', 0)
