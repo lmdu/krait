@@ -416,20 +416,18 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				extend_end = build_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
 				backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
 				end = extend_start + *(extend_end+1);
-
-
 				
 				length = end - start + 1;
-				identity = matches/length;
+				identity = 1.0*matches/length*100;
 				
 				if(identity>=required_identity){
-					PyList_Append(result, Py_BuildValue("(siiiiiiiii)", motif, j, start, end, length, matches, substitution, insertion, deletion, identity));
+					PyList_Append(result, Py_BuildValue("(siiiiiiiif)", motif, j, start, end, length, matches, substitution, insertion, deletion, identity));
+					printf("%s,%d,%d,%d,%d,%d,%d,%d,%d,%f\n", motif, j, start, end, length, matches, substitution, insertion, deletion, identity);
 					i = end;
+					j = 0;
 				}else{
 					i = seed_start;
 				}
-
-				j = 0;
 			}else{
 				i = seed_start;
 			}
