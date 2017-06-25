@@ -5,7 +5,7 @@ def print_matrix(m):
 		print " ".join(map(lambda x: "%-2d" % x,i))
 	print "------------------------------------------"
 
-def direction(left, top, lefttop):
+def edit_direction(left, top, lefttop):
 	m = min((left, top, lefttop))
 	if m == lefttop:
 		return 0
@@ -16,7 +16,7 @@ def direction(left, top, lefttop):
 
 def edit_distance(seq, motif, start):
 	m = len(motif)
-	N = 15
+	N = 20
 	size = len(seq) - start
 
 	if size > N:
@@ -64,6 +64,7 @@ def edit_distance(seq, motif, start):
 
 		if seq[start+y-1] == motif[(x-1)%m]:
 			d[x][y] = d[x-1][y-1]
+			error = 0
 		else:
 			d[x][y] = min(d[x-1][y-1], d[x-1][y], d[x][y-1]) + 1
 		
@@ -75,22 +76,37 @@ def edit_distance(seq, motif, start):
 			else:
 				x -= 1
 
+			error += 1
+
 		x += 1
 		y += 1
-	
-	#print matches, substitution, deletion, insertion
+
+		if error > 3:
+			break
+
 	print_matrix(d)
 	
-	i = x - error
-	j = y - error
-	while i>0 or j>0:
-		direct direction(d[i-1][j], d[])
-		if :
+	i = x - 1 - error
+	j = y - 1 - error
+	print i, j
+
+	while i > 0 and j > 0:
+		cost = min(d[i][j], d[i-1][j], d[i][j-1])
+		if cost == d[i][j]:
+			if cost == d[i-1][j-1]:
+				matches += 1
+			else:
+				substitution += 1
 			i -= 1
 			j -= 1
-
+		elif cost == d[i][j-1]:
+			deletion += 1
+			j -= 1
+		else:
+			insertion += 1
+			i -= 1
 
 	print matches, substitution, insertion, deletion
 
 if __name__ == '__main__':
-	edit_distance('AAGAGAAG', 'AAG', 0)
+	edit_distance('AGAAG', 'AAG', 0)
