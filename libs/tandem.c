@@ -152,20 +152,20 @@ static int** initial_matrix(int size){
 	int i;
 	int j;
 	int **matrix = (int **)malloc(sizeof(int *)*size);
-	for(i=0; i<size; i++)
+	for(i=0; i<=size; i++)
 		matrix[i] = (int *)malloc(sizeof(int)*size);
 
-	for(i=0; i<size; i++)
+	for(i=0; i<=size; i++)
 		matrix[i][0] = i;
 
-	for(j=0; j<size; j++)
+	for(j=0; j<=size; j++)
 		matrix[0][j] = j;
 
-	for(i=1;i<size;i++){
+	/*for(i=1;i<size;i++){
 		for(j=1;j<size;j++){
 			matrix[i][j] = -1;
 		}
-	}
+	}*/
 
 	return matrix;
 }
@@ -179,9 +179,9 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 	int smaller;
 	int error = 0;
 	int mlen = strlen(motif);
-	static int diagonal[2];
+	static int res[3];
 	//start += 1;
-	while(y <= size){
+	for(x=1,y=1; y<=size; x++, y++){
 		//fill row, column number fixed
 		if(i != y){
 			ref1 = seq[start-y];
@@ -225,16 +225,17 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 			error++;
 		}
 
-		x++;
-		y++;
-
 		if(error>max_error){
-			break;
+			res[0] = x;
+			res[1] = y;
+			res[2] = error;
+			return res;
 		}
 	}
-	diagonal[0] = x - 1 - error;
-	diagonal[1] = y - 1 - error;
-	return diagonal;
+	res[0] = --x;
+	res[1] = --y;
+	res[2] = error;
+	return res;
 }
 
 static int* build_matrix(char *seq, char *motif, int **matrix, int start, int size, int max_error){
@@ -247,9 +248,8 @@ static int* build_matrix(char *seq, char *motif, int **matrix, int start, int si
 	int smaller;
 	int error = 0;
 	int mlen = strlen(motif);
-	static int diagonal[2];
-	start -= 1;
-	while(y <= size){
+	static int res[3];
+	for(x=1,y=1; y<=size; x++,y++){
 		//fill row, column number fixed
 		if(i != y){
 			ref1 = seq[start+y];
@@ -293,22 +293,41 @@ static int* build_matrix(char *seq, char *motif, int **matrix, int start, int si
 			error++;
 		}
 
-		x++;
-		y++;
-
 		if(error>max_error){
-			break;
+			res[0] = x;
+			res[1] = y;
+			res[2] = error;
+			return res;
 		}
 	}
-	diagonal[0] = x - 1 - error;
-	diagonal[1] = y - 1 - error;
-	return diagonal;
+	res[0] = --x;
+	res[1] = --y;
+	res[2] = error;
+	return res;
 }
 
-static void backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, int *ins, int *del){
+static int* backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, int *ins, int *del){
 	int i = *diagonal;
 	int j = *(diagonal+1);
+	int e = *(diagonal+2);
 	int cost;
+	static int res[2];
+	while(e){
+		cost = min(matrix[i][j], matrix[i-1][j], matrix[i][j-1]);
+		if(cost == matrix[i][j]){
+			i--;
+			j--;
+		}else if(cost == matrix[i][j-1]){
+			j--;
+		}else{
+			i--;
+		}
+		e--;
+	}
+
+	res[0] = i;
+	res[1] = j;
+
 	while(i>0 && j>0){
 		cost = min(matrix[i][j], matrix[i-1][j], matrix[i][j-1]);
 		if(cost == matrix[i][j]){
@@ -327,6 +346,8 @@ static void backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, in
 			i--;
 		}
 	}
+
+	return res;
 }
 
 //search imperfect ssr method
@@ -337,6 +358,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	char *seq;
 	size_t seqlen;
 	int seed_start;
+	int seed_end;
 	int seed_length;
 	int seed_repeat;
 	int seed_repeats;
@@ -350,6 +372,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	int extend_start;
 	int extend_len;
 	int *extend_end;
+	int *extend_ok;
 	int length;
 	int matches;
 	int substitution;
@@ -392,6 +415,8 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				//PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
 				//printf("%d,%d,%d,%d\n", j, repeat, start, length);
 				//return Py_BuildValue("s", motif);
+				//seed end is the same to seed start 0-based coodinates
+				seed_end = seed_start + seed_length-seed_length%j - 1;
 				matches = seed_length-seed_length%j;
 				insertion = 0;
 				deletion = 0;
@@ -404,25 +429,26 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 					extend_len = size;
 				}
 				extend_end = build_left_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
-				backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
-				start = extend_start - *(extend_end+1) + 1;
+				extend_ok = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
+				start = extend_start - *(extend_ok+1) + 1;
 
 				//extend right
-				extend_start = seed_start+seed_length-seed_length%j;
+				extend_start = seed_end;
 				extend_len = seqlen - extend_start;
 				if(extend_len > size){
 					extend_len = size;
 				}
 				extend_end = build_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
-				backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
-				end = extend_start + *(extend_end+1);
+				extend_ok = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
+				end = extend_start + *(extend_ok+1) + 1;
 				
 				length = end - start + 1;
 				identity = 1.0*matches/length*100;
 				
 				if(identity>=required_identity){
 					PyList_Append(result, Py_BuildValue("(siiiiiiiif)", motif, j, start, end, length, matches, substitution, insertion, deletion, identity));
-					printf("%s,%d,%d,%d,%d,%d,%d,%d,%d,%f\n", motif, j, start, end, length, matches, substitution, insertion, deletion, identity);
+					//printf("%s,%d,%d,%d,%d,%d,%d,%d,%d,%f\n", motif, j, start, end, length, matches, substitution, insertion, deletion, identity);
+					printf("%d,%d\n", *extend_ok, *(extend_ok+1));
 					i = end;
 					j = 0;
 				}else{
