@@ -313,6 +313,9 @@ static int* backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, in
 	int cost;
 	static int res[2];
 	while(e){
+		if(i==0 || j==0){
+			break;
+		}
 		cost = min(matrix[i][j], matrix[i-1][j], matrix[i][j-1]);
 		if(cost == matrix[i][j]){
 			i--;
@@ -448,7 +451,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				if(identity>=required_identity){
 					PyList_Append(result, Py_BuildValue("(siiiiiiiif)", motif, j, start, end, length, matches, substitution, insertion, deletion, identity));
 					//printf("%s,%d,%d,%d,%d,%d,%d,%d,%d,%f\n", motif, j, start, end, length, matches, substitution, insertion, deletion, identity);
-					printf("%d,%d\n", *extend_ok, *(extend_ok+1));
+					//printf("%d,%d\n", *extend_ok, *(extend_ok+1));
 					i = end;
 					j = 0;
 				}else{
