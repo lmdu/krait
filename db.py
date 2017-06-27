@@ -221,7 +221,7 @@ class CompoundTable(SSRTable):
 		super(CompoundTable, self).__init__()
 
 class SatelliteTable(SSRTable):
-	table = 'satellite'
+	table = 'vntr'
 	fields = [
 		("sid", "INTEGER PRIMARY KEY", int),
 		("sequence", "TEXT", str),

@@ -10,7 +10,8 @@ SSRMainWindow{
 
 QTableView{
 	border: 0;
-	selection-background-color: rgba(95, 186, 125, 80%);
+	selection-background-color: #F6F6F6;
+	selection-color: #000000;
 }
 
 QTextBrowser{

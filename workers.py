@@ -58,7 +58,6 @@ class SSRWorker(Worker):
 		self.fasta_counts = len(self.fastas)
 
 	def process(self):
-		start = time.time()
 		current_fastas = 0
 		for fasta_id, fasta_file in self.fastas:
 			current_fastas += 1
@@ -90,12 +89,65 @@ class SSRWorker(Worker):
 				cursor.execute("BEGIN TRANSACTION;")
 				cursor.executemany(sql, values())
 				cursor.execute("COMMIT;")
-				self.update_progress.emit(int(seq_progress*fasta_progress*100))
+				self.update_progress.emit(int(seq_progress*fasta_progress*100)) 
 				
 		self.update_progress.emit(100)
 		self.update_message.emit('Perfect SSRs search completed')
 		self.finished.emit()
-		print time.time() - start
+
+class ISSRWorker(Worker):
+	'''
+	perfect microsatellite search thread
+	'''
+	def __init__(self, fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score):
+		super(ISSRWorker, self).__init__()
+		self.fastas = fastas
+		self.fasta_counts = len(self.fastas)
+		self.seed_repeat = seed_repeat
+		self.seed_length = seed_length
+		self.max_eidts = max_eidts
+		self.mis_penalty = mis_penalty
+		self.gap_penalty = gap_penalty
+		self.score = score
+
+	def process(self):
+		current_fastas = 0
+		for fasta_id, fasta_file in self.fastas:
+			current_fastas += 1
+			fasta_progress = current_fastas/self.fasta_counts
+			
+			#use fasta and create fasta file index
+			self.update_message.emit("Building fasta index for %s" % fasta_file)
+			seqs = self.build_fasta_index(fasta_id, fasta_file)
+			#insert ssr to database
+			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+
+			current_seqs = 0
+			seq_counts = len(seqs)
+			#start search perfect microsatellites
+			for name, seq in seqs:
+				self.update_message.emit("Search imperfect SSRs from %s" % name)
+				current_seqs += 1
+				seq_progress = current_seqs/seq_counts
+				issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 2000)
+				
+				def values():
+					for issr in issrs:
+						row = [None, name]
+						row.extend(issr)
+						yield row
+
+				self.update_message.emit("Insert iSSRs to database")
+				cursor = self.db.get_cursor()
+				cursor.execute("BEGIN TRANSACTION;")
+				cursor.executemany(sql, values())
+				cursor.execute("COMMIT;")
+				self.update_progress.emit(int(seq_progress*fasta_progress*100)) 
+				
+		self.update_progress.emit(100)
+		self.update_message.emit('Imperfect SSRs search completed')
+		self.finished.emit()
+
 
 
 class CompoundWorker(Worker):
@@ -119,8 +171,8 @@ class CompoundWorker(Worker):
 		self.update_message.emit("Compound SSRs search completed.")
 
 class SatelliteWorker(Worker):
-	def __init__(self, parent, fastas, min_motif, max_motif, repeats):
-		super(SatelliteWorker, self).__init__(parent)
+	def __init__(self, fastas, min_motif, max_motif, repeats):
+		super(SatelliteWorker, self).__init__()
 		self.fastas = fastas
 		self.min_motif = min_motif
 		self.max_motif = max_motif
@@ -130,28 +182,43 @@ class SatelliteWorker(Worker):
 		self.ssr_table = SatelliteTable()
 		self.seq_table = SequenceTable()
 
-	def run(self):
+	def process(self):
 		current_fastas = 0
-		for fasta in self.fastas:
+		for fasta_id, fasta_file in self.fastas:
 			current_fastas += 1
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
-			self.update_message.emit("Building fasta index for %s." % fasta)
-			detector = SatelliteDetector(fasta.path, self.min_motif, self.max_motif, self.repeats)
+			self.update_message.emit("Building fasta index for %s" % fasta_file)
+			seqs = self.build_fasta_index(fasta_id, fasta_file)
+			#insert ssr to database
+			sql = "INSERT INTO vntr VALUES (?,?,?,?,?,?,?,?)"
 
-			#get all sequence names
-			for name in detector.fastas.keys():
-				self.seq_table.insert(Data(sid=None, name=name, fid=fasta.fid))
+			current_seqs = 0
+			seq_counts = len(seqs)
+			#start search perfect microsatellites
+			for name, seq in seqs:
+				self.update_message.emit("Search Satellites from %s" % name)
+				current_seqs += 1
+				seq_progress = current_seqs/seq_counts
+				vntrs = tandem.search_vntr(seq, self.min_motif, self.max_motif, self.repeats)
+				
+				def values():
+					for vntr in vntrs:
+						row = [None, name]
+						row.extend(vntr)
+						yield row
 
-			#start search perfect SSRs
-			self.update_message.emit("Search satellites...")
-			for ssr in detector:
-				self.ssr_table.insert(ssr)
-				self.update_progress.emit(round(fasta_progress*detector.progress*100))
-
-			self.update_progress.emit(100)
-			self.update_message.emit('Satellites search completed.')
+				self.update_message.emit("Insert Satellites to database")
+				cursor = self.db.get_cursor()
+				cursor.execute("BEGIN TRANSACTION;")
+				cursor.executemany(sql, values())
+				cursor.execute("COMMIT;")
+				self.update_progress.emit(int(seq_progress*fasta_progress*100)) 
+				
+		self.update_progress.emit(100)
+		self.update_message.emit('Satellites search completed')
+		self.finished.emit()
 
 class StatisticsWorker(Worker):
 	def __init__(self, editor, parent):

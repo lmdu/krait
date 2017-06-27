@@ -207,6 +207,7 @@ class SSRMainWindow(QMainWindow):
 		#search imperfect microsatellites
 		self.imperfectAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
 		self.imperfectAct.setToolTip(self.tr("Find imperfect microsatellites"))
+		self.imperfectAct.triggered.connect(self.detectISSR)
 
 		#design primer
 		self.primerAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
@@ -567,23 +568,41 @@ class SSRMainWindow(QMainWindow):
 		pass
 
 	def detectSatellites(self):
-		min_motif = int(self.settings.value('ssr/smin'))
-		max_motif = int(self.settings.value('ssr/smax'))
-		min_repeat = int(self.settings.value('ssr/srep'))
-
-		fastas = [fasta for fasta in self.fasta_table.fetchAll()]
-		worker = SatelliteWorker(self, fastas, min_motif, max_motif, min_repeat)
-		worker.update_message.connect(self.setStatusMessage)
-		worker.update_progress.connect(self.setProgress)
-		worker.finished.connect(self.showSatellites)
-		worker.start()
+		min_motif = int(self.settings.value('ssr/vmin'))
+		max_motif = int(self.settings.value('ssr/vmax'))
+		min_repeat = int(self.settings.value('ssr/vrep'))
+		fastas = self.db.get_all("SELECT * FROM fasta")
+		self.worker = SatelliteWorker(fastas, min_motif, max_motif, min_repeat)
+		self.worker.update_message.connect(self.setStatusMessage)
+		self.worker.update_progress.connect(self.setProgress)
+		self.worker.finished.connect(self.showSatellites)
+		self.execute(self.worker)
 
 	def showSatellites(self):
-		self.model.setTable('satellite')
-		self.model.refresh()
+		self.model.setTable('vntr')
+		self.model.select()
 
 	def removeSatellites(self):
 		pass
+
+	def detectISSR(self):
+		seed_repeat = int(self.settings.value('ssr/srep'))
+		seed_length = int(self.settings.value('ssr/slen'))
+		max_eidts = int(self.settings.value('ssr/error'))
+		mis_penalty = int(self.settings.value('ssr/mismatch'))
+		gap_penalty = int(self.settings.value('ssr/gap'))
+		score = int(self.settings.value('ssr/score'))
+		fastas = self.db.get_all("SELECT * FROM fasta")
+		self.worker = ISSRWorker(fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score)
+		self.worker.update_message.connect(self.setStatusMessage)
+		self.worker.update_progress.connect(self.setProgress)
+		self.worker.finished.connect(self.showISSR)
+		self.execute(self.worker)
+
+	def showISSR(self):
+		self.model.setTable('issr')
+		self.model.select()
+
 
 	def getPrimer3Settings(self):
 		p3_settings = dict(
@@ -1051,25 +1070,19 @@ class GeneralTab(QWidget):
 		super(GeneralTab, self).__init__(parent)
 		self.settings = settings
 
-		repeatsGroup = QGroupBox(self.tr("SSR minimum repeats"))
-		monoLabel = QLabel("Mono")
+		repeatsGroup = QGroupBox(self.tr("Minimal repeats for each SSR type"))
+		monoLabel = QLabel("Mono-nucleotide")
 		self.monoValue = QSpinBox()
-		self.monoValue.setSuffix(' bp')
-		diLabel = QLabel("Di")
+		diLabel = QLabel("Di-nucleotide")
 		self.diValue = QSpinBox()
-		self.diValue.setSuffix(' bp')
-		triLabel = QLabel("Tri")
+		triLabel = QLabel("Tri-nucleotide")
 		self.triValue = QSpinBox()
-		self.triValue.setSuffix(' bp')
-		tetraLabel = QLabel("Tetra")
+		tetraLabel = QLabel("Tetra-nucleotide")
 		self.tetraValue = QSpinBox()
-		self.tetraValue.setSuffix(' bp')
-		pentaLabel = QLabel("Penta")
+		pentaLabel = QLabel("Penta-nucleotide")
 		self.pentaValue = QSpinBox()
-		self.pentaValue.setSuffix(' bp')
-		hexaLabel = QLabel("Hexa")
+		hexaLabel = QLabel("Hexa-nucleotide")
 		self.hexaValue = QSpinBox()
-		self.hexaValue.setSuffix(' bp')
 		repeatLayout = QGridLayout()
 		repeatLayout.setVerticalSpacing(10)
 		repeatLayout.setHorizontalSpacing(10)
@@ -1091,7 +1104,7 @@ class GeneralTab(QWidget):
 		repeatsGroup.setLayout(repeatLayout)
 
 		distanceGroup = QGroupBox(self.tr("Compound microsatellite, cSSR"))
-		distanceLabel = QLabel("Maximal allowed distance between two SSRs (dMAX): ")
+		distanceLabel = QLabel("Max distance (dMAX) allowed between two SSRs")
 		self.distanceValue = QSpinBox()
 		self.distanceValue.setSuffix(' bp')
 		distanceLayout = QHBoxLayout()
@@ -1099,18 +1112,16 @@ class GeneralTab(QWidget):
 		distanceLayout.addWidget(self.distanceValue, 1)
 		distanceGroup.setLayout(distanceLayout)
 
-		satelliteGroup = QGroupBox(self.tr("Minisatellite and Macrosatellite, VNTR"))
-		min_tandem_label = QLabel("Minimum length of repeat unit ")
+		satelliteGroup = QGroupBox(self.tr("Minisatellite and Macrosatellite, VNTRs"))
+		min_tandem_label = QLabel("Min motif length")
 		self.min_tandem_motif = QSpinBox()
 		self.min_tandem_motif.setMinimum(7)
-		self.min_tandem_motif.setSuffix(' bp')
 
-		max_tandem_label = QLabel("Maximum ")
+		max_tandem_label = QLabel("Max motif length")
 		self.max_tandem_motif = QSpinBox()
 		self.max_tandem_motif.setMinimum(7)
-		self.max_tandem_motif.setSuffix(' bp')
 
-		repeat_tandem_label = QLabel("Minimum allowed repeats ")
+		repeat_tandem_label = QLabel("Min repeats")
 		self.min_tandem_repeat = QSpinBox()
 		self.min_tandem_repeat.setMinimum(2)
 
@@ -1119,12 +1130,38 @@ class GeneralTab(QWidget):
 		satelliteLayout.addWidget(self.min_tandem_motif, 0, 1)
 		satelliteLayout.addWidget(max_tandem_label, 0, 2)
 		satelliteLayout.addWidget(self.max_tandem_motif, 0, 3)
-		satelliteLayout.addWidget(repeat_tandem_label, 1, 0)
-		satelliteLayout.addWidget(self.min_tandem_repeat, 1, 1)
+		satelliteLayout.addWidget(repeat_tandem_label, 0, 4)
+		satelliteLayout.addWidget(self.min_tandem_repeat, 0, 5)
 		satelliteGroup.setLayout(satelliteLayout)
 
 		issrGroup = QGroupBox(self.tr("Imperfect microsatellite, iSSR"))
-
+		seed_mrep_label = QLabel("Min seed repeats")
+		self.seed_min_repeat = QSpinBox()
+		self.seed_min_repeat.setMinimum(1)
+		seed_mlen_label = QLabel("Min seed length")
+		self.seed_min_length = QSpinBox()
+		max_error_label = QLabel("Max consecutive edits")
+		self.max_error = QSpinBox()
+		mis_penalty_label = QLabel("Mismatch penalty")
+		self.mis_penalty = QSpinBox()
+		gap_penalty_label = QLabel("Gap penalty")
+		self.gap_penalty = QSpinBox()
+		min_score_label = QLabel("Min required score")
+		self.min_score = QSpinBox()
+		issrLayout = QGridLayout()
+		issrLayout.addWidget(seed_mrep_label, 0, 0)
+		issrLayout.addWidget(self.seed_min_repeat, 0, 1)
+		issrLayout.addWidget(seed_mlen_label, 0, 2)
+		issrLayout.addWidget(self.seed_min_length, 0, 3)
+		issrLayout.addWidget(max_error_label, 0, 4)
+		issrLayout.addWidget(self.max_error, 0, 5)
+		issrLayout.addWidget(mis_penalty_label, 1, 0)
+		issrLayout.addWidget(self.mis_penalty, 1, 1)
+		issrLayout.addWidget(gap_penalty_label, 1, 2)
+		issrLayout.addWidget(self.gap_penalty, 1, 3)
+		issrLayout.addWidget(min_score_label, 1, 4)
+		issrLayout.addWidget(self.min_score, 1, 5)
+		issrGroup.setLayout(issrLayout)
 
 		level_group = QGroupBox(self.tr("Motif standardization level"))
 		level_label = QLabel(self.tr("Standard level"))
@@ -1147,7 +1184,7 @@ class GeneralTab(QWidget):
 		level_group.setLayout(level_layout)
 
 		flankGroup = QGroupBox(self.tr("Flanking sequence"))
-		flankLabel = QLabel("Flanking sequence length: ")
+		flankLabel = QLabel("Flanking sequence length")
 		self.flankValue = QSpinBox()
 		self.flankValue.setSuffix(' bp')
 		self.flankValue.setMaximum(1000)
@@ -1175,9 +1212,15 @@ class GeneralTab(QWidget):
 		self.hexaValue.setValue(int(self.settings.value('ssr/hexa', 4)))
 		self.distanceValue.setValue(int(self.settings.value('ssr/dmax', 10)))
 		self.flankValue.setValue(int(self.settings.value('ssr/flank', 100)))
-		self.min_tandem_motif.setValue(int(self.settings.value('ssr/smin', 7)))
-		self.max_tandem_motif.setValue(int(self.settings.value('ssr/smax', 30)))
-		self.min_tandem_repeat.setValue(int(self.settings.value('ssr/srep', 2)))
+		self.min_tandem_motif.setValue(int(self.settings.value('ssr/vmin', 7)))
+		self.max_tandem_motif.setValue(int(self.settings.value('ssr/vmax', 30)))
+		self.min_tandem_repeat.setValue(int(self.settings.value('ssr/vrep', 2)))
+		self.seed_min_repeat.setValue(int(self.settings.value('ssr/srep', 3)))
+		self.seed_min_length.setValue(int(self.settings.value('ssr/slen', 8)))
+		self.max_error.setValue(int(self.settings.value('ssr/error', 2)))
+		self.min_score.setValue(int(self.settings.value('ssr/score', 12)))
+		self.mis_penalty.setValue(int(self.settings.value('ssr/mismatch', 1)))
+		self.gap_penalty.setValue(int(self.settings.value('ssr/gap', 2)))
 		self.level_select.setCurrentIndex(int(self.settings.value('ssr/level', 3)))
 
 
@@ -1190,11 +1233,16 @@ class GeneralTab(QWidget):
 		self.settings.setValue('ssr/hexa', self.hexaValue.value())
 		self.settings.setValue('ssr/dmax', self.distanceValue.value())
 		self.settings.setValue('ssr/flank', self.flankValue.value())
-		self.settings.setValue('ssr/smin', self.min_tandem_motif.value())
-		self.settings.setValue('ssr/smax', self.max_tandem_motif.value())
-		self.settings.setValue('ssr/srep', self.min_tandem_repeat.value())
+		self.settings.setValue('ssr/vmin', self.min_tandem_motif.value())
+		self.settings.setValue('ssr/vmax', self.max_tandem_motif.value())
+		self.settings.setValue('ssr/vrep', self.min_tandem_repeat.value())
 		self.settings.setValue('ssr/level', self.level_select.currentIndex())
-
+		self.settings.setValue('ssr/srep', self.seed_min_repeat.value())
+		self.settings.setValue('ssr/slen', self.seed_min_length.value())
+		self.settings.setValue('ssr/error', self.max_error.value())
+		self.settings.setValue('ssr/score', self.min_score.value())
+		self.settings.setValue('ssr/mismatch', self.mis_penalty.value())
+		self.settings.setValue('ssr/gap', self.gap_penalty.value())
 
 	def showStandardLevelDetail(self, idx):
 		if idx == 0:

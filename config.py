@@ -58,16 +58,27 @@ CREATE TABLE IF NOT EXISTS `cssr`(
 CREATE TABLE IF NOT EXISTS `vntr`(
 	id INTEGER PRIMARY KEY,
 	sequence TEXT,
-	start INTEGER,
-	end INTEGER,
 	motif TEXT,
 	type INTEGER,
 	repeat INTEGER,
+	start INTEGER,
+	end INTEGER,
 	length INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS `issr`(
-	id INTEGER PRIMARY KEY
+	id INTEGER PRIMARY KEY,
+	sequence TEXT,
+	motif TEXT,
+	type INTEGER,
+	start INTEGER,
+	end INTEGER,
+	length INTEGER,
+	match INTEGER,
+	subsitution INTEGER,
+	insertion INTEGER,
+	deletion INTEGER,
+	score INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS `fasta`(

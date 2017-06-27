@@ -55,7 +55,7 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 			{
 				strncpy(motif, seq+start, j);
 				motif[j] = '\0';
-				length = repeat * j;
+				length = repeat*j;
 				PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
 				//printf("%d,%d,%d,%d\n", j, repeat, start, length);
 				//return Py_BuildValue("s", motif);
@@ -89,7 +89,7 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 
 	PyObject *result = PyList_New(0);
 
-	if (!PyArg_ParseTuple(args, "siii", &seq, &max, &min, &mrep)){
+	if (!PyArg_ParseTuple(args, "siii", &seq, &min, &max, &mrep)){
 		return NULL;
 	}
 
@@ -117,9 +117,9 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 				strncpy(motif, seq+start, j);
 				motif[j] = '\0';
 				length = j*repeat;
-				PyList_Append(result, Py_BuildValue("(siiii)", motif, j, repeat, start+1, start+length));
+				PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
 				i = start + length;
-				j = 0;
+				j = min;
 			}
 			else
 			{
@@ -181,7 +181,7 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 	int mlen = strlen(motif);
 	static int res[3];
 	//start += 1;
-	for(x=1,y=1; y<=size; x++, y++){
+	for(x=1,y=1; (x<=size)&&(y<=size); x++, y++){
 		//fill row, column number fixed
 		if(i != y){
 			ref1 = seq[start-y];
@@ -249,7 +249,7 @@ static int* build_matrix(char *seq, char *motif, int **matrix, int start, int si
 	int error = 0;
 	int mlen = strlen(motif);
 	static int res[3];
-	for(x=1,y=1; y<=size; x++,y++){
+	for(x=1,y=1; (x<=size)&&(y<=size); x++,y++){
 		//fill row, column number fixed
 		if(i != y){
 			ref1 = seq[start+y];
@@ -367,7 +367,6 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	int seed_repeats;
 	int seed_minlen;
 	int max_errors;
-	int required_identity;
 	int size;
 	char motif[7] = "\0";
 	int start;
@@ -381,11 +380,14 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	int substitution;
 	int insertion;
 	int deletion;
-	float identity;
+	int required_score;
+	int mis_penalty;
+	int gap_penalty;
+	int score;
 
 	PyObject *result = PyList_New(0);
 
-	if (!PyArg_ParseTuple(args, "siiiii", &seq, &seed_repeats, &seed_minlen, &max_errors, &required_identity, &size)){
+	if (!PyArg_ParseTuple(args, "siiiiiii", &seq, &seed_repeats, &seed_minlen, &max_errors, &mis_penalty, &gap_penalty, &required_score, &size)){
 		return NULL;
 	}
 
@@ -446,10 +448,11 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				end = extend_start + *(extend_ok+1) + 1;
 				
 				length = end - start + 1;
-				identity = 1.0*matches/length*100;
 				
-				if(identity>=required_identity){
-					PyList_Append(result, Py_BuildValue("(siiiiiiiif)", motif, j, start, end, length, matches, substitution, insertion, deletion, identity));
+				score = matches - substitution*mis_penalty - (insertion+deletion)*gap_penalty;
+				
+				if(score>=required_score){
+					PyList_Append(result, Py_BuildValue("(siiiiiiiii)", motif, j, start, end, length, matches, substitution, insertion, deletion, score));
 					//printf("%s,%d,%d,%d,%d,%d,%d,%d,%d,%f\n", motif, j, start, end, length, matches, substitution, insertion, deletion, identity);
 					//printf("%d,%d\n", *extend_ok, *(extend_ok+1));
 					i = end;
