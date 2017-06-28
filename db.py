@@ -48,7 +48,19 @@ class Database:
 	def __init__(self):
 		if not self.get_tables():
 			self.create_table()
-		self.get_cursor().execute("PRAGMA synchronous=OFF;")
+		
+		self.optimize()
+
+	def optimize(self):
+		sql = '''
+		PRAGMA synchronous=OFF;
+		PRAGMA page_size=1024;
+		PRAGMA cache_size=8192;
+		PRAGMA locking_mode=EXCLUSIVE;
+		PRAGMA journal_mode = OFF;
+		PRAGMA temp_store = MEMORY;
+		'''
+		self.get_cursor().execute(sql)
 
 	def get_cursor(self):
 		return conn.cursor()
@@ -101,6 +113,9 @@ class Database:
 		'''
 		return [row[0] for row in self.get_cursor().execute(sql)]
 
+	def execute(self, sql):
+		self.get_cursor().execute(sql)
+
 	def open(self, dbfile):
 		source = apsw.Connection(dbfile)
 		with conn.backup("main", source, "main") as b:
@@ -111,6 +126,12 @@ class Database:
 		target = apsw.Connection(dbfile)
 		with target.backup("main", conn, "main") as b:
 			b.step()
+
+	def begin(self):
+		self.execute("BEGIN;")
+
+	def commit(self):
+		self.execute("COMMIT;")
 
 def open_database(dbname=':memory:'):
 	db = QSqlDatabase.database()

@@ -48,7 +48,6 @@ CREATE TABLE IF NOT EXISTS `cssr`(
 	start INTEGER,
 	end INTEGER,
 	motif TEXT,
-	standard TEXT,
 	complexity INTEGER,
 	length INTEGER,
 	component TEXT,

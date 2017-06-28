@@ -85,7 +85,8 @@ class Fasta:
 		fp.seek(start)
 		content = fp.read(length)
 		fp.close()
-		return content.replace('\n', '').replace('\r', '').upper()
+		
+		return content.replace('\n', '').upper()
 
 	def get_sequence_by_loci(self, name, start, end):
 		'''

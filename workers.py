@@ -7,13 +7,12 @@ import jinja2
 import pyfaidx
 from PySide.QtCore import *
 
-import fasta
+import zfasta
 import motif
 import tandem
 import primerdesign
 from ssr import *
 from db import *
-from fasta import *
 from config import *
 from statistics import StatisticsReport
 from utils import Data
@@ -37,7 +36,7 @@ class Worker(QObject):
 		@para fasta_path str, the file path of fasta
 		@return object, a Fasta object
 		'''
-		seqs = fasta.Fasta(fasta_path)
+		seqs = zfasta.Fasta(fasta_path)
 		sql = "SELECT * FROM seq WHERE name='%s'" % seqs.keys()[0]
 		if not self.db.get_one(sql):
 			rows = [(None, name, fasta_id) for name in seqs.keys()]
@@ -57,6 +56,7 @@ class SSRWorker(Worker):
 		self.motifs = motif.StandardMotif(standard_level)
 		self.fasta_counts = len(self.fastas)
 
+	@Slot()
 	def process(self):
 		current_fastas = 0
 		for fasta_id, fasta_file in self.fastas:
@@ -65,6 +65,7 @@ class SSRWorker(Worker):
 			
 			#use fasta and create fasta file index
 			self.update_message.emit("Building fasta index for %s" % fasta_file)
+			time.sleep(0)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
@@ -74,6 +75,7 @@ class SSRWorker(Worker):
 			#start search perfect microsatellites
 			for name, seq in seqs:
 				self.update_message.emit("Search perfect SSRs from %s" % name)
+				time.sleep(0)
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
 				ssrs = tandem.search_ssr(seq, self.min_repeats)
@@ -84,12 +86,12 @@ class SSRWorker(Worker):
 						row.extend(ssr)
 						yield row
 
-				self.update_message.emit("Insert SSRs to database")
 				cursor = self.db.get_cursor()
-				cursor.execute("BEGIN TRANSACTION;")
+				cursor.execute("BEGIN;")
 				cursor.executemany(sql, values())
 				cursor.execute("COMMIT;")
-				self.update_progress.emit(int(seq_progress*fasta_progress*100)) 
+				self.update_progress.emit(int(seq_progress*fasta_progress*100))
+				time.sleep(0)
 				
 		self.update_progress.emit(100)
 		self.update_message.emit('Perfect SSRs search completed')
@@ -139,7 +141,7 @@ class ISSRWorker(Worker):
 
 				self.update_message.emit("Insert iSSRs to database")
 				cursor = self.db.get_cursor()
-				cursor.execute("BEGIN TRANSACTION;")
+				cursor.execute("BEGIN;")
 				cursor.executemany(sql, values())
 				cursor.execute("COMMIT;")
 				self.update_progress.emit(int(seq_progress*fasta_progress*100)) 
@@ -149,28 +151,52 @@ class ISSRWorker(Worker):
 		self.finished.emit()
 
 
-
-class CompoundWorker(Worker):
-	def __init__(self, parent, dmax):
-		super(CompoundWorker, self).__init__(parent)
+class CSSRWorker(Worker):
+	def __init__(self, dmax):
+		super(CSSRWorker, self).__init__()
 		self.dmax = dmax
-		
-		self.ssr_table = MicrosatelliteTable()
-		self.cssr_table = CompoundTable()
 
-	def run(self):
-		total_ssrs = self.ssr_table.recordCounts()
-		ssrs = self.ssr_table.fetchAll()
-		self.update_message.emit("Search compound SSRs...")
-		for cssr in CompoundDetector(ssrs, self.dmax):
-			self.cssr_table.insert(cssr)
-			progress = round(int(cssr.component.split(',')[-1])/total_ssrs*100)
-			self.update_progress.emit(progress)
+	@Slot()
+	def process(self):
+		ssrs = self.db.get_all("SELECT * FROM ssr")
+		total = len(ssrs)
+		self.db.begin()
+		self.update_message.emit("Concatenate compound SSRs")
+		cssrs = [ssrs[0]]
+		for ssr in ssrs[1:]:
+			d = ssr.start - cssrs[-1].end - 1
+			if ssr.sequence == cssrs[-1].sequence and d <= self.dmax:
+				cssrs.append(ssr)
+			else:
+				if len(cssrs) > 1:
+					self.concatenate(cssrs)
+				progress = round(cssrs[-1].id/total*100)
+				self.update_progress.emit(progress)
+				cssrs = [ssr]
+		
+		if len(cssrs) > 1:
+			self.concatenate(cssrs)
+
+		self.db.commit()
 
 		self.update_progress.emit(100)
-		self.update_message.emit("Compound SSRs search completed.")
+		self.update_message.emit("Compound SSRs search completed")
+		self.finished.emit()
 
-class SatelliteWorker(Worker):
+	def concatenate(self, cssrs):
+		seqname = cssrs[-1].sequence
+		start = cssrs[0].start
+		end = cssrs[-1].end
+		complexity = len(cssrs)
+		component = "%s-%s" % (cssrs[0].id, cssrs[-1].id)
+		motif = "-".join([cssr.motif for cssr in cssrs])
+		length = sum(cssr.length for cssr in cssrs)
+		structure = "-".join(["(%s)%s" % (cssr.motif, cssr.repeat) for cssr in cssrs])
+		sql = "INSERT INTO cssr VALUES (?,?,?,?,?,?,?,?,?)"
+		self.db.get_cursor().execute(sql, (None, seqname, start, end, motif, complexity, length, component, structure))
+
+
+class VNTRWorker(Worker):
 	def __init__(self, fastas, min_motif, max_motif, repeats):
 		super(SatelliteWorker, self).__init__()
 		self.fastas = fastas

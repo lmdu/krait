@@ -12,7 +12,7 @@ from PySide.QtSql import *
 #from PySide.QtWebKit import *
 
 from db import *
-from fasta import *
+from zfasta import *
 from utils import *
 from detail import *
 from workers import *
@@ -507,14 +507,22 @@ class SSRMainWindow(QMainWindow):
 		if dialog.exec_() == QDialog.Accepted:
 			dialog.saveSettings()
 
-	def execute(self, worker):
-		self.thread = QThread()
-		self.thread.started.connect(worker.process)
-		worker.finished.connect(self.thread.quit)
-		worker.finished.connect(worker.deleteLater)
-		self.thread.finished.connect(self.thread.deleteLater)
-		worker.moveToThread(self.thread)
-		self.thread.start()
+	def executeTask(self, worker, finish_callback):
+		#check the running task
+		if hasattr(self, 'work_thread') and self.work_thread.isRunning():
+			QMessageBox.warning(self, "Warning", "Task is running! Please wait until finished.")
+			return
+
+		self.worker = worker
+		self.worker.update_message.connect(self.setStatusMessage)
+		self.worker.update_progress.connect(self.setProgress)
+		self.worker.finished.connect(finish_callback)
+		self.work_thread = QThread()
+		self.work_thread.started.connect(self.worker.process)
+		self.worker.finished.connect(self.work_thread.quit)
+		self.worker.finished.connect(self.worker.deleteLater)
+		self.worker.moveToThread(self.work_thread)
+		self.work_thread.start()	
 
 	def searchMicrosatellites(self):
 		#if self.db.isTableExists('ssr'):
@@ -525,7 +533,8 @@ class SSRMainWindow(QMainWindow):
 		#	)
 
 		#	if status == QMessageBox.Cancel:
-			
+		self.perfectAct.activate(QAction.Hover)
+		return
 		rules = [
 			int(self.settings.value('ssr/mono')),
 			int(self.settings.value('ssr/di')),
@@ -536,12 +545,10 @@ class SSRMainWindow(QMainWindow):
 		]
 		level = int(self.settings.value('ssr/level'))
 		fastas = self.db.get_all("SELECT * FROM fasta")
-		self.worker = SSRWorker(fastas, rules, level)
-		self.worker.update_message.connect(self.setStatusMessage)
-		self.worker.update_progress.connect(self.setProgress)
-		self.worker.finished.connect(self.showMicrosatellites)
-		self.execute(self.worker)
+		worker = SSRWorker(fastas, rules, level)
+		self.executeTask(worker, self.showMicrosatellites)
 	
+	@Slot()
 	def showMicrosatellites(self):
 		self.model.setTable('ssr')
 		#self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
@@ -552,17 +559,18 @@ class SSRMainWindow(QMainWindow):
 		pass
 
 	def searchCompoundSSRs(self):
-		dmax = int(self.settings.value('ssr/dmax', 10))
-		worker = CompoundWorker(self, dmax)
-		worker.update_message.connect(self.setStatusMessage)
-		worker.update_progress.connect(self.setProgress)
-		worker.finished.connect(self.showCompoundSSRs)
-		worker.start()
+		if not self.db.get_one("SELECT 1 FROM ssr LIMIT 1"):
+			QMessageBox.warning(self, "Warning", "Please search perfect SSRs first, before search compound microsatellites.")
+			return
 
+		dmax = int(self.settings.value('ssr/dmax'))
+		worker = CSSRWorker(dmax)
+		self.executeTask(worker, self.showCompoundSSRs)
+
+	@Slot()
 	def showCompoundSSRs(self):
 		self.model.setTable('cssr')
-		self.table.horizontalHeader().setResizeMode(QHeaderView.Interactive)
-		self.model.refresh()
+		self.model.select()
 
 	def removeCompoundSSRs(self):
 		pass
@@ -572,11 +580,9 @@ class SSRMainWindow(QMainWindow):
 		max_motif = int(self.settings.value('ssr/vmax'))
 		min_repeat = int(self.settings.value('ssr/vrep'))
 		fastas = self.db.get_all("SELECT * FROM fasta")
-		self.worker = SatelliteWorker(fastas, min_motif, max_motif, min_repeat)
-		self.worker.update_message.connect(self.setStatusMessage)
-		self.worker.update_progress.connect(self.setProgress)
-		self.worker.finished.connect(self.showSatellites)
-		self.execute(self.worker)
+		worker = VNTRWorker(fastas, min_motif, max_motif, min_repeat)
+		self.executeTask(worker, self.showSatellites)
+		
 
 	def showSatellites(self):
 		self.model.setTable('vntr')
@@ -593,11 +599,8 @@ class SSRMainWindow(QMainWindow):
 		gap_penalty = int(self.settings.value('ssr/gap'))
 		score = int(self.settings.value('ssr/score'))
 		fastas = self.db.get_all("SELECT * FROM fasta")
-		self.worker = ISSRWorker(fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score)
-		self.worker.update_message.connect(self.setStatusMessage)
-		self.worker.update_progress.connect(self.setProgress)
-		self.worker.finished.connect(self.showISSR)
-		self.execute(self.worker)
+		worker = ISSRWorker(fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score)
+		self.executeTask(worker, self.showISSR)
 
 	def showISSR(self):
 		self.model.setTable('issr')
@@ -627,11 +630,8 @@ class SSRMainWindow(QMainWindow):
 		table = self.model.table
 		flank = min_motif = int(self.settings.value('ssr/flank'))
 		primer3_settings = self.getPrimer3Settings()
-		self.worker = PrimerWorker(table, rows, flank, primer3_settings)
-		self.worker.update_message.connect(self.setStatusMessage)
-		self.worker.update_progress.connect(self.setProgress)
-		self.worker.finished.connect(self.showPrimers)
-		self.execute(self.worker)
+		worker = PrimerWorker(table, rows, flank, primer3_settings)
+		self.executeTask(worker, self.showPrimers)
 
 	def designPrimerForTable(self):
 		rows = self.model.dataset
@@ -704,9 +704,11 @@ class SSRMainWindow(QMainWindow):
 	def changeSelectCount(self, count):
 		self.selectCounts.setText("Select: %s" % count)
 	
+	@Slot(int)
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)
 
+	@Slot(str)
 	def setStatusMessage(self, msg):
 		self.statusBar.showMessage(msg)
 

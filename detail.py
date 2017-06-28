@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from db import *
-from fasta import *
+from zfasta import *
 from utils import *
 
 class Detail(object):
