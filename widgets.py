@@ -164,55 +164,63 @@ class SSRMainWindow(QMainWindow):
 
 		#toolbar actions
 		#search perfect ssrs tool button
-		self.perfectAct = QAction(QIcon("icons/ssr.png"), self.tr("SSRs"), self)
-		self.perfectAct.setToolTip(self.tr("Search perfect microsatellites"))
-		self.perfectAct.triggered.connect(self.searchMicrosatellites)
-		self.perfectMenuAct = QAction(self.tr("Perform SSR search"), self)
-		self.perfectMenuAct.triggered.connect(self.searchMicrosatellites)
-		self.perfectResultAct = QAction(self.tr("Show perfect SSRs"), self)
-		self.perfectResultAct.triggered.connect(self.showMicrosatellites)
-		self.perfectRemoveAct = QAction(self.tr("Remove perfect SSRs"), self)
-		self.perfectRemoveAct.triggered.connect(self.removePerfectSSRs)
-		self.minRepeatAct = QAction(self.tr("Set minimum repeats"), self)
-		self.minRepeatAct.triggered.connect(self.setPreference)
+		self.SSRSearchAct = QAction(QIcon("icons/ssr.png"), self.tr("SSRs"), self)
+		self.SSRSearchAct.setToolTip(self.tr("Search perfect SSRs"))
+		self.SSRSearchAct.triggered.connect(self.searchOrShowSSR)
+		self.SSRForceAct = QAction(self.tr("force SSR search"), self)
+		self.SSRForceAct.triggered.connect(self.searchSSR)
+		self.SSRShowAct = QAction(self.tr("Show perfect SSRs"), self)
+		self.SSRShowAct.triggered.connect(self.showSSR)
+		self.SSRRemoveAct = QAction(self.tr("Remove perfect SSRs"), self)
+		self.SSRRemoveAct.triggered.connect(self.removeSSR)
+		self.SSRSetAct = QAction(self.tr("Specify minimal repeats"), self)
+		self.SSRSetAct.triggered.connect(self.setPreference)
 		
 		#search compound ssrs tool button
-		self.compoundAct = QAction(QIcon("icons/cssr.png"), self.tr("cSSRs"), self)
-		self.compoundAct.setToolTip(self.tr("Identify compound microsatellites using dMax"))
-		self.compoundAct.triggered.connect(self.searchCompoundSSRs)
-		self.compoundMenuAct = QAction(self.tr("Perform cSSRs search"), self)
-		self.compoundMenuAct.triggered.connect(self.searchCompoundSSRs)
-		self.compoundResultAct = QAction(self.tr("Show compound SSRs"), self)
-		self.compoundResultAct.triggered.connect(self.showCompoundSSRs)
-		self.compoundRemoveAct = QAction(self.tr("Remove cSSR results"), self)
-		self.compoundRemoveAct.triggered.connect(self.removeCompoundSSRs)
-		self.bestDmaxAct = QAction(self.tr("Estimate best dMax"), self)
-		self.bestDmaxAct.triggered.connect(self.estimateBestMaxDistance)
-		self.maxDistanceAct = QAction(self.tr("Set Maximum distance dMAX"), self)
-		self.maxDistanceAct.triggered.connect(self.setPreference)
+		self.CSSRSearchAct = QAction(QIcon("icons/cssr.png"), self.tr("cSSRs"), self)
+		self.CSSRSearchAct.setToolTip(self.tr("search compound SSRs using dMax"))
+		self.CSSRSearchAct.triggered.connect(self.searchOrShowCSSR)
+		self.CSSRForceAct = QAction(self.tr("force cSSRs search"), self)
+		self.CSSRForceAct.triggered.connect(self.searchCSSR)
+		self.CSSRShowAct = QAction(self.tr("Show compound SSRs"), self)
+		self.CSSRShowAct.triggered.connect(self.showCSSR)
+		self.CSSRRemoveAct = QAction(self.tr("Remove compound SSRs"), self)
+		self.CSSRRemoveAct.triggered.connect(self.removeCSSR)
+		#self.bestDmaxAct = QAction(self.tr("Estimate best dMax"), self)
+		#self.bestDmaxAct.triggered.connect(self.estimateBestMaxDistance)
+		self.CSSRSetAct = QAction(self.tr("Specify maximal distance dMAX"), self)
+		self.CSSRSetAct.triggered.connect(self.setPreference)
 
-		#search satellite dna
-		self.satelliteAct = QAction(QIcon("icons/satellite.png"), self.tr("VNTRs"), self)
-		self.satelliteAct.setToolTip(self.tr("Detect satellites"))
-		self.satelliteAct.triggered.connect(self.detectSatellites)
-		self.satelliteMenuAct = QAction(self.tr("Detect satellites"), self)
-		self.satelliteMenuAct.triggered.connect(self.detectSatellites)
-		self.satelliteResultAct = QAction(self.tr("Show satellites"), self)
-		self.satelliteResultAct.triggered.connect(self.showSatellites)
-		self.satelliteRemoveAct = QAction(self.tr("Remove satellites"), self)
-		self.satelliteRemoveAct.triggered.connect(self.removeSatellites)
-		self.satelliteRuleAct = QAction(self.tr("Set search parameter"), self)
-		self.satelliteRuleAct.triggered.connect(self.setPreference)
+		#search VNTRs
+		self.VNTRSearchAct = QAction(QIcon("icons/satellite.png"), self.tr("VNTRs"), self)
+		self.VNTRSearchAct.setToolTip(self.tr("search minisatellites or macrosatellites"))
+		self.VNTRSearchAct.triggered.connect(self.searchOrShowVNTR)
+		self.VNTRForceAct = QAction(self.tr("force search VNTRs"), self)
+		self.VNTRForceAct.triggered.connect(self.searchVNTR)
+		self.VNTRShowAct = QAction(self.tr("Show VNTRs"), self)
+		self.VNTRShowAct.triggered.connect(self.showVNTR)
+		self.VNTRRemoveAct = QAction(self.tr("Remove VNTRs"), self)
+		self.VNTRRemoveAct.triggered.connect(self.removeVNTR)
+		self.VNTRSetAct = QAction(self.tr("Specify search parameters"), self)
+		self.VNTRSetAct.triggered.connect(self.setPreference)
 
 		#search imperfect microsatellites
-		self.imperfectAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
-		self.imperfectAct.setToolTip(self.tr("Find imperfect microsatellites"))
-		self.imperfectAct.triggered.connect(self.detectISSR)
+		self.ISSRSearchAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
+		self.ISSRSearchAct.setToolTip(self.tr("search imperfect SSRs"))
+		self.ISSRSearchAct.triggered.connect(self.searchOrShowISSR)
+		self.ISSRForceAct = QAction(self.tr("force search iSSRs"), self)
+		self.ISSRForceAct.triggered.connect(self.searchISSR)
+		self.ISSRShowAct = QAction(self.tr("Show imperfect SSRs"), self)
+		self.ISSRShowAct.triggered.connect(self.showISSR)
+		self.ISSRRemoveAct = QAction(self.tr("Remove imperfect SSRs"), self)
+		self.ISSRRemoveAct.triggered.connect(self.removeISSR)
+		self.ISSRSetAct = QAction(self.tr("Specify search parameters"), self)
+		self.ISSRSetAct.triggered.connect(self.setPreference)
 
 		#design primer
 		self.primerAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
 		self.primerAct.setToolTip(self.tr("Design primers"))
-		self.primerAct.triggered.connect(self.designPrimers)
+		self.primerAct.triggered.connect(self.designPrimer)
 		self.primerAllAct = QAction(self.tr("Design primer for all rows"), self)
 		self.primerAllAct.setToolTip(self.tr("Design primer for all rows in table"))
 		self.primerAllAct.triggered.connect(self.designPrimerForTable)
@@ -267,19 +275,22 @@ class SSRMainWindow(QMainWindow):
 		self.editMenu.addSeparator()
 		self.editMenu.addAction(self.preferenceAct)
 
-		self.searchMenu.addAction(self.perfectMenuAct)
-		self.searchMenu.addAction(self.compoundMenuAct)
-		self.searchMenu.addAction(self.satelliteMenuAct)
+		self.searchMenu.addAction(self.SSRSearchAct)
+		self.searchMenu.addAction(self.CSSRSearchAct)
+		self.searchMenu.addAction(self.ISSRSearchAct)
+		self.searchMenu.addAction(self.VNTRSearchAct)
 
-		self.viewMenu.addAction(self.perfectResultAct)
-		self.viewMenu.addAction(self.compoundResultAct)
-		self.viewMenu.addAction(self.satelliteResultAct)
+		self.viewMenu.addAction(self.SSRShowAct)
+		self.viewMenu.addAction(self.CSSRShowAct)
+		self.viewMenu.addAction(self.ISSRShowAct)
+		self.viewMenu.addAction(self.VNTRShowAct)
 		self.viewMenu.addSeparator()
-		self.viewMenu.addAction(self.perfectRemoveAct)
-		self.viewMenu.addAction(self.compoundRemoveAct)
-		self.viewMenu.addAction(self.satelliteRemoveAct)
+		self.viewMenu.addAction(self.SSRRemoveAct)
+		self.viewMenu.addAction(self.CSSRRemoveAct)
+		self.viewMenu.addAction(self.ISSRRemoveAct)
+		self.viewMenu.addAction(self.VNTRRemoveAct)
 
-		self.toolMenu.addAction(self.bestDmaxAct)
+		#self.toolMenu.addAction(self.bestDmaxAct)
 		self.toolMenu.addAction(self.statisticsAct)
 
 		self.helpMenu.addAction(self.documentAct)
@@ -289,32 +300,37 @@ class SSRMainWindow(QMainWindow):
 
 		#tool bar menus
 		#search ssrs tool button menu
-		self.perfectMenu = QMenu()
-		self.perfectMenu.addAction(self.perfectMenuAct)
-		self.perfectMenu.addAction(self.perfectResultAct)
-		self.perfectMenu.addAction(self.perfectRemoveAct)
-		self.perfectMenu.addSeparator()
-		self.perfectMenu.addAction(self.loadFastaAct)
-		self.perfectMenu.addAction(self.loadFastasAct)
-		self.perfectMenu.addSeparator()
-		self.perfectMenu.addAction(self.minRepeatAct)
+		self.SSRMenu = QMenu()
+		self.SSRMenu.addAction(self.SSRForceAct)
+		self.SSRMenu.addAction(self.SSRShowAct)
+		self.SSRMenu.addAction(self.SSRRemoveAct)
+		self.SSRMenu.addSeparator()
+		self.SSRMenu.addAction(self.loadFastaAct)
+		self.SSRMenu.addAction(self.loadFastasAct)
+		self.SSRMenu.addSeparator()
+		self.SSRMenu.addAction(self.SSRSetAct)
 
-		self.compoundMenu = QMenu()
-		self.compoundMenu.addAction(self.compoundMenuAct)
-		self.compoundMenu.addAction(self.compoundResultAct)
-		self.compoundMenu.addAction(self.compoundRemoveAct)
-		self.compoundMenu.addSeparator()
-		self.compoundMenu.addAction(self.bestDmaxAct)
-		self.compoundMenu.addAction(self.maxDistanceAct)
+		self.CSSRMenu = QMenu()
+		self.CSSRMenu.addAction(self.CSSRForceAct)
+		self.CSSRMenu.addAction(self.CSSRShowAct)
+		self.CSSRMenu.addAction(self.CSSRRemoveAct)
+		self.CSSRMenu.addSeparator()
+		#self.CSSRMenu.addAction(self.bestDmaxAct)
+		self.CSSRMenu.addAction(self.CSSRSetAct)
 
-		self.satelliteMenu = QMenu()
-		self.satelliteMenu.addAction(self.satelliteMenuAct)
-		self.satelliteMenu.addAction(self.satelliteResultAct)
-		self.satelliteMenu.addAction(self.satelliteRemoveAct)
-		self.satelliteMenu.addSeparator()
-		self.satelliteMenu.addAction(self.satelliteRuleAct)
+		self.VNTRMenu = QMenu()
+		self.VNTRMenu.addAction(self.VNTRForceAct)
+		self.VNTRMenu.addAction(self.VNTRShowAct)
+		self.VNTRMenu.addAction(self.VNTRRemoveAct)
+		self.VNTRMenu.addSeparator()
+		self.VNTRMenu.addAction(self.VNTRSetAct)
 
-		self.imperfectMenu = QMenu()
+		self.ISSRMenu = QMenu()
+		self.ISSRMenu.addAction(self.ISSRForceAct)
+		self.ISSRMenu.addAction(self.ISSRShowAct)
+		self.ISSRMenu.addAction(self.ISSRRemoveAct)
+		self.ISSRMenu.addSeparator()
+		self.ISSRMenu.addAction(self.ISSRSetAct)
 
 		self.primerMenu = QMenu()
 		self.primerMenu.addAction(self.primerAllAct)
@@ -333,17 +349,17 @@ class SSRMainWindow(QMainWindow):
 		self.toolBar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
 		#search ssr action and menus
-		self.perfectAct.setMenu(self.perfectMenu)
-		self.toolBar.addAction(self.perfectAct)
+		self.SSRSearchAct.setMenu(self.SSRMenu)
+		self.toolBar.addAction(self.SSRSearchAct)
 
-		self.compoundAct.setMenu(self.compoundMenu)
-		self.toolBar.addAction(self.compoundAct)
+		self.CSSRSearchAct.setMenu(self.CSSRMenu)
+		self.toolBar.addAction(self.CSSRSearchAct)
 
-		self.satelliteAct.setMenu(self.satelliteMenu)
-		self.toolBar.addAction(self.satelliteAct)
+		self.ISSRSearchAct.setMenu(self.ISSRMenu)
+		self.toolBar.addAction(self.ISSRSearchAct)
 
-		self.imperfectAct.setMenu(self.imperfectMenu)
-		self.toolBar.addAction(self.imperfectAct)
+		self.VNTRSearchAct.setMenu(self.VNTRMenu)
+		self.toolBar.addAction(self.VNTRSearchAct)
 
 		self.primerAct.setMenu(self.primerMenu)
 		self.toolBar.addAction(self.primerAct)
@@ -514,27 +530,35 @@ class SSRMainWindow(QMainWindow):
 			return
 
 		self.worker = worker
-		self.worker.update_message.connect(self.setStatusMessage)
-		self.worker.update_progress.connect(self.setProgress)
-		self.worker.finished.connect(finish_callback)
+		#self.worker.update_message.connect(self.setStatusMessage)
+		#self.worker.update_progress.connect(self.setProgress)
+		#self.worker.finished.connect(finish_callback)
 		self.work_thread = QThread()
-		self.work_thread.started.connect(self.worker.process)
-		self.worker.finished.connect(self.work_thread.quit)
-		self.worker.finished.connect(self.worker.deleteLater)
+		self.work_thread.started.connect(self.worker.start)
+		#self.worker.finished.connect(self.work_thread.quit)
+		#self.worker.finished.connect(self.worker.deleteLater)
 		self.worker.moveToThread(self.work_thread)
-		self.work_thread.start()	
+		self.work_thread.start()
 
-	def searchMicrosatellites(self):
-		#if self.db.isTableExists('ssr'):
-		#	status = QMessageBox.warning(self, 
-		#		self.tr("Warning"), 
-		#		self.tr("The SSRs have been searched.\nDo you want to remove result and search again?"), 
-		#		QMessageBox.Ok | QMessageBox.Cancel
-		#	)
+	def getInputFastas(self):
+		'''
+		get all fasta files with path provided by user
+		'''
+		if self.db.is_empty('fasta'):
+			QMessageBox.critical(self, "Error occurred", "No fasta file imported. Please import fasta files.")
+			return None
+		else:
+			return self.db.get_all("SELECT * FROM fasta")
 
-		#	if status == QMessageBox.Cancel:
-		self.perfectAct.activate(QAction.Hover)
-		return
+
+	#handle perfect SSRs search
+	def searchSSR(self):
+		fastas = self.getInputFastas()
+		if not fastas:
+			return
+
+		self.removeSSR()
+		
 		rules = [
 			int(self.settings.value('ssr/mono')),
 			int(self.settings.value('ssr/di')),
@@ -544,70 +568,109 @@ class SSRMainWindow(QMainWindow):
 			int(self.settings.value('ssr/hexa'))
 		]
 		level = int(self.settings.value('ssr/level'))
-		fastas = self.db.get_all("SELECT * FROM fasta")
 		worker = SSRWorker(fastas, rules, level)
-		self.executeTask(worker, self.showMicrosatellites)
+		self.executeTask(worker, self.showSSR)
+
+	def searchOrShowSSR(self):
+		if self.db.is_empty('ssr'):
+			self.searchSSR()
+		else:
+			self.showSSR()
 	
-	@Slot()
-	def showMicrosatellites(self):
+	def showSSR(self):
 		self.model.setTable('ssr')
-		#self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
-		#self.model.refresh()
 		self.model.select()
 
-	def removePerfectSSRs(self):
-		pass
+	def removeSSR(self):
+		self.db.clear('ssr')
 
-	def searchCompoundSSRs(self):
-		if not self.db.get_one("SELECT 1 FROM ssr LIMIT 1"):
-			QMessageBox.warning(self, "Warning", "Please search perfect SSRs first, before search compound microsatellites.")
+	
+	#handle compound SSRs search
+	def searchCSSR(self):
+		if self.db.is_empty('ssr'):
+			QMessageBox.warning(self, "Warning", "Please search perfect SSRs first, before search compound SSRs.")
 			return
+
+		self.removeCSSR()
 
 		dmax = int(self.settings.value('ssr/dmax'))
 		worker = CSSRWorker(dmax)
-		self.executeTask(worker, self.showCompoundSSRs)
+		self.executeTask(worker, self.showCSSR)
 
-	@Slot()
-	def showCompoundSSRs(self):
+	def searchOrShowCSSR(self):
+		if self.db.is_empty('cssr'):
+			self.searchCSSR()
+		else:
+			self.showCSSR()
+
+	def showCSSR(self):
 		self.model.setTable('cssr')
 		self.model.select()
 
-	def removeCompoundSSRs(self):
-		pass
+	def removeCSSR(self):
+		self.db.clear('cssr')
 
-	def detectSatellites(self):
+
+	#handle VNTRs search
+	def searchVNTR(self):
+		fastas = self.getInputFastas()
+		if not fastas:
+			return
+
+		self.removeVNTR()
+
 		min_motif = int(self.settings.value('ssr/vmin'))
 		max_motif = int(self.settings.value('ssr/vmax'))
 		min_repeat = int(self.settings.value('ssr/vrep'))
-		fastas = self.db.get_all("SELECT * FROM fasta")
 		worker = VNTRWorker(fastas, min_motif, max_motif, min_repeat)
-		self.executeTask(worker, self.showSatellites)
-		
+		self.executeTask(worker, self.showVNTR)
 
-	def showSatellites(self):
+	def searchOrShowVNTR(self):
+		if self.db.is_empty('vntr'):
+			self.searchVNTR()
+		else:
+			self.showVNTR()
+		
+	def showVNTR(self):
 		self.model.setTable('vntr')
 		self.model.select()
 
-	def removeSatellites(self):
-		pass
+	def removeVNTR(self):
+		self.db.clear('vntr')
 
-	def detectISSR(self):
+	
+	#handle imperfect SSRs search
+	def searchISSR(self):
+		fastas = self.getInputFastas()
+		if not fastas:
+			return
+
+		self.removeISSR()
+
 		seed_repeat = int(self.settings.value('ssr/srep'))
 		seed_length = int(self.settings.value('ssr/slen'))
 		max_eidts = int(self.settings.value('ssr/error'))
 		mis_penalty = int(self.settings.value('ssr/mismatch'))
 		gap_penalty = int(self.settings.value('ssr/gap'))
 		score = int(self.settings.value('ssr/score'))
-		fastas = self.db.get_all("SELECT * FROM fasta")
 		worker = ISSRWorker(fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score)
 		self.executeTask(worker, self.showISSR)
+
+	def searchOrShowISSR(self):
+		if self.db.is_empty('issr'):
+			self.searchISSR()
+		else:
+			self.showISSR()
 
 	def showISSR(self):
 		self.model.setTable('issr')
 		self.model.select()
 
+	def removeISSR(self):
+		self.db.clear('issr')
 
-	def getPrimer3Settings(self):
+
+	def getPrimerSettings(self):
 		p3_settings = dict(
 			PRIMER_TASK = 'generic',
 			PRIMER_PICK_LEFT_PRIMER = 1,
@@ -625,11 +688,12 @@ class SSRMainWindow(QMainWindow):
 		self.settings.endGroup()
 		return p3_settings
 
-	def designPrimers(self):
+	#design primers for ssrs
+	def designPrimer(self):
 		rows = self.model.dataset
 		table = self.model.table
 		flank = min_motif = int(self.settings.value('ssr/flank'))
-		primer3_settings = self.getPrimer3Settings()
+		primer3_settings = self.getPrimerSettings()
 		worker = PrimerWorker(table, rows, flank, primer3_settings)
 		self.executeTask(worker, self.showPrimers)
 
@@ -647,8 +711,7 @@ class SSRMainWindow(QMainWindow):
 		self.model.select()
 
 	def removePrimers(self):
-		self.db.get_cursor().execute("DELETE FROM primer")
-		self.model.select()
+		self.db.clear('primer')
 
 	def estimateBestMaxDistance(self):
 		pass
@@ -698,8 +761,10 @@ class SSRMainWindow(QMainWindow):
 		#self.table.setColumnWidth(0, 30)
 		self.table.resizeColumnToContents(0)
 		#self.table.resizeColumnsToContents()
-		self.rowCounts.setText("Row: %s" % count[0])
-		self.colCounts.setText("Column: %s" % count[1])
+		labels = {'ssr':'SSRs', 'vntr':'VNTRs', 'cssr':'cSSRs', 'issr':'iSSRs', 'primer':'Primers'}
+		label = labels.get(count[0], 'Row')
+		self.rowCounts.setText("%s: %s" % (label, count[1]))
+		self.colCounts.setText("Column: %s" % count[2])
 
 	def changeSelectCount(self, count):
 		self.selectCounts.setText("Select: %s" % count)
@@ -922,7 +987,7 @@ class TableModel(QAbstractTableModel):
 		self.read_row = 0
 		self.selected = set()
 		self.endResetModel()
-		self.row_col.emit((len(self.dataset), len(self.headers)))
+		self.row_col.emit((self.table, len(self.dataset), len(self.headers)))
 
 	def clear(self):
 		self.dataset = []

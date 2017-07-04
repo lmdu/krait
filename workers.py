@@ -5,6 +5,7 @@ import time
 import json
 import jinja2
 import pyfaidx
+import multiprocessing
 from PySide.QtCore import *
 
 import zfasta
@@ -55,9 +56,9 @@ class SSRWorker(Worker):
 		self.min_repeats = min_repeats
 		self.motifs = motif.StandardMotif(standard_level)
 		self.fasta_counts = len(self.fastas)
+		self.progress = 0
 
-	@Slot()
-	def process(self):
+	def run(self):
 		current_fastas = 0
 		for fasta_id, fasta_file in self.fastas:
 			current_fastas += 1
@@ -198,7 +199,7 @@ class CSSRWorker(Worker):
 
 class VNTRWorker(Worker):
 	def __init__(self, fastas, min_motif, max_motif, repeats):
-		super(SatelliteWorker, self).__init__()
+		super(VNTRWorker, self).__init__()
 		self.fastas = fastas
 		self.min_motif = min_motif
 		self.max_motif = max_motif

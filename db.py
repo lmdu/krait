@@ -113,6 +113,15 @@ class Database:
 		'''
 		return [row[0] for row in self.get_cursor().execute(sql)]
 
+	def is_empty(self, table):
+		'''
+		check the table is empty or not
+		'''
+		if self.get_one("SELECT 1 FROM %s LIMIT 1" % table):
+			return False
+		return True
+
+
 	def execute(self, sql):
 		self.get_cursor().execute(sql)
 
@@ -132,6 +141,9 @@ class Database:
 
 	def commit(self):
 		self.execute("COMMIT;")
+
+	def clear(self, table):
+		self.execute("DELETE FROM %s" % table)
 
 def open_database(dbname=':memory:'):
 	db = QSqlDatabase.database()
