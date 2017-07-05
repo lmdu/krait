@@ -802,32 +802,6 @@ class SSRFilterInput(QLineEdit):
 		super(SSRFilterInput, self).__init__(parent)
 		self.setPlaceholderText("Filter data in table e.g. motif=AT and repeat>10")
 
-class CheckHeader(QHeaderView):
-	isOn = False
-
-	def __init__(self, orientation, parent=None):
-		QHeaderView.__init__(self, orientation, parent)
-
-	def paintSection(self, painter, rect, logicalIndex):
-		painter.save()
-		QHeaderView.paintSection(self, painter, rect, logicalIndex)
-		painter.restore()
-
-		if logicalIndex == 0:
-			option = QStyleOptionButton()
-			option.rect = QRect(3, 10, 10, 10)
-			if self.isOn:
-				option.state = QStyle.State_On
-			else:
-				option.state = QStyle.State_Off
-
-			self.style().drawControl(QStyle.CE_CheckBox, option, painter)
-
-	def mousePressEvent(self, event):
-		self.isOn = not self.isOn
-		self.updateSection(0)
-		QHeaderView.mousePressEvent(self, event)
-
 
 #class SSRWebView(QWebView):
 #	def __init__(self, parent=None):
@@ -838,29 +812,26 @@ class CheckHeader(QHeaderView):
 #	def openUrl(self, url):
 #		QDesktopServices.openUrl(url)
 
-
-class SSRTableModel(QSqlTableModel):
-	refreshed = Signal()
-	def __init__(self):
-		super(SSRTableModel, self).__init__()
-
-	def refresh(self):
-		self.select()
-		self.refreshed.emit()
-
-
 class SSRTableView(QTableView):
 	def __init__(self, parent=None):
 		super(SSRTableView, self).__init__(parent)
 		self.parent = parent
-		self.header = CheckHeader(Qt.Horizontal, self)
-		self.setHorizontalHeader(self.header)
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setSelectionMode(QAbstractItemView.SingleSelection)
 		self.setSortingEnabled(True)
+
+		self.checkbox = QCheckBox(self.horizontalHeader())
+		self.checkbox.setGeometry(QRect(3,5,20,20))
+		self.checkbox.stateChanged.connect(self.checkboxAction)
+
+		self.clicked.connect(self.showCellContent)
+
+	def showCellContent(self, index):
+		msg = self.model().data(index)
+		self.parent.setStatusMessage(str(msg))
 
 	def contextMenuEvent(self, event):
 		self.current_row = self.rowAt(event.pos().y())
@@ -891,6 +862,12 @@ class SSRTableView(QTableView):
 		self.menu.addSeparator()
 		self.menu.addAction(detail_action)
 		self.menu.popup(QCursor.pos())
+
+	def checkboxAction(self, state):
+		if state > 0:
+			self.selectAll()
+		else:
+			self.deselectAll()
 
 	def selectCurrentRow(self):
 		self.model().selectRow(self.current_row)
