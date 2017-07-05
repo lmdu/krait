@@ -5,6 +5,7 @@ import sys
 #do not generate pyc file
 sys.dont_write_bytecode = True
 
+from PySide.QtCore import *
 from PySide.QtGui import *
 
 #create application and set properties
@@ -12,6 +13,8 @@ app = QApplication(sys.argv)
 app.setOrganizationName('Chengdu University')
 app.setOrganizationDomain('http://www.cdu.edu.cn')
 app.setApplicationName('Krait')
+
+QThread.currentThread().setPriority(QThread.HighPriority)
 
 #set style sheet like css
 with open('style.qss') as qss:

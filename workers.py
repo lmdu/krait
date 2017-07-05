@@ -46,10 +46,11 @@ class Worker(QObject):
 
 		return seqs
 
+
 class SSRWorker(Worker):
-	'''
+	"""
 	perfect microsatellite search thread
-	'''
+	"""
 	def __init__(self, fastas, min_repeats, standard_level):
 		super(SSRWorker, self).__init__()
 		self.fastas = fastas
@@ -58,7 +59,7 @@ class SSRWorker(Worker):
 		self.fasta_counts = len(self.fastas)
 		self.progress = 0
 
-	def run(self):
+	def process(self):
 		current_fastas = 0
 		for fasta_id, fasta_file in self.fastas:
 			current_fastas += 1

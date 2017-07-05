@@ -4,6 +4,7 @@ import os
 import sys
 import csv
 import apsw
+import time
 import platform
 
 from PySide.QtCore import *
@@ -11,6 +12,7 @@ from PySide.QtGui import *
 from PySide.QtSql import *
 #from PySide.QtWebKit import *
 
+from ssr import *
 from db import *
 from zfasta import *
 from utils import *
@@ -81,17 +83,6 @@ class SSRMainWindow(QMainWindow):
 		name = QFileDialog.getSaveFileName(self, directory=action, filter="SVG image (*.svg)")
 		if not name: return
 		print name
-
-	def setDatabase(self, db_name):
-		try:
-			db = open_database(db_name)
-		except Exception, e:
-			QMessageBox.critical(self,
-				self.tr('Error occurred'),
-				self.tr(str(e))
-			)
-			return False
-		return True
 
 	def readSettings(self):
 		self.settings = QSettings("config.ini", QSettings.IniFormat)
@@ -405,7 +396,17 @@ class SSRMainWindow(QMainWindow):
 		self.db.drop_tables()
 		self.db.open(dbfile)
 
-		self.showMicrosatellites()
+		if not self.db.is_empty('ssr'):
+			self.showSSR()
+
+		elif not self.db.is_empty('cssr'):
+			self.showCSSR()
+
+		elif not self.db.is_empty('issr'):
+			self.showISSR()
+
+		elif not self.db.is_empty('vntr'):
+			self.showVNTR()
 
 	def saveProject(self):
 		if self.opened_project is None:
@@ -530,13 +531,13 @@ class SSRMainWindow(QMainWindow):
 			return
 
 		self.worker = worker
-		#self.worker.update_message.connect(self.setStatusMessage)
-		#self.worker.update_progress.connect(self.setProgress)
-		#self.worker.finished.connect(finish_callback)
+		self.worker.update_message.connect(self.setStatusMessage)
+		self.worker.update_progress.connect(self.setProgress)
+		self.worker.finished.connect(finish_callback)
 		self.work_thread = QThread()
-		self.work_thread.started.connect(self.worker.start)
-		#self.worker.finished.connect(self.work_thread.quit)
-		#self.worker.finished.connect(self.worker.deleteLater)
+		self.work_thread.started.connect(self.worker.process)
+		self.worker.finished.connect(self.work_thread.quit)
+		self.worker.finished.connect(self.worker.deleteLater)
 		self.worker.moveToThread(self.work_thread)
 		self.work_thread.start()
 
@@ -570,6 +571,7 @@ class SSRMainWindow(QMainWindow):
 		level = int(self.settings.value('ssr/level'))
 		worker = SSRWorker(fastas, rules, level)
 		self.executeTask(worker, self.showSSR)
+		proc = SSRTask(fastas, rules, level)
 
 	def searchOrShowSSR(self):
 		if self.db.is_empty('ssr'):
@@ -718,11 +720,8 @@ class SSRMainWindow(QMainWindow):
 
 	def filterTable(self):
 		filters = str(self.filter.text())
-
-		if filters.startswith('db'):
-			self.model.setTable(filters.split('=')[1])
-			return
-		self.model.setFilter(filters)
+		sqlwhere = format_sql_where(filters)
+		self.model.setFilter(sqlwhere)
 
 	def generateStatisticsReport(self):
 		worker = StatisticsWorker(self.reportor, self)
@@ -769,11 +768,9 @@ class SSRMainWindow(QMainWindow):
 	def changeSelectCount(self, count):
 		self.selectCounts.setText("Select: %s" % count)
 	
-	@Slot(int)
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)
 
-	@Slot(str)
 	def setStatusMessage(self, msg):
 		self.statusBar.showMessage(msg)
 
@@ -805,6 +802,32 @@ class SSRFilterInput(QLineEdit):
 		super(SSRFilterInput, self).__init__(parent)
 		self.setPlaceholderText("Filter data in table e.g. motif=AT and repeat>10")
 
+class CheckHeader(QHeaderView):
+	isOn = False
+
+	def __init__(self, orientation, parent=None):
+		QHeaderView.__init__(self, orientation, parent)
+
+	def paintSection(self, painter, rect, logicalIndex):
+		painter.save()
+		QHeaderView.paintSection(self, painter, rect, logicalIndex)
+		painter.restore()
+
+		if logicalIndex == 0:
+			option = QStyleOptionButton()
+			option.rect = QRect(3, 10, 10, 10)
+			if self.isOn:
+				option.state = QStyle.State_On
+			else:
+				option.state = QStyle.State_Off
+
+			self.style().drawControl(QStyle.CE_CheckBox, option, painter)
+
+	def mousePressEvent(self, event):
+		self.isOn = not self.isOn
+		self.updateSection(0)
+		QHeaderView.mousePressEvent(self, event)
+
 
 #class SSRWebView(QWebView):
 #	def __init__(self, parent=None):
@@ -830,6 +853,8 @@ class SSRTableView(QTableView):
 	def __init__(self, parent=None):
 		super(SSRTableView, self).__init__(parent)
 		self.parent = parent
+		self.header = CheckHeader(Qt.Horizontal, self)
+		self.setHorizontalHeader(self.header)
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)

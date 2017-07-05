@@ -145,15 +145,6 @@ class Database:
 	def clear(self, table):
 		self.execute("DELETE FROM %s" % table)
 
-def open_database(dbname=':memory:'):
-	db = QSqlDatabase.database()
-	db.setDatabaseName(dbname)
-	if not db.open():
-		raise Exception("Can not connect to database %s" % dbname)
-	query = QSqlQuery()
-	query.exec_("PRAGMA synchronous=OFF;")
-	return db
-
 
 class SSRTable(QObject):
 	table = None

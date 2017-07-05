@@ -49,6 +49,29 @@ def export_to_file(outfile, headers, rows):
 
 	writer(outfile, headers, rows)
 
+def format_sql_where(conditions):
+	symbols = ['>=', '<=', '>', '<', '=', 'in']
+	conditions = conditions.split()
+	for idx, cond in enumerate(conditions):
+		if cond == 'in':
+			items = conditions[idx+1].strip('()').split(',')
+			if not items[0].isdigit():
+				conditions[idx+1] = "(%s)" % ",".join(map(lambda x: "'%s'" % x, items))
+			continue
+
+		if cond in symbols:
+			if not conditions[idx+1].isdigit():
+				conditions[idx+1] = "'%s'" % conditions[idx+1]
+			continue
+
+		for symbol in symbols:
+			if symbol in cond:
+				res = cond.split(symbol)
+				if not res[1].isdigit():
+					res[1] = "'%s'" % res[1]
+					conditions[idx] = "%s%s%s" % (res[0], symbol, res[1])
+
+	return " ".join(conditions)
 
 class SequenceHighlighter:
 	html = '''
