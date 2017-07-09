@@ -14,6 +14,7 @@ import tandem
 import primerdesign
 from ssr import *
 from db import *
+from utils import *
 from config import *
 from statistics import StatisticsReport
 from utils import Data
@@ -38,7 +39,7 @@ class Worker(QObject):
 		@return object, a Fasta object
 		'''
 		seqs = zfasta.Fasta(fasta_path)
-		sql = "SELECT * FROM seq WHERE name='%s'" % seqs.keys()[0]
+		sql = "SELECT 1 FROM seq WHERE name='%s'" % seqs.keys()[0]
 		if not self.db.get_one(sql):
 			rows = [(None, name, fasta_id) for name in seqs.keys()]
 			sql = "INSERT INTO seq VALUES (?,?,?)"
@@ -75,9 +76,10 @@ class SSRWorker(Worker):
 			current_seqs = 0
 			seq_counts = len(seqs)
 			#start search perfect microsatellites
-			for name, seq in seqs:
+			for name in seqs:
 				self.update_message.emit("Search perfect SSRs from %s" % name)
 				time.sleep(0)
+				seq = seqs[name]
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
 				ssrs = tandem.search_ssr(seq, self.min_repeats)
@@ -158,7 +160,6 @@ class CSSRWorker(Worker):
 		super(CSSRWorker, self).__init__()
 		self.dmax = dmax
 
-	@Slot()
 	def process(self):
 		ssrs = self.db.get_all("SELECT * FROM ssr")
 		total = len(ssrs)
@@ -288,24 +289,34 @@ class PrimerWorker(Worker):
 	def process(self):
 		primerdesign.loadThermoParams(PRIMER3_CONFIG)
 		primerdesign.setGlobals(self.primer3_settings, None, None)
-		sql = (
-			"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
-			"fasta AS f,seq AS s,%s AS t WHERE f.id=s.fid AND "
-			"t.sequence=s.name AND t.id IN (%s)"
-		)
-		sql = sql % (self.table, ",".join(map(str, self.ids)))
+		#total ssr counts in a table
+		total_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % self.table)
+		total_ids = len(self.ids)
 
-		total = len(self.ids)
+		if total_ssrs == total_ids:
+			sql = (
+				"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
+				"%s AS t,fasta AS f,seq AS s WHERE f.id=s.fid AND "
+				"t.sequence=s.name"
+			)
+			sql = sql % self.table
+		else:
+			sql = (
+				"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
+				"%s AS t,fasta AS f,seq AS s WHERE f.id=s.fid AND "
+				"t.sequence=s.name AND t.id IN (%s)"
+			)
+			sql = sql % (self.table, ",".join(map(str, self.ids)))
+
 		current = 0
 		seqs = None
 
-		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?)"
-		cursor = self.db.get_cursor()
-		cursor.execute("BEGIN TRANSACTION;")
-
+		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+		
+		self.db.begin()
 		for item in self.db.get_cursor().execute(sql):
 			if seqs is None or item[2] not in seqs:
-				seqs = Fasta(item[0])
+				seqs = zfasta.Fasta(item[0])
 			
 			start = item[3] - self.flank
 			if start < 1:
@@ -322,28 +333,126 @@ class PrimerWorker(Worker):
 			res = primerdesign.runDesign(False)
 			current += 1
 
-			with open(target['SEQUENCE_ID'], 'wb') as fh:
-				json.dump(res, fh, indent=4)
+			#with open(target['SEQUENCE_ID'], 'wb') as fh:
+			#	json.dump(res, fh, indent=4)
 
 			primer_count = res['PRIMER_PAIR_NUM_RETURNED']
 			for i in range(primer_count):
 				primer = [None, target['SEQUENCE_ID'], i+1]
+				primer.append(res['PRIMER_PAIR_%s_PRODUCT_SIZE' % i])
 				primer.append(res['PRIMER_LEFT_%s_SEQUENCE' % i])
 				primer.append(round(res['PRIMER_LEFT_%s_TM' % i], 2))
 				primer.append(round(res['PRIMER_LEFT_%s_GC_PERCENT' % i], 2))
+				primer.append(round(res['PRIMER_LEFT_%s_END_STABILITY' % i], 2))
 				primer.append(res['PRIMER_RIGHT_%s_SEQUENCE' % i])
 				primer.append(round(res['PRIMER_RIGHT_%s_TM' % i], 2))
 				primer.append(round(res['PRIMER_RIGHT_%s_GC_PERCENT' % i], 2))
-				cursor.execute(insert_sql, primer)
+				primer.append(round(res['PRIMER_RIGHT_%s_END_STABILITY' % i], 2))
+				self.db.get_cursor().execute(insert_sql, primer)
 
 				meta = [self.db.get_last_insert_rowid()]
 				meta.extend(res['PRIMER_LEFT_%s' % i])
 				meta.extend(res['PRIMER_RIGHT_%s' % i])
-				cursor.execute("INSERT INTO primer_meta VALUES (?,?,?,?,?)", meta)
+				self.db.get_cursor().execute("INSERT INTO primer_meta VALUES (?,?,?,?,?)", meta)
 		
-			self.update_progress.emit(round(current/total*100))
+			self.update_progress.emit(round(current/total_ids*100))
 
-		cursor.execute("COMMIT;")
+		self.db.commit()
 
 		self.update_message.emit('Primer design completed')
 		self.finished.emit()
+
+class ExportFastaWorker(Worker):
+	def __init__(self, table, ids, flank, outfile):
+		super(ExportFastaWorker, self).__init__()
+		self.table = table
+		self.ids = ids
+		self.flank = flank
+		self.outfile = outfile
+
+	def process(self):
+		total_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % self.table)
+		total_ids = len(self.ids)
+
+		if total_ssrs == total_ids:
+			sql = (
+				"SELECT t.*, f.path FROM %s AS t,fasta AS f,seq AS s "
+				"WHERE f.id=s.fid AND t.sequence=s.name"
+			)
+			sql = sql % self.table
+		else:
+			sql = (
+				"SELECT t.*, f.path FROM %s AS t,fasta AS f,seq AS s "
+				"WHERE f.id=s.fid AND t.sequence=s.name AND t.id IN (%s)"
+			)
+			sql = sql % (self.table, ",".join(map(str, self.ids)))
+
+		current = 0
+		seqs = None
+
+		fp = open(self.outfile, 'w')
+
+		for item in self.db.get_cursor().execute(sql):
+			if seqs is None or item.sequence not in seqs:
+				seqs = zfasta.Fasta(item.path)
+			
+			start = item.start - self.flank
+			if start < 1:
+				start = 1
+			end = item.end + self.flank
+			ssr = seqs.get_sequence_by_loci(item.sequence, start, end)
+			name = ">%s%s %s:%s-%s|motif:%s" % (self.table.upper(), item.id, item.sequence, item.start, item.end, item.motif)
+			fp.write("%s\n%s" % (name, format_fasta_sequence(ssr, 70)))
+			
+			current += 1
+			self.update_progress.emit(round(current/total_ids*100))
+
+		fp.close()
+
+		self.update_message.emit("Export fasta completed.")
+		self.finished.emit()
+
+class LocateWorker(Worker):
+	"""
+	Locate the SSRs in which region of genome
+	@para table, the table name in database
+	@para gene_annot, the genome annotation file, gff or gtf
+	@para repeat_annot, the repeatmask output file contains TEs
+	"""
+	def __init__(self, table, gene_annot=None, repeat_annot=None):
+		self.table = table
+		self.gene_annot = gene_annot
+		self.repeat_annot = repeat_annot
+
+	def process(self):
+		self.update_message("Building interval tree")
+		gene_tree = generate_interval_tree(gene_annot) if gene_annot else {}
+		repeat_tree = generate_interval_tree(repeat_annot, 'repeatmasker') if repeat_annot else {}
+		total = self.db.get_one("SELECT COUNT(1) FROM %s" % self.table)
+		current = 0
+		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
+			self.update_message("Processing %ss on %s", (self.table.upper(), ssr.sequence))
+			regions = set()
+			if ssr.sequence in gene_tree:
+				res = gene_tree[ssr.sequence].search(ssr.start, ssr.end)
+				if res:
+					for it in res:
+						regions.add(it.data)
+
+			if ssr.sequence in repeat_tree:
+				res = repeat_tree[ssr.sequence].search(ssr.start, ssr.end)
+				if res:
+					for it in res:
+						regions.add(it.data)
+
+			if regions:
+				record = [None, self.table, ssr.id, ";".join(regions)]
+				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?)", record)
+
+			current += 1
+			self.update_progress(int(current/total*100))
+
+		self.update_message("%s location completed." % self.table)
+
+
+		

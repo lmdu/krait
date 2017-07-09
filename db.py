@@ -17,6 +17,10 @@ class Row:
 	def getValues(self):
 		return self.values
 
+	def value(self, name):
+		idx = self.names.index(name)
+		return self.values[idx]
+
 	def getKeys(self):
 		return self.names
 
@@ -145,7 +149,7 @@ class Database:
 	def clear(self, table):
 		self.execute("DELETE FROM %s" % table)
 
-
+"""
 class SSRTable(QObject):
 	table = None
 	fields = []
@@ -291,3 +295,4 @@ class MetaTable(SSRTable):
 		self._query.exec_("SELECT value FROM meta WHERE name='%s' LIMIT 1" % name)
 		while self._query.next():
 			return self._query.value(0)
+"""

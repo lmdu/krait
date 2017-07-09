@@ -3,6 +3,8 @@
 import os
 from jinja2 import Environment, FileSystemLoader
 
+VERSION = '0.1.0'
+
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
 #cache path for plots or temp data
@@ -100,12 +102,15 @@ CREATE TABLE IF NOT EXISTS `primer`(
 	id INTEGER PRIMARY KEY,
 	target TEXT,
 	entry INTEGER,
+	product INTEGER,
 	left TEXT,
 	tm1 REAL,
 	gc1 REAL,
+	stability1 REAL,
 	right TEXT,
 	tm2 REAL,
-	gc2 REAL
+	gc2 REAL,
+	stability2 REAL
 );
 
 CREATE TABLE IF NOT EXISTS `primer_meta`(
@@ -114,6 +119,13 @@ CREATE TABLE IF NOT EXISTS `primer_meta`(
 	length1 INTEGER,
 	start2 INTEGER,
 	length2 INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS `location`(
+	id INTEGER PRIMARY KEY,
+	category TEXT,
+	target INTEGER,
+	region TEXT
 );
 
 """

@@ -54,7 +54,7 @@ class SSRMainWindow(QMainWindow):
 		self.filter.returnPressed.connect(self.filterTable)
 
 		#create fasta table
-		self.fasta_table = FastaTable()
+		#self.fasta_table = FastaTable()
 
 		self.createActions()
 		self.createMenus()
@@ -96,36 +96,36 @@ class SSRMainWindow(QMainWindow):
 
 	def createActions(self):
 		#open a project action
-		self.openProjectAct = QAction(self.tr("Open project"), self)
+		self.openProjectAct = QAction(self.tr("Open Project"), self)
 		self.openProjectAct.setShortcut(QKeySequence.Open)
 		self.openProjectAct.triggered.connect(self.openProject)
 
 		#close a project action
-		self.closeProjectAct = QAction(self.tr("Close project"), self)
+		self.closeProjectAct = QAction(self.tr("Close Project"), self)
 		self.closeProjectAct.setShortcut(QKeySequence.Close)
 		self.closeProjectAct.triggered.connect(self.closeProject)
 		
 		#save a project action
-		self.saveProjectAct = QAction(self.tr("Save project"), self)
+		self.saveProjectAct = QAction(self.tr("Save Project"), self)
 		self.saveProjectAct.setShortcut(QKeySequence.Save)
 		self.saveProjectAct.triggered.connect(self.saveProject)
 		
 		#save as a project action
-		self.saveAsProjectAct = QAction(self.tr("Save project as..."), self)
+		self.saveAsProjectAct = QAction(self.tr("Save Project As..."), self)
 		self.saveAsProjectAct.setShortcut(QKeySequence.SaveAs)
 		self.saveAsProjectAct.triggered.connect(self.saveProjectAs)
 		
 		#load fasta file or genome action
-		self.loadFastaAct = QAction(self.tr("Import fasta sequence"), self)
+		self.loadFastaAct = QAction(self.tr("Import Fasta Sequence"), self)
 		self.loadFastaAct.triggered.connect(self.importFasta)
-		self.loadFastasAct = QAction(self.tr("Import Fastas in folder"), self)
+		self.loadFastasAct = QAction(self.tr("Import Fastas in Folder"), self)
 		self.loadFastasAct.triggered.connect(self.importFastas)
 		
 		#export the Results
-		self.exportSelectedAct = QAction(self.tr("Export selected rows"), self)
-		self.exportSelectedAct.triggered.connect(self.exportSelectedRows)
-		self.exportAllAct = QAction(self.tr("Export all rows"), self)
-		self.exportAllAct.triggered.connect(self.exportAllRows)
+		self.exportTableAct = QAction(self.tr("Exprot Table"), self)
+		self.exportTableAct.triggered.connect(self.exportTableRows)
+		self.exportFastaAct = QAction(self.tr("Export Fasta"), self)
+		self.exportFastaAct.triggered.connect(self.exportTableFastas)
 		
 		#exit action
 		self.exitAct = QAction(self.tr("Exit"), self)
@@ -156,75 +156,75 @@ class SSRMainWindow(QMainWindow):
 		#toolbar actions
 		#search perfect ssrs tool button
 		self.SSRSearchAct = QAction(QIcon("icons/ssr.png"), self.tr("SSRs"), self)
-		self.SSRSearchAct.setToolTip(self.tr("Search perfect SSRs"))
+		self.SSRSearchAct.setToolTip(self.tr("Search Perfect SSRs"))
 		self.SSRSearchAct.triggered.connect(self.searchOrShowSSR)
-		self.SSRForceAct = QAction(self.tr("force SSR search"), self)
+		self.SSRForceAct = QAction(self.tr("Force SSR Search"), self)
 		self.SSRForceAct.triggered.connect(self.searchSSR)
-		self.SSRShowAct = QAction(self.tr("Show perfect SSRs"), self)
+		self.SSRShowAct = QAction(self.tr("Show Perfect SSRs"), self)
 		self.SSRShowAct.triggered.connect(self.showSSR)
-		self.SSRRemoveAct = QAction(self.tr("Remove perfect SSRs"), self)
+		self.SSRRemoveAct = QAction(self.tr("Remove Perfect SSRs"), self)
 		self.SSRRemoveAct.triggered.connect(self.removeSSR)
-		self.SSRSetAct = QAction(self.tr("Specify minimal repeats"), self)
+		self.SSRSetAct = QAction(self.tr("Specify Minimal Repeats"), self)
 		self.SSRSetAct.triggered.connect(self.setPreference)
 		
 		#search compound ssrs tool button
 		self.CSSRSearchAct = QAction(QIcon("icons/cssr.png"), self.tr("cSSRs"), self)
-		self.CSSRSearchAct.setToolTip(self.tr("search compound SSRs using dMax"))
+		self.CSSRSearchAct.setToolTip(self.tr("Search Compound SSRs Using dMax"))
 		self.CSSRSearchAct.triggered.connect(self.searchOrShowCSSR)
-		self.CSSRForceAct = QAction(self.tr("force cSSRs search"), self)
+		self.CSSRForceAct = QAction(self.tr("Force cSSRs Search"), self)
 		self.CSSRForceAct.triggered.connect(self.searchCSSR)
-		self.CSSRShowAct = QAction(self.tr("Show compound SSRs"), self)
+		self.CSSRShowAct = QAction(self.tr("Show Compound SSRs"), self)
 		self.CSSRShowAct.triggered.connect(self.showCSSR)
-		self.CSSRRemoveAct = QAction(self.tr("Remove compound SSRs"), self)
+		self.CSSRRemoveAct = QAction(self.tr("Remove Compound SSRs"), self)
 		self.CSSRRemoveAct.triggered.connect(self.removeCSSR)
 		#self.bestDmaxAct = QAction(self.tr("Estimate best dMax"), self)
 		#self.bestDmaxAct.triggered.connect(self.estimateBestMaxDistance)
-		self.CSSRSetAct = QAction(self.tr("Specify maximal distance dMAX"), self)
+		self.CSSRSetAct = QAction(self.tr("Specify Maximal Distance (dMAX)"), self)
 		self.CSSRSetAct.triggered.connect(self.setPreference)
 
 		#search VNTRs
 		self.VNTRSearchAct = QAction(QIcon("icons/satellite.png"), self.tr("VNTRs"), self)
-		self.VNTRSearchAct.setToolTip(self.tr("search minisatellites or macrosatellites"))
+		self.VNTRSearchAct.setToolTip(self.tr("Search Minisatellites or Macrosatellites"))
 		self.VNTRSearchAct.triggered.connect(self.searchOrShowVNTR)
-		self.VNTRForceAct = QAction(self.tr("force search VNTRs"), self)
+		self.VNTRForceAct = QAction(self.tr("Force Search VNTRs"), self)
 		self.VNTRForceAct.triggered.connect(self.searchVNTR)
 		self.VNTRShowAct = QAction(self.tr("Show VNTRs"), self)
 		self.VNTRShowAct.triggered.connect(self.showVNTR)
 		self.VNTRRemoveAct = QAction(self.tr("Remove VNTRs"), self)
 		self.VNTRRemoveAct.triggered.connect(self.removeVNTR)
-		self.VNTRSetAct = QAction(self.tr("Specify search parameters"), self)
+		self.VNTRSetAct = QAction(self.tr("Specify Search Parameters"), self)
 		self.VNTRSetAct.triggered.connect(self.setPreference)
 
 		#search imperfect microsatellites
 		self.ISSRSearchAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
-		self.ISSRSearchAct.setToolTip(self.tr("search imperfect SSRs"))
+		self.ISSRSearchAct.setToolTip(self.tr("Search Imperfect SSRs"))
 		self.ISSRSearchAct.triggered.connect(self.searchOrShowISSR)
-		self.ISSRForceAct = QAction(self.tr("force search iSSRs"), self)
+		self.ISSRForceAct = QAction(self.tr("Force Search iSSRs"), self)
 		self.ISSRForceAct.triggered.connect(self.searchISSR)
-		self.ISSRShowAct = QAction(self.tr("Show imperfect SSRs"), self)
+		self.ISSRShowAct = QAction(self.tr("Show Imperfect SSRs"), self)
 		self.ISSRShowAct.triggered.connect(self.showISSR)
-		self.ISSRRemoveAct = QAction(self.tr("Remove imperfect SSRs"), self)
+		self.ISSRRemoveAct = QAction(self.tr("Remove Imperfect SSRs"), self)
 		self.ISSRRemoveAct.triggered.connect(self.removeISSR)
-		self.ISSRSetAct = QAction(self.tr("Specify search parameters"), self)
+		self.ISSRSetAct = QAction(self.tr("Specify Search Parameters"), self)
 		self.ISSRSetAct.triggered.connect(self.setPreference)
 
 		#design primer
-		self.primerAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
-		self.primerAct.setToolTip(self.tr("Design primers"))
-		self.primerAct.triggered.connect(self.designPrimer)
-		self.primerAllAct = QAction(self.tr("Design primer for all rows"), self)
-		self.primerAllAct.setToolTip(self.tr("Design primer for all rows in table"))
-		self.primerAllAct.triggered.connect(self.designPrimerForTable)
-		self.primerSelectAct = QAction(self.tr("Design primer for selected rows"), self)
-		self.primerSelectAct.setToolTip(self.tr("Design primer for selected rows in table"))
-		self.primerSelectAct.triggered.connect(self.designPrimerForSelected)
-		self.primerShowAct = QAction(self.tr("Show designed primers"), self)
-		self.primerRemoveAct = QAction(self.tr("Remove designed primers"), self)
+		self.primerDesignAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
+		self.primerDesignAct.setToolTip(self.tr("Design primers"))
+		self.primerDesignAct.triggered.connect(self.designPrimer)
+		self.primerForceAct = QAction(self.tr("Force Design Primer"), self)
+		self.primerForceAct.triggered.connect(self.designOrShowPrimer)
+		self.primerShowAct = QAction(self.tr("Show Designed Primer"), self)
+		self.primerShowAct.triggered.connect(self.showPrimer)
+		self.primerRemoveAct = QAction(self.tr("Remove Designed Primer"), self)
+		self.primerRemoveAct.triggered.connect(self.removePrimer)
+		self.primerSetAct = QAction(self.tr("Specify Primer3 Settings"), self)
+		self.primerSetAct.triggered.connect(self.setPreference)
 
 		#statistics report
 		self.statisticsAct = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
 		self.statisticsAct.triggered.connect(self.generateStatisticsReport)
-		self.statisticsMenuAct = QAction(self.tr("Perform statistics"), self)
+		self.statisticsMenuAct = QAction(self.tr("Perform Statistics"), self)
 		self.statisticsMenuAct.triggered.connect(self.generateStatisticsReport)
 
 		#about action
@@ -253,8 +253,8 @@ class SSRMainWindow(QMainWindow):
 		self.fileMenu.addAction(self.loadFastaAct)
 		self.fileMenu.addAction(self.loadFastasAct)
 		self.fileMenu.addSeparator()
-		self.fileMenu.addAction(self.exportSelectedAct)
-		self.fileMenu.addAction(self.exportAllAct)
+		self.fileMenu.addAction(self.exportTableAct)
+		self.fileMenu.addAction(self.exportFastaAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exitAct)
 		
@@ -282,6 +282,7 @@ class SSRMainWindow(QMainWindow):
 		self.viewMenu.addAction(self.VNTRRemoveAct)
 
 		#self.toolMenu.addAction(self.bestDmaxAct)
+		self.toolMenu.addAction(self.primerDesignAct)
 		self.toolMenu.addAction(self.statisticsAct)
 
 		self.helpMenu.addAction(self.documentAct)
@@ -324,10 +325,11 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRMenu.addAction(self.ISSRSetAct)
 
 		self.primerMenu = QMenu()
-		self.primerMenu.addAction(self.primerAllAct)
-		self.primerMenu.addAction(self.primerSelectAct)
+		self.primerMenu.addAction(self.primerForceAct)
 		self.primerMenu.addAction(self.primerShowAct)
 		self.primerMenu.addAction(self.primerRemoveAct)
+		self.primerMenu.addSeparator()
+		self.primerMenu.addAction(self.primerSetAct)
 
 		self.statisticsMenu = QMenu()
 		self.statisticsMenu.addAction(self.statisticsMenuAct)
@@ -352,8 +354,8 @@ class SSRMainWindow(QMainWindow):
 		self.VNTRSearchAct.setMenu(self.VNTRMenu)
 		self.toolBar.addAction(self.VNTRSearchAct)
 
-		self.primerAct.setMenu(self.primerMenu)
-		self.toolBar.addAction(self.primerAct)
+		self.primerDesignAct.setMenu(self.primerMenu)
+		self.toolBar.addAction(self.primerDesignAct)
 
 		self.statisticsAct.setMenu(self.statisticsMenu)
 		self.toolBar.addAction(self.statisticsAct)
@@ -453,47 +455,53 @@ class SSRMainWindow(QMainWindow):
 			count += 1
 		self.setStatusMessage("Import %s fastas in %s" % (count, directory))
 
-	def exportSelectedRows(self):
-		selected_items = self.model.getSelectedIds()
-		if not selected_items:
-			QMessageBox.information(self, 'Warning', "No rows selected!")
-			return
-
-		save_file, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv);;Tabular text (*.txt)")
-
-		if not save_file:
-			return
-
-		sql = "SELECT * FROM %s WHERE id IN (%s)" % (self.model.tableName(), ",".join(map(str,selected_items)))
-
-		rows = self.db.get_cursor().execute(sql)
-
-		export_to_file(save_file, self.model.columnNames(), rows)
-		QMessageBox.information(self, "Information", "Successfully exported to %s" % save_file)
-
-	def exportAllRows(self):
-		items = self.model.getAllItems()
-		if not items:
-			QMessageBox.information(self, 'Warning', "No rows in table!")
-			return
-
-		save_file, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv);;Tabular text (*.txt)")
-
-		if not save_file:
-			return
+	def exportTableRows(self):
+		selected = self.model.getSelectedRows()
+		if not selected:
+			return QMessageBox.warning(self, 'Warning', "Please select rows in table to export.")
 
 		table = self.model.tableName()
-		total_rows = self.db.get_one("SELECT COUNT(1) FROM %s" % table)
-		if total_rows == self.model.getRowCounts():
+		headers = self.model.columnNames()
+
+		exp_file, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv);;GFF (*.gff);;GTF (*.gtf);;Tabular text (*.txt)")
+		if not exp_file: return
+
+		if len(selected) == self.db.get_one("SELECT COUNT(1) FROM %s" % table):
 			sql = "SELECT * FROM %s" % table
 		else:
-			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, items)))
+			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected)))
 
-		rows = self.db.get_cursor().execute(sql)
+		cursor = self.db.get_cursor()
+		cursor.execute(sql)
 
-		export_to_file(save_file, self.model.columnNames(), rows)
+		if exp_file.endswith('.csv'):
+			write_to_csv(exp_file, headers, cursor)
+		elif exp_file.endswith('.gff'):
+			write_to_gff(exp_file, table.upper(), cursor)
+		elif exp_file.endswith('.gtf'):
+			write_to_gtf(exp_file, table.upper(), cursor)
+		else:
+			write_to_tab(exp_file, headers, cursor)
 
-		QMessageBox.information(self, "Information", "Successfully exported to %s" % save_file)
+		QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file)
+
+	def exportTableFastas(self):
+		selected = self.model.getSelectedRows()
+		if not selected:
+			return QMessageBox.warning(self, 'Warning', "Please select rows in table to export.")
+
+		table = self.model.tableName()
+
+		if table not in ('ssr', 'issr', 'cssr', 'vntr'):
+			return QMessageBox.warning(self, 'Warning', "Your selected rows are not SSRs")
+
+		exp_file, _ = QFileDialog.getSaveFileName(self, filter="Fasta (*.fa);;Fasta (*.fasta)")
+		if not exp_file: return
+
+		flank = int(self.settings.value('ssr/flank'))
+		worker = ExportFastaWorker(table, selected, flank, exp_file)
+		self.executeTask(worker, lambda: QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file))
+
 
 	def doCopy(self):
 		focus = QApplication.focusWidget()
@@ -571,7 +579,7 @@ class SSRMainWindow(QMainWindow):
 		level = int(self.settings.value('ssr/level'))
 		worker = SSRWorker(fastas, rules, level)
 		self.executeTask(worker, self.showSSR)
-		proc = SSRTask(fastas, rules, level)
+		#proc = SSRTask(fastas, rules, level)
 
 	def searchOrShowSSR(self):
 		if self.db.is_empty('ssr'):
@@ -692,28 +700,36 @@ class SSRMainWindow(QMainWindow):
 
 	#design primers for ssrs
 	def designPrimer(self):
-		rows = self.model.dataset
+		rows = self.model.getSelectedRows()
+		if not rows:
+			return QMessageBox.Warning(self, "Warning", "Please select SSR, iSSRs, cSSRs or VNTRs")	
+		
 		table = self.model.table
-		flank = min_motif = int(self.settings.value('ssr/flank'))
+		flank = int(self.settings.value('ssr/flank'))
 		primer3_settings = self.getPrimerSettings()
 		worker = PrimerWorker(table, rows, flank, primer3_settings)
-		self.executeTask(worker, self.showPrimers)
 
-	def designPrimerForTable(self):
-		rows = self.model.dataset
-		table = self.model.table
+		self.removePrimer()
 
+		self.executeTask(worker, self.showPrimer)
 
-	def designPrimerForSelected(self):
-		rows = self.model.getSelectedRows()
-		table = self.model.table
+	def designOrShowPrimer(self):
+		if self.db.is_empty('primer'):
+			self.designPrimer()
+		else:
+			self.showPrimer()
 
-	def showPrimers(self):
+	def showPrimer(self):
 		self.model.setTable('primer')
 		self.model.select()
 
-	def removePrimers(self):
+	def removePrimer(self):
 		self.db.clear('primer')
+
+	def locateTandem(self):
+		pass
+
+
 
 	def estimateBestMaxDistance(self):
 		pass
@@ -916,18 +932,6 @@ class TableModel(QAbstractTableModel):
 	def getAllItems(self):
 		return self.dataset
 
-	def getSelectedIds(self):
-		'''
-		get the selected item ids in database
-		'''
-		if not self.selected:
-			return None
-
-		selected_ids = [self.dataset[i] for i in self.selected]
-		selected_ids.sort()
-
-		return selected_ids
-
 	def selectRow(self, row):
 		if row not in self.selected:
 			self.beginResetModel()
@@ -944,11 +948,13 @@ class TableModel(QAbstractTableModel):
 		self.beginResetModel()
 		self.selected = set(range(len(self.dataset)))
 		self.endResetModel()
+		self.sel_row.emit(len(self.dataset))
 
 	def deselectAll(self):
 		self.beginResetModel()
 		self.selected = set()
 		self.endResetModel()
+		self.sel_row.emit(0)
 
 	def setTable(self, table):
 		self.table = table
@@ -997,8 +1003,13 @@ class TableModel(QAbstractTableModel):
 		self.selected = set()
 
 	def getSelectedRows(self):
-		if self.selected:
-			return [self.dataset[idx] for idx in self.selected]
+		if len(self.selected) == len(self.dataset):
+			return self.dataset
+		else:
+			ids = [self.dataset[idx] for idx in self.selected]
+			ids.sort()
+			return ids
+
 
 	def value(self, index):
 		ID = self.dataset[index.row()]

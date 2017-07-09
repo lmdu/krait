@@ -14,8 +14,7 @@ class Fasta:
 
 	def __iter__(self):
 		for name in self._index:
-			seq = self.get_sequence_by_name(name)
-			yield (name, seq)
+			yield name
 
 	def __len__(self):
 		return len(self._index)
