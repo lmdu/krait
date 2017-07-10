@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import csv
+import gzip
 import pyfaidx
 import intervaltree
 
@@ -108,7 +109,7 @@ def gff_gtf_parser(annot_file):
 	"""
 	parse GFF, GTF, comparessed gz annotation file
 	"""
-	if gff_file.endswith('.gz'):
+	if annot_file.endswith('.gz'):
 		fh = gzip.open(annot_file)
 	else:
 		fh = open(annot_file)
@@ -124,11 +125,12 @@ def gff_gtf_parser(annot_file):
 		record.attrs = {}
 		
 		for item in cols[-1].split(';'):
+			if not item: continue
 			if 'ID=' in cols[-1]:
 				name, value = item.split('=')
 			else:
 				name, value = item.strip().strip('"').split('"')
-			record.attrs[name] = value
+			record.attrs[name.strip()] = value
 		
 		yield record
 
@@ -159,11 +161,13 @@ def generate_interval_tree(annot_file, _format='gene'):
 	@return interval tree
 	"""
 	tree = {}
+
 	if _format == 'repeatmasker':
 		for r in repeatmasker_parser(annot_file):
 			if r.seqid not in tree:
 				tree[r.seqid] = intervaltree.IntervalTree()
-			tree[r.seqid].addi(r.start, r.end, 'TE')
+			if r.start < r.end:
+				tree[r.seqid].addi(r.start, r.end, 'TE')
 
 		return tree
 
@@ -171,39 +175,54 @@ def generate_interval_tree(annot_file, _format='gene'):
 	father = None
 	seqid = None
 	exons = []
-	for r in gff_gtf_parser(gff_file, _format):
+	for r in gff_gtf_parser(annot_file):
 		if r.seqid not in tree:
 			tree[r.seqid] = intervaltree.IntervalTree()
 
 		if r.feature == 'CDS':
-			tree[r.seqid].addi(r.start, r.end, 'CDS')
+			if r.start < r.end:
+				tree[r.seqid].addi(r.start, r.end, 'CDS')
 		elif r.feature == 'FIVE_PRIMER_UTR':
-			tree[r.seqid].addi(r.start, r.end, "5'UTR")
+			if r.start < r.end:
+				tree[r.seqid].addi(r.start, r.end, "5'UTR")
 		elif r.feature == 'THREE_PRIMER_UTR':
-			tree[r.seqid].addi(r.start, r.end, "3'UTR")
+			if r.start < r.end:
+				tree[r.seqid].addi(r.start, r.end, "3'UTR")
 		elif r.feature == 'EXON':
-			if _format == 'gff':
-				mother = r.attrs['Parent']
-			elif _format == 'gtf':
+			if 'transcript_id' in r.attrs:
 				mother = r.attrs['transcript_id']
+			else:
+				mother = r.attrs['Parent']
 
 			if father == mother:
 				exons.append((r.start, r.end))
 			else:
 				if exons:
-					for idx, start, end in enumerate(exons):
-						tree[seqid].addi(start, end, 'exon')
+					exons = sorted(exons, key=lambda x: x[0])
+					for idx, loci in enumerate(exons):
+						start, end = loci
+						if start < end:
+							tree[seqid].addi(start, end, 'exon')
 						if idx < len(exons)-1:
-							tree[seqid].addi(end+1, exons[idx+1][0]-1, 'intron')
+							start = end+1
+							end = exons[idx+1][0]-1
+							if start < end:
+								tree[seqid].addi(start, end, 'intron')	
 				
 				exons = [(r.start, r.end)]
 				father = mother
 				seqid = r.seqid
 
-	for idx, start, end in enumerate(exons):
-		tree[seqid].addi(start, end, 'exon')
+	exons = sorted(exons, key=lambda x: x[0])
+	for idx, loci in enumerate(exons):
+		start, end = loci
+		if start < end:
+			tree[seqid].addi(start, end, 'exon')
 		if idx < len(exons)-1:
-			tree[seqid].addi(end+1, exons[idx+1][0]-1, 'intron')
+			start = end+1
+			end = exons[idx+1][0]-1
+			if start < end:
+				tree[seqid].addi(start, end, 'intron')
 
 	return tree
 
@@ -211,13 +230,7 @@ def gtf_parser(gtf_file):
 	"""
 	parse gtf annotation file and generate interval tree
 	"""
-
-
-
-
-
-
-
+	pass
 
 
 

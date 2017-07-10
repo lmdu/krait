@@ -128,5 +128,10 @@ CREATE TABLE IF NOT EXISTS `location`(
 	region TEXT
 );
 
+CREATE TABLE IF NOT EXISTS `option`(
+	name TEXT,
+	value TEXT
+)
+
 """
 

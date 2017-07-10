@@ -420,18 +420,19 @@ class LocateWorker(Worker):
 	@para repeat_annot, the repeatmask output file contains TEs
 	"""
 	def __init__(self, table, gene_annot=None, repeat_annot=None):
+		super(LocateWorker, self).__init__()
 		self.table = table
 		self.gene_annot = gene_annot
 		self.repeat_annot = repeat_annot
 
 	def process(self):
-		self.update_message("Building interval tree")
-		gene_tree = generate_interval_tree(gene_annot) if gene_annot else {}
-		repeat_tree = generate_interval_tree(repeat_annot, 'repeatmasker') if repeat_annot else {}
+		self.update_message.emit("Building interval tree")
+		gene_tree = generate_interval_tree(self.gene_annot) if self.gene_annot else {}
+		repeat_tree = generate_interval_tree(self.repeat_annot, 'repeatmasker') if self.repeat_annot else {}
 		total = self.db.get_one("SELECT COUNT(1) FROM %s" % self.table)
 		current = 0
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
-			self.update_message("Processing %ss on %s", (self.table.upper(), ssr.sequence))
+			self.update_message.emit("Processing %ss on %s" % (self.table.upper(), ssr.sequence))
 			regions = set()
 			if ssr.sequence in gene_tree:
 				res = gene_tree[ssr.sequence].search(ssr.start, ssr.end)
@@ -450,9 +451,9 @@ class LocateWorker(Worker):
 				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?)", record)
 
 			current += 1
-			self.update_progress(int(current/total*100))
+			self.update_progress.emit(int(current/total*100))
 
-		self.update_message("%s location completed." % self.table)
+		self.update_message.emit("%s location completed." % self.table)
 
 
 		

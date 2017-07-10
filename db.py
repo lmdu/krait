@@ -96,8 +96,10 @@ class Database:
 
 	def get_one(self, sql):
 		for row in self.get_cursor().execute(sql):
-			return row[0]
-
+			try:
+				return row[0]
+			except IndexError:
+				return None
 
 	def get_all(self, sql):
 		'''
@@ -125,6 +127,15 @@ class Database:
 			return False
 		return True
 
+	def get_option(self, name):
+		return self.get_one("SELECT value FROM option WHERE name='%s' LIMIT 1" % name)
+
+	def set_option(self, name, value):
+		cursor = self.get_cursor()
+		if self.get_option(name):
+			cursor.execute("UPDATE option SET value=? WHERE name=?", (value, name))
+		else:
+			cursor.execute("INSERT INTO option VALUES (?,?)", (name, value))
 
 	def execute(self, sql):
 		self.get_cursor().execute(sql)

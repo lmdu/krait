@@ -208,6 +208,13 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRSetAct = QAction(self.tr("Specify Search Parameters"), self)
 		self.ISSRSetAct.triggered.connect(self.setPreference)
 
+		#locate ssrs
+		self.locateAct = QAction(QIcon("icons/annotation.png"), self.tr("Locate"), self)
+		self.locateAct.setToolTip(self.tr("Locate SSR in which genomic region"))
+		self.locateAct.triggered.connect(self.locateTandem)
+		self.locateSetAct = QAction(self.tr("Provide annotation file"), self)
+		self.locateSetAct.triggered.connect(self.provideAnnotation)
+
 		#design primer
 		self.primerDesignAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
 		self.primerDesignAct.setToolTip(self.tr("Design primers"))
@@ -266,10 +273,10 @@ class SSRMainWindow(QMainWindow):
 		self.editMenu.addSeparator()
 		self.editMenu.addAction(self.preferenceAct)
 
-		self.searchMenu.addAction(self.SSRSearchAct)
-		self.searchMenu.addAction(self.CSSRSearchAct)
-		self.searchMenu.addAction(self.ISSRSearchAct)
-		self.searchMenu.addAction(self.VNTRSearchAct)
+		self.searchMenu.addAction(self.SSRForceAct)
+		self.searchMenu.addAction(self.CSSRForceAct)
+		self.searchMenu.addAction(self.ISSRForceAct)
+		self.searchMenu.addAction(self.VNTRForceAct)
 
 		self.viewMenu.addAction(self.SSRShowAct)
 		self.viewMenu.addAction(self.CSSRShowAct)
@@ -282,8 +289,9 @@ class SSRMainWindow(QMainWindow):
 		self.viewMenu.addAction(self.VNTRRemoveAct)
 
 		#self.toolMenu.addAction(self.bestDmaxAct)
-		self.toolMenu.addAction(self.primerDesignAct)
+		self.toolMenu.addAction(self.primerForceAct)
 		self.toolMenu.addAction(self.statisticsAct)
+		self.toolMenu.addAction(self.locateAct)
 
 		self.helpMenu.addAction(self.documentAct)
 		self.helpMenu.addSeparator()
@@ -324,6 +332,9 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRMenu.addSeparator()
 		self.ISSRMenu.addAction(self.ISSRSetAct)
 
+		self.locateMenu = QMenu()
+		self.locateMenu.addAction(self.locateSetAct)
+
 		self.primerMenu = QMenu()
 		self.primerMenu.addAction(self.primerForceAct)
 		self.primerMenu.addAction(self.primerShowAct)
@@ -353,6 +364,9 @@ class SSRMainWindow(QMainWindow):
 
 		self.VNTRSearchAct.setMenu(self.VNTRMenu)
 		self.toolBar.addAction(self.VNTRSearchAct)
+
+		self.locateAct.setMenu(self.locateMenu)
+		self.toolBar.addAction(self.locateAct)
 
 		self.primerDesignAct.setMenu(self.primerMenu)
 		self.toolBar.addAction(self.primerDesignAct)
@@ -436,7 +450,7 @@ class SSRMainWindow(QMainWindow):
 		'''
 		Import a fasta file from a directory
 		'''
-		fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta);;All files (*.*)")
+		fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta *.fa.gz *.fasta.gz);;All files (*.*)")
 		if not fasta: return
 		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, fasta))
 		#self.fasta_table.insert(Data(fid=None, path=fasta))
@@ -726,9 +740,24 @@ class SSRMainWindow(QMainWindow):
 	def removePrimer(self):
 		self.db.clear('primer')
 
-	def locateTandem(self):
-		pass
+	def provideAnnotation(self):
+		annot_file = self.db.get_option('annotation')
+		rm_file = self.db.get_option('repeatmasker')
 
+		dialog = AnnotationDialog(self, annot_file, rm_file)
+		dialog.exec_()
+
+		annot_file, rm_file = dialog.get()
+
+		self.db.set_option('annotation', annot_file)
+		self.db.set_option('repeatmasker', rm_file)
+
+	def locateTandem(self):
+		annot_file = self.db.get_option('annotation')
+		rm_file = self.db.get_option('repeatmasker')
+		table = self.model.table
+		worker = LocateWorker(table, annot_file, rm_file)
+		self.executeTask(worker, lambda : 1)
 
 
 	def estimateBestMaxDistance(self):
@@ -736,6 +765,10 @@ class SSRMainWindow(QMainWindow):
 
 	def filterTable(self):
 		filters = str(self.filter.text())
+		if 'table=' in filters:
+			self.model.setTable(filters.split('=')[1])
+			self.model.select()
+			return
 		sqlwhere = format_sql_where(filters)
 		self.model.setFilter(sqlwhere)
 
@@ -1016,6 +1049,17 @@ class TableModel(QAbstractTableModel):
 		col = self.headers[index.column()-1]
 		return self.db.get_one("SELECT %s FROM %s WHERE id=%s" % (col, self.table, ID))
 
+	def rowColor(self, index):
+		ID = self.dataset[index.row()]
+		regions = self.db.get_one("SELECT region FROM location WHERE target=%s AND category='%s'" % (ID, self.table))
+		if not regions:
+			return None
+		regions = regions.split(';')
+
+		if 'CDS' in regions:
+			pass
+
+
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():
 			return 0
@@ -1051,6 +1095,10 @@ class TableModel(QAbstractTableModel):
 				else:
 					return Qt.Unchecked
 
+		elif role == Qt.BackgroundColorRole:
+			pass
+
+
 		return None
 
 
@@ -1064,7 +1112,7 @@ class TableModel(QAbstractTableModel):
 
 		if orientation == Qt.Horizontal:
 			if section == 0:
-				return ''
+				return None
 			else:
 				return self.headers[section-1]
 
@@ -1112,6 +1160,63 @@ class TableModel(QAbstractTableModel):
 		self.beginInsertRows(QModelIndex(), self.read_row, self.read_row+fetch_row-1)
 		self.read_row += fetch_row
 		self.endInsertRows()
+
+class AnnotationDialog(QDialog):
+	def __init__(self, parent=None, gff_file='', rm_file=''):
+		super(AnnotationDialog, self).__init__(parent)
+		self.resize(QSize(450, 150))
+		self.setWindowTitle(self.tr("Provide annotation file"))
+		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
+		buttonBox.accepted.connect(self.accept)
+		
+		self.gff_label = QLabel(self.tr("Select GTF or GFF genome annotation file"), self)
+		self.gff_input = QLineEdit(self)
+		self.gff_input.setText(gff_file)
+		self.gff_input.setReadOnly(True)
+		self.gff_btn = QPushButton(self.tr("Select"), self)
+		self.gff_btn.clicked.connect(self.selectAnnotationFile)
+
+		self.rm_label = QLabel(self.tr("Select repeatmasker output file"), self)
+		self.rm_input = QLineEdit(self)
+		self.rm_input.setText(rm_file)
+		self.rm_input.setReadOnly(True)
+		self.rm_btn = QPushButton(self.tr("Select"), self)
+		self.rm_btn.clicked.connect(self.selectRepeatmaskerFile)
+
+		self.info_label = QLabel(self.tr("Please select at least one annotation file"), self)
+
+		annotLayout = QGridLayout()
+		annotLayout.setColumnStretch(0, 1)
+		annotLayout.addWidget(self.gff_label, 0, 0)
+		annotLayout.addWidget(self.gff_input, 1, 0)
+		annotLayout.addWidget(self.gff_btn, 1, 1)
+		annotLayout.addWidget(self.rm_label, 2, 0)
+		annotLayout.addWidget(self.rm_input, 3, 0)
+		annotLayout.addWidget(self.rm_btn, 3, 1)
+		annotLayout.addWidget(self.info_label, 4, 0)
+		annotLayout.addWidget(buttonBox, 5, 1)
+
+		self.setLayout(annotLayout)
+
+	def selectAnnotationFile(self):
+		filters = "GTF (*.gtf);;GFF (*.gff);;Compressed GTF or GFF (*.gz);;ALL (*.*)"
+		annot_file, _ = QFileDialog.getOpenFileName(self, "GFF or GTF annotation file", filters=filters)
+		if annot_file:
+			self.gff_input.setText(annot_file)
+
+	def selectRepeatmaskerFile(self):
+		filters = "Repeatmasker output (*.rm);;GFF (*.gff);;Compressed repeatmasker output (*.gz);;ALL (*.*)"
+		rm_file, _ = QFileDialog.getOpenFileName(self, "GFF or GTF annotation file", filters=filters)
+		if rm_file:
+			self.rm_input.setText(rm_file)
+
+	def get(self):
+		return (self.gff_input.text(), self.rm_input.text())
+
+
+
+
+
 
 class PreferenceDialog(QDialog):
 	def __init__(self, parent=None, settings=None):
