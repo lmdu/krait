@@ -129,9 +129,10 @@ CREATE TABLE IF NOT EXISTS `location`(
 );
 
 CREATE TABLE IF NOT EXISTS `option`(
+	id INTEGER PRIMARY KEY,
 	name TEXT,
 	value TEXT
-)
+);
 
 """
 

@@ -435,23 +435,23 @@ class LocateWorker(Worker):
 			self.update_message.emit("Processing %ss on %s" % (self.table.upper(), ssr.sequence))
 			regions = set()
 			if ssr.sequence in gene_tree:
-				res = gene_tree[ssr.sequence].search(ssr.start, ssr.end)
-				if res:
-					for it in res:
-						regions.add(it.data)
+				res = gene_tree[ssr.sequence].find(ssr.start, ssr.end)
+				for it in res:
+					regions.add(it)
 
 			if ssr.sequence in repeat_tree:
-				res = repeat_tree[ssr.sequence].search(ssr.start, ssr.end)
-				if res:
-					for it in res:
-						regions.add(it.data)
+				res = repeat_tree[ssr.sequence].find(ssr.start, ssr.end)
+				for it in res:
+					regions.add(it)
 
 			if regions:
 				record = [None, self.table, ssr.id, ";".join(regions)]
 				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?)", record)
 
 			current += 1
-			self.update_progress.emit(int(current/total*100))
+			progress = int(current/total*100)
+			if progress%5 == 0:
+				self.update_progress.emit(progress)
 
 		self.update_message.emit("%s location completed." % self.table)
 

@@ -135,7 +135,7 @@ class Database:
 		if self.get_option(name):
 			cursor.execute("UPDATE option SET value=? WHERE name=?", (value, name))
 		else:
-			cursor.execute("INSERT INTO option VALUES (?,?)", (name, value))
+			cursor.execute("INSERT INTO option VALUES (?,?,?)", (None, name, value))
 
 	def execute(self, sql):
 		self.get_cursor().execute(sql)

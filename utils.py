@@ -3,9 +3,8 @@
 import csv
 import gzip
 import pyfaidx
-import intervaltree
+import intersection
 
-from PySide.QtCore import QDir
 from config import *
 
 class Data(dict):
@@ -73,7 +72,7 @@ def write_to_gtf(gtf_file, feature, cursor):
 			gtf.write("\t".join(map(str, cols))+'\n')
 
 def format_sql_where(conditions):
-	symbols = ['>=', '<=', '>', '<', '=', 'in']
+	symbols = ['>=', '<=', '>', '<', '=', ' in ']
 	conditions = conditions.split()
 	for idx, cond in enumerate(conditions):
 		if cond == 'in':
@@ -165,9 +164,9 @@ def generate_interval_tree(annot_file, _format='gene'):
 	if _format == 'repeatmasker':
 		for r in repeatmasker_parser(annot_file):
 			if r.seqid not in tree:
-				tree[r.seqid] = intervaltree.IntervalTree()
+				tree[r.seqid] = intersection.IntervalTree()
 			if r.start < r.end:
-				tree[r.seqid].addi(r.start, r.end, 'TE')
+				tree[r.seqid].insert(r.start, r.end, 'TE')
 
 		return tree
 
@@ -177,17 +176,14 @@ def generate_interval_tree(annot_file, _format='gene'):
 	exons = []
 	for r in gff_gtf_parser(annot_file):
 		if r.seqid not in tree:
-			tree[r.seqid] = intervaltree.IntervalTree()
+			tree[r.seqid] = intersection.IntervalTree()
 
 		if r.feature == 'CDS':
-			if r.start < r.end:
-				tree[r.seqid].addi(r.start, r.end, 'CDS')
+			tree[r.seqid].insert(r.start, r.end, 'CDS')
 		elif r.feature == 'FIVE_PRIMER_UTR':
-			if r.start < r.end:
-				tree[r.seqid].addi(r.start, r.end, "5'UTR")
+			tree[r.seqid].insert(r.start, r.end, "5'UTR")
 		elif r.feature == 'THREE_PRIMER_UTR':
-			if r.start < r.end:
-				tree[r.seqid].addi(r.start, r.end, "3'UTR")
+			tree[r.seqid].insert(r.start, r.end, "3'UTR")
 		elif r.feature == 'EXON':
 			if 'transcript_id' in r.attrs:
 				mother = r.attrs['transcript_id']
@@ -201,13 +197,11 @@ def generate_interval_tree(annot_file, _format='gene'):
 					exons = sorted(exons, key=lambda x: x[0])
 					for idx, loci in enumerate(exons):
 						start, end = loci
-						if start < end:
-							tree[seqid].addi(start, end, 'exon')
+						tree[seqid].insert(start, end, 'exon')
 						if idx < len(exons)-1:
 							start = end+1
 							end = exons[idx+1][0]-1
-							if start < end:
-								tree[seqid].addi(start, end, 'intron')	
+							tree[seqid].insert(start, end, 'intron')
 				
 				exons = [(r.start, r.end)]
 				father = mother
@@ -216,13 +210,11 @@ def generate_interval_tree(annot_file, _format='gene'):
 	exons = sorted(exons, key=lambda x: x[0])
 	for idx, loci in enumerate(exons):
 		start, end = loci
-		if start < end:
-			tree[seqid].addi(start, end, 'exon')
+		tree[seqid].insert(start, end, 'exon')
 		if idx < len(exons)-1:
 			start = end+1
 			end = exons[idx+1][0]-1
-			if start < end:
-				tree[seqid].addi(start, end, 'intron')
+			tree[seqid].insert(start, end, 'intron')
 
 	return tree
 
