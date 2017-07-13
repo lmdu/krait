@@ -104,7 +104,25 @@ def format_fasta_sequence(sequence, length):
 	seqs.append('\n')
 	return "".join(seqs)
 
-def gff_gtf_parser(annot_file):
+def check_gene_annot_format(annot_file):
+	if annot_file.endswith('.gz'):
+		fh = gzip.open(annot_file)
+	else:
+		fh = open(annot_file)
+
+	for line in fh:
+		if line[0] == '#': continue
+		cols = line.strip().split('\t')
+		if cols[2].upper() != 'EXON': continue
+		if cols[-1].count('=') > 2:
+			return 'GFF'
+		elif 'transcript_id' in cols[-1]:
+			return 'GTF'
+		else:
+			raise Exception('The annotation file is not GTF or GFF format')
+
+
+def gff_gtf_parser(annot_file, _format='GFF'):
 	"""
 	parse GFF, GTF, comparessed gz annotation file
 	"""
@@ -125,105 +143,103 @@ def gff_gtf_parser(annot_file):
 		
 		for item in cols[-1].split(';'):
 			if not item: continue
-			if 'ID=' in cols[-1]:
+			if _format == 'GFF':
 				name, value = item.split('=')
 			else:
 				name, value = item.strip().strip('"').split('"')
-			record.attrs[name.strip()] = value
+			record.attrs[name.strip().upper()] = value
 		
 		yield record
 
 	fh.close()
 
-def repeatmasker_parser(rm_file):
-	if rm_file.endswith('.gz'):
-		fh = gzip.open(rm_file)
-	else:
-		fh = open(rm_file)
-
-	for line in fh:
-		if line[0] == '#': continue
-		cols = line.strip().split()
-		record = Data()
-		record.seqid = cols[4]
-		record.start = int(cols[5])
-		record.end = int(cols[6])
-		yield record
-
-	fh.close()
-
-def generate_interval_tree(annot_file, _format='gene'):
-	"""
-	parse gff, gtf or repeatmasker file and generate interval tree
-	@para annot_file str, annotation file
-	@para _format str, gene or repeatmasker
-	@return interval tree
-	"""
-	tree = {}
-
-	if _format == 'repeatmasker':
-		for r in repeatmasker_parser(annot_file):
-			if r.seqid not in tree:
-				tree[r.seqid] = intersection.IntervalTree()
-			if r.start < r.end:
-				tree[r.seqid].insert(r.start, r.end, 'TE')
-
-		return tree
-
-	#begin parse gff or gtf annotation
+def get_gtf_coordinate(gtf_file):
 	father = None
-	seqid = None
 	exons = []
-	for r in gff_gtf_parser(annot_file):
-		if r.seqid not in tree:
-			tree[r.seqid] = intersection.IntervalTree()
-
-		if r.feature == 'CDS':
-			tree[r.seqid].insert(r.start, r.end, 'CDS')
+	for r in gff_gtf_parser(gtf_file, 'GTF'):
+		if r.feature == 'GENE':
+			yield ('GENE', r.attrs['GENE_ID'], r.attrs['GENE_NAME'])
+		elif r.feature == 'CDS':
+			yield ('CDS', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
 		elif r.feature == 'FIVE_PRIMER_UTR':
-			tree[r.seqid].insert(r.start, r.end, "5'UTR")
+			yield ('UTR', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
 		elif r.feature == 'THREE_PRIMER_UTR':
-			tree[r.seqid].insert(r.start, r.end, "3'UTR")
+			yield ('UTR', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
 		elif r.feature == 'EXON':
-			if 'transcript_id' in r.attrs:
-				mother = r.attrs['transcript_id']
-			else:
-				mother = r.attrs['Parent']
+			mother = r.attrs['TRANSCRIPT_ID']
 
 			if father == mother:
-				exons.append((r.start, r.end))
+				exons.append(('EXON', r.seqid, r.start, r.end, r.attrs['GENE_ID']))
 			else:
 				if exons:
-					exons = sorted(exons, key=lambda x: x[0])
-					for idx, loci in enumerate(exons):
-						start, end = loci
-						tree[seqid].insert(start, end, 'exon')
+					exons = sorted(exons, key=lambda x: x[2])
+					for idx, exon in enumerate(exons):
+						start, end = exon[2], exon[3]
+						yield exon
+
 						if idx < len(exons)-1:
 							start = end+1
-							end = exons[idx+1][0]-1
-							tree[seqid].insert(start, end, 'intron')
+							end = exons[idx+1][2]-1
+							yield ('INTRON', exons[0][1], start, end, exons[0][4])
 				
-				exons = [(r.start, r.end)]
+				exons = [('EXON', r.seqid, r.start, r.end, r.attrs['GENE_ID'])]
 				father = mother
-				seqid = r.seqid
 
-	exons = sorted(exons, key=lambda x: x[0])
-	for idx, loci in enumerate(exons):
-		start, end = loci
-		tree[seqid].insert(start, end, 'exon')
+	exons = sorted(exons, key=lambda x: x[2])
+	for idx, exon in enumerate(exons):
+		start, end = exon[2], exon[3]
+		yield exon
+
 		if idx < len(exons)-1:
 			start = end+1
-			end = exons[idx+1][0]-1
-			tree[seqid].insert(start, end, 'intron')
+			end = exons[idx+1][2]-1
+			yield ('INTRON', exons[0][1], start, end, exons[0][4])
 
-	return tree
+def get_gff_coordinate(gff_file):
+	father = None
+	exons = []
+	relations = {}
+	for r in gff_gtf_parser(gff_file, 'GFF'):
+		if 'ID' in r.attrs and 'PARENT' in r.attrs:
+			relations[r.attrs['ID']] = r.attrs['PARENT']
 
-def gtf_parser(gtf_file):
-	"""
-	parse gtf annotation file and generate interval tree
-	"""
-	pass
+		if r.feature == 'GENE':
+			yield ('GENE', r.attrs['ID'], r.attrs['NAME'])
+		elif r.feature == 'CDS':
+			yield ('CDS', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
+		elif r.feature == 'FIVE_PRIMER_UTR':
+			yield ('UTR', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
+		elif r.feature == 'THREE_PRIMER_UTR':
+			yield ('UTR', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
+		elif r.feature == 'EXON':
+			mother = r.attrs['PARENT']
 
+			if father == mother:
+				exons.append(('EXON', r.seqid, r.start, r.end, relations[r.attrs['PARENT']]))
+			else:
+				if exons:
+					exons = sorted(exons, key=lambda x: x[2])
+					for idx, exon in enumerate(exons):
+						start, end = exon[2], exon[3]
+						yield exon
+
+						if idx < len(exons)-1:
+							start = end+1
+							end = exons[idx+1][2]-1
+							yield ('INTRON', exons[0][1], start, end, exons[0][4])
+				
+				exons = [('EXON', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])]
+				father = mother
+
+	exons = sorted(exons, key=lambda x: x[2])
+	for idx, exon in enumerate(exons):
+		start, end = exon[2], exon[3]
+		yield exon
+
+		if idx < len(exons)-1:
+			start = end+1
+			end = exons[idx+1][2]-1
+			yield ('INTRON', exons[0][1], start, end, exons[0][4])
 
 
 def get_ssr_sequence(seq_file, seq_name, start, stop, flank):

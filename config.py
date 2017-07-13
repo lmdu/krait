@@ -125,7 +125,9 @@ CREATE TABLE IF NOT EXISTS `location`(
 	id INTEGER PRIMARY KEY,
 	category TEXT,
 	target INTEGER,
-	region TEXT
+	gene_id TEXT,
+	gene_name TEXT,
+	feature TEXT
 );
 
 CREATE TABLE IF NOT EXISTS `option`(

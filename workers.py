@@ -11,6 +11,7 @@ from PySide.QtCore import *
 import zfasta
 import motif
 import tandem
+import intersection
 import primerdesign
 from ssr import *
 from db import *
@@ -419,41 +420,76 @@ class LocateWorker(Worker):
 	@para gene_annot, the genome annotation file, gff or gtf
 	@para repeat_annot, the repeatmask output file contains TEs
 	"""
-	def __init__(self, table, gene_annot=None, repeat_annot=None):
+	def __init__(self, table, annot_file=None):
 		super(LocateWorker, self).__init__()
 		self.table = table
-		self.gene_annot = gene_annot
-		self.repeat_annot = repeat_annot
+		self.annot_file = annot_file
 
 	def process(self):
 		self.update_message.emit("Building interval tree")
-		gene_tree = generate_interval_tree(self.gene_annot) if self.gene_annot else {}
-		repeat_tree = generate_interval_tree(self.repeat_annot, 'repeatmasker') if self.repeat_annot else {}
+		interval_forest = {}
+		genes_info = {}
+		f = check_gene_annot_format(self.annot_file)
+		if f == 'GFF':
+			features = get_gff_coordinate(self.annot_file)
+		else:
+			features = get_gtf_coordinate(self.annot_file)
+
+		self.update_message.emit("Building interval tree")
+		for feature in features:
+			if feature[0] == 'GENE':
+				genes_info[feature[1]] = feature[2]
+				continue
+
+			if feature[1] not in interval_forest:
+				interval_forest[feature[1]] = {}
+				interval_forest[feature[1]]['CDS'] = intersection.IntervalTree()
+				interval_forest[feature[1]]['EXON'] = intersection.IntervalTree()
+				interval_forest[feature[1]]['INTRON'] = intersection.IntervalTree()
+				interval_forest[feature[1]]['UTR'] = intersection.IntervalTree()
+
+			interval_forest[feature[1]][feature[0]].insert(feature[2], feature[3], feature[4])
+			
+
 		total = self.db.get_one("SELECT COUNT(1) FROM %s" % self.table)
 		current = 0
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
 			self.update_message.emit("Processing %ss on %s" % (self.table.upper(), ssr.sequence))
-			regions = set()
-			if ssr.sequence in gene_tree:
-				res = gene_tree[ssr.sequence].find(ssr.start, ssr.end)
-				for it in res:
-					regions.add(it)
-
-			if ssr.sequence in repeat_tree:
-				res = repeat_tree[ssr.sequence].find(ssr.start, ssr.end)
-				for it in res:
-					regions.add(it)
-
-			if regions:
-				record = [None, self.table, ssr.id, ";".join(regions)]
-				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?)", record)
-
 			current += 1
 			progress = int(current/total*100)
-			if progress%5 == 0:
+			if progress%2 == 0:
 				self.update_progress.emit(progress)
 
+			if ssr.sequence not in interval_forest:
+				continue
+			
+			res = interval_forest[ssr.sequence]['INTRON'].find(ssr.start, ssr.end)
+			if res:
+				record = [None, self.table, ssr.id, res[0], genes_info[res[0]], 'intron']
+				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
+				continue
+			
+			res = interval_forest[ssr.sequence]['CDS'].find(ssr.start, ssr.end)
+			if res:
+				record = [None, self.table, ssr.id, res[0], genes_info[res[0]], 'CDS']
+				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
+				continue
+
+			res = interval_forest[ssr.sequence]['EXON'].find(ssr.start, ssr.end)
+			if res:
+				record = [None, self.table, ssr.id, res[0], genes_info[res[0]], 'exon']
+				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
+				continue
+
+			res = interval_forest[ssr.sequence]['UTR'].find(ssr.start, ssr.end)
+			if res:
+				record = [None, self.table, ssr.id, res[0], genes_info[res[0]], 'UTR']
+				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
+
+		self.update_message.emit("Creating query index")
+		self.db.get_cursor().execute("CREATE INDEX loci ON location (target, category)")
+
+		self.update_progress.emit(100)
 		self.update_message.emit("%s location completed." % self.table)
-
-
+		self.finished.emit()
 		

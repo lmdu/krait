@@ -67,6 +67,9 @@ class SSRMainWindow(QMainWindow):
 		#opened project
 		self.opened_project = None
 
+		#annotation file
+		self.annot_file = ''
+
 		#read settings
 		self.readSettings()
 
@@ -716,7 +719,7 @@ class SSRMainWindow(QMainWindow):
 	def designPrimer(self):
 		rows = self.model.getSelectedRows()
 		if not rows:
-			return QMessageBox.Warning(self, "Warning", "Please select SSR, iSSRs, cSSRs or VNTRs")	
+			return QMessageBox.warning(self, "Warning", "Please select SSR, iSSRs, cSSRs or VNTRs")	
 		
 		table = self.model.table
 		flank = int(self.settings.value('ssr/flank'))
@@ -741,22 +744,23 @@ class SSRMainWindow(QMainWindow):
 		self.db.clear('primer')
 
 	def provideAnnotation(self):
-		annot_file = self.db.get_option('annotation')
-		rm_file = self.db.get_option('repeatmasker')
+		#dialog = AnnotationDialog(self, self.annot_file)
+		#dialog.exec_()
+		#self.annot_file = dialog.get()
+		filters = "GFF or GTF (*.gtf *.gtf.gz *.gff *.gff3 *.gff.gz *.gff3.gz);;ALL (*.*)"
+		annot_file, _ = QFileDialog.getOpenFileName(self, "GFF or GTF annotation file", filter=filters)
+		if not annot_file:
+			return
+		self.annot_file = annot_file
+		self.setStatusMessage("Import annotation file %s" % self.annot_file)
 
-		dialog = AnnotationDialog(self, annot_file, rm_file)
-		dialog.exec_()
-
-		annot_file, rm_file = dialog.get()
-
-		self.db.set_option('annotation', annot_file)
-		self.db.set_option('repeatmasker', rm_file)
 
 	def locateTandem(self):
-		annot_file = self.db.get_option('annotation')
-		rm_file = self.db.get_option('repeatmasker')
+		if not self.annot_file:
+			return QMessageBox.warning(self, "Warning", "Please provide gtf or gff well formated annotation file")
+
 		table = self.model.table
-		worker = LocateWorker(table, annot_file, rm_file)
+		worker = LocateWorker(table, self.annot_file)
 		self.executeTask(worker, lambda : 1)
 
 
@@ -1047,18 +1051,21 @@ class TableModel(QAbstractTableModel):
 	def value(self, index):
 		ID = self.dataset[index.row()]
 		col = self.headers[index.column()-1]
-		return self.db.get_one("SELECT %s FROM %s WHERE id=%s" % (col, self.table, ID))
+		return self.db.get_one("SELECT %s FROM %s WHERE id=%s LIMIT 1" % (col, self.table, ID))
 
 	def rowColor(self, index):
 		ID = self.dataset[index.row()]
-		regions = self.db.get_one("SELECT region FROM location WHERE target=%s AND category='%s'" % (ID, self.table))
-		if not regions:
-			return None
-		regions = regions.split(';')
-
-		if 'CDS' in regions:
-			pass
-
+		feature = self.db.get_one("SELECT feature FROM location WHERE target=%s AND category='%s' LIMIT 1" % (ID, self.table))
+		if feature == 'CDS':
+			return QColor(244, 67, 54)
+		elif feature == 'exon':
+			return QColor(191, 219, 184)
+		elif feature == 'UTR':
+			return QColor(219, 203, 184)
+		elif feature == 'intron':
+			return QColor(191, 191, 191)
+		else:
+			return QColor(255, 255, 255)
 
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():
@@ -1096,7 +1103,7 @@ class TableModel(QAbstractTableModel):
 					return Qt.Unchecked
 
 		elif role == Qt.BackgroundColorRole:
-			pass
+			return self.rowColor(index)
 
 
 		return None
@@ -1164,58 +1171,35 @@ class TableModel(QAbstractTableModel):
 class AnnotationDialog(QDialog):
 	def __init__(self, parent=None, gff_file='', rm_file=''):
 		super(AnnotationDialog, self).__init__(parent)
-		self.resize(QSize(450, 150))
+		self.resize(QSize(450, 80))
 		self.setWindowTitle(self.tr("Provide annotation file"))
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
 		buttonBox.accepted.connect(self.accept)
 		
-		self.gff_label = QLabel(self.tr("Select GTF or GFF genome annotation file"), self)
+		self.gff_label = QLabel(self.tr("Select GTF, GFF or gz compressed genome annotation file"), self)
 		self.gff_input = QLineEdit(self)
 		self.gff_input.setText(gff_file)
 		self.gff_input.setReadOnly(True)
 		self.gff_btn = QPushButton(self.tr("Select"), self)
 		self.gff_btn.clicked.connect(self.selectAnnotationFile)
 
-		self.rm_label = QLabel(self.tr("Select repeatmasker output file"), self)
-		self.rm_input = QLineEdit(self)
-		self.rm_input.setText(rm_file)
-		self.rm_input.setReadOnly(True)
-		self.rm_btn = QPushButton(self.tr("Select"), self)
-		self.rm_btn.clicked.connect(self.selectRepeatmaskerFile)
-
-		self.info_label = QLabel(self.tr("Please select at least one annotation file"), self)
-
 		annotLayout = QGridLayout()
 		annotLayout.setColumnStretch(0, 1)
 		annotLayout.addWidget(self.gff_label, 0, 0)
 		annotLayout.addWidget(self.gff_input, 1, 0)
 		annotLayout.addWidget(self.gff_btn, 1, 1)
-		annotLayout.addWidget(self.rm_label, 2, 0)
-		annotLayout.addWidget(self.rm_input, 3, 0)
-		annotLayout.addWidget(self.rm_btn, 3, 1)
-		annotLayout.addWidget(self.info_label, 4, 0)
-		annotLayout.addWidget(buttonBox, 5, 1)
+		annotLayout.addWidget(buttonBox, 2, 1)
 
 		self.setLayout(annotLayout)
 
 	def selectAnnotationFile(self):
-		filters = "GTF (*.gtf);;GFF (*.gff);;Compressed GTF or GFF (*.gz);;ALL (*.*)"
-		annot_file, _ = QFileDialog.getOpenFileName(self, "GFF or GTF annotation file", filters=filters)
+		filters = "GTF (*.gtf *.gtf.gz);;GFF (*.gff *.gff.gz);;ALL (*.*)"
+		annot_file, _ = QFileDialog.getOpenFileName(self, "GFF or GTF annotation file", filter=filters)
 		if annot_file:
 			self.gff_input.setText(annot_file)
 
-	def selectRepeatmaskerFile(self):
-		filters = "Repeatmasker output (*.rm);;GFF (*.gff);;Compressed repeatmasker output (*.gz);;ALL (*.*)"
-		rm_file, _ = QFileDialog.getOpenFileName(self, "GFF or GTF annotation file", filters=filters)
-		if rm_file:
-			self.rm_input.setText(rm_file)
-
 	def get(self):
-		return (self.gff_input.text(), self.rm_input.text())
-
-
-
-
+		return self.gff_input.text()
 
 
 class PreferenceDialog(QDialog):
