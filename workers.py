@@ -442,16 +442,11 @@ class LocateWorker(Worker):
 				continue
 
 			if feature[1] not in interval_forest:
-				interval_forest[feature[1]] = {}
-				interval_forest[feature[1]]['CDS'] = intersection.IntervalTree()
-				interval_forest[feature[1]]['EXON'] = intersection.IntervalTree()
-				interval_forest[feature[1]]['INTRON'] = intersection.IntervalTree()
-				interval_forest[feature[1]]['UTR'] = intersection.IntervalTree()
+				interval_forest[feature[1]] = intersection.IntervalTree()
 
-			interval_forest[feature[1]][feature[0]].insert(feature[2], feature[3], feature[4])
-			
+			interval_forest[feature[1]].insert(feature[2], feature[3], (feature[0], feature[4]))
 
-		total = self.db.get_one("SELECT COUNT(1) FROM %s" % self.table)
+		total = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
 		current = 0
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
 			self.update_message.emit("Processing %ss on %s" % (self.table.upper(), ssr.sequence))
@@ -462,32 +457,23 @@ class LocateWorker(Worker):
 
 			if ssr.sequence not in interval_forest:
 				continue
-			
-			res = interval_forest[ssr.sequence]['INTRON'].find(ssr.start, ssr.end)
-			if res:
-				record = [None, self.table, ssr.id, res[0], genes_info[res[0]], 'intron']
-				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
-				continue
-			
-			res = interval_forest[ssr.sequence]['CDS'].find(ssr.start, ssr.end)
-			if res:
-				record = [None, self.table, ssr.id, res[0], genes_info[res[0]], 'CDS']
-				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
-				continue
 
-			res = interval_forest[ssr.sequence]['EXON'].find(ssr.start, ssr.end)
-			if res:
-				record = [None, self.table, ssr.id, res[0], genes_info[res[0]], 'exon']
-				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
-				continue
+			res = interval_forest[ssr.sequence].find(ssr.start, ssr.end)
+			if not res: continue
 
-			res = interval_forest[ssr.sequence]['UTR'].find(ssr.start, ssr.end)
-			if res:
-				record = [None, self.table, ssr.id, res[0], genes_info[res[0]], 'UTR']
-				self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
+			res = {f:g for f, g in res}
+
+			record = [None, self.table, ssr.id]
+			for feat in ['CDS', '5UTR', '3UTR', 'EXON', 'INTRON']:
+				if feat in res:
+					gid = res[feat]
+					record.extend([gid, genes_info[gid], feat])
+					self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
+					break
 
 		self.update_message.emit("Creating query index")
 		self.db.get_cursor().execute("CREATE INDEX loci ON location (target, category)")
+		self.db.get_cursor().execute("CREATE INDEX sel ON location (category, feature)")
 
 		self.update_progress.emit(100)
 		self.update_message.emit("%s location completed." % self.table)

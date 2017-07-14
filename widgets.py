@@ -212,11 +212,34 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRSetAct.triggered.connect(self.setPreference)
 
 		#locate ssrs
-		self.locateAct = QAction(QIcon("icons/annotation.png"), self.tr("Locate"), self)
+		self.locateAct = QAction(QIcon("icons/annotation.png"), self.tr("Mark"), self)
 		self.locateAct.setToolTip(self.tr("Locate SSR in which genomic region"))
 		self.locateAct.triggered.connect(self.locateTandem)
-		self.locateSetAct = QAction(self.tr("Provide annotation file"), self)
+		self.locateSetAct = QAction(self.tr("Import Annotation File"), self)
 		self.locateSetAct.triggered.connect(self.provideAnnotation)
+		self.removeLocateAct = QAction(self.tr("Remove makers"), self)
+		self.removeLocateAct.triggered.connect(self.removeMarker)
+		
+		cds_icon = QPixmap(16, 16)
+		cds_icon.fill(QColor(245, 183, 177))
+		self.showCDSAct = QAction(QIcon(cds_icon), self.tr("Show Markers in CDS"), self)
+		self.showCDSAct.triggered.connect(self.showCDSMarker)
+
+		exon_icon = QPixmap(16, 16)
+		exon_icon.fill(QColor(169, 223, 191))
+		self.showExonAct = QAction(QIcon(exon_icon), self.tr("Show Markers in Exon"), self)
+		self.showExonAct.triggered.connect(self.showExonMarker)
+
+		utr_icon = QPixmap(16, 16)
+		utr_icon.fill(QColor(250, 215, 160))
+		self.showUTRAct = QAction(QIcon(utr_icon), self.tr("Show Markers in UTR"), self)
+		self.showUTRAct.triggered.connect(self.showUTRMarker)
+
+		intron_icon = QPixmap(16, 16)
+		intron_icon.fill(QColor(174, 214, 241))
+		self.showIntronAct = QAction(QIcon(intron_icon), self.tr("Show Markers in Intron"), self)
+		self.showIntronAct.triggered.connect(self.showIntronMarker)
+
 
 		#design primer
 		self.primerDesignAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
@@ -337,6 +360,13 @@ class SSRMainWindow(QMainWindow):
 
 		self.locateMenu = QMenu()
 		self.locateMenu.addAction(self.locateSetAct)
+		self.locateMenu.addSeparator()
+		self.locateMenu.addAction(self.removeLocateAct)
+		self.locateMenu.addSeparator()
+		self.locateMenu.addAction(self.showCDSAct)
+		self.locateMenu.addAction(self.showExonAct)
+		self.locateMenu.addAction(self.showUTRAct)
+		self.locateMenu.addAction(self.showIntronAct)
 
 		self.primerMenu = QMenu()
 		self.primerMenu.addAction(self.primerForceAct)
@@ -763,6 +793,33 @@ class SSRMainWindow(QMainWindow):
 		worker = LocateWorker(table, self.annot_file)
 		self.executeTask(worker, lambda : 1)
 
+	def removeMarker(self):
+		self.db.clear('location')
+
+	def showMarker(self, marker):
+		table = self.model.table
+		sql = "SELECT target FROM location WHERE category='%s' AND feature='%s'" % (table, marker)
+		data = self.db.get_column(sql)
+		if not data:
+			return QMessageBox.warning(self, "Warning", "No %ss located in %s region" % (table.upper(), marker))
+		self.model.injectData(data)
+
+	def showCDSMarker(self):
+		self.showMarker('CDS')
+
+	def showExonMarker(self):
+		self.showMarker('EXON')
+
+	def showUTRMarker(self):
+		table = self.model.table
+		sql = "SELECT target FROM location WHERE category='%s' AND feature IN ('3UTR', '5UTR')" % table
+		data = self.db.get_column(sql)
+		if not data:
+			return QMessageBox.warning(self, "Warning", "No %ss located in UTR region" % table.upper())
+		self.model.injectData(data)
+
+	def showIntronMarker(self):
+		self.showMarker('INTRON')
 
 	def estimateBestMaxDistance(self):
 		pass
@@ -1027,10 +1084,14 @@ class TableModel(QAbstractTableModel):
 
 	def select(self):
 		sql = " ".join(self.query)
+		data = self.db.get_column(sql)
+		self.injectData(data)
+
+	def injectData(self, data):
 		self.beginResetModel()
-		self.dataset = self.db.get_column(sql)
 		self.read_row = 0
 		self.selected = set()
+		self.dataset = data
 		self.endResetModel()
 		self.row_col.emit((self.table, len(self.dataset), len(self.headers)))
 
@@ -1057,13 +1118,13 @@ class TableModel(QAbstractTableModel):
 		ID = self.dataset[index.row()]
 		feature = self.db.get_one("SELECT feature FROM location WHERE target=%s AND category='%s' LIMIT 1" % (ID, self.table))
 		if feature == 'CDS':
-			return QColor(244, 67, 54)
-		elif feature == 'exon':
-			return QColor(191, 219, 184)
-		elif feature == 'UTR':
-			return QColor(219, 203, 184)
-		elif feature == 'intron':
-			return QColor(191, 191, 191)
+			return QColor(245, 183, 177)
+		elif feature == 'EXON':
+			return QColor(169, 223, 191)
+		elif feature == '3UTR' or feature == '5UTR':
+			return QColor(250, 215, 160) 
+		elif feature == 'INTRON':
+			return QColor(174, 214, 241)
 		else:
 			return QColor(255, 255, 255)
 

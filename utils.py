@@ -161,10 +161,10 @@ def get_gtf_coordinate(gtf_file):
 			yield ('GENE', r.attrs['GENE_ID'], r.attrs['GENE_NAME'])
 		elif r.feature == 'CDS':
 			yield ('CDS', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
-		elif r.feature == 'FIVE_PRIMER_UTR':
-			yield ('UTR', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
-		elif r.feature == 'THREE_PRIMER_UTR':
-			yield ('UTR', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
+		elif r.feature == 'FIVE_PRIME_UTR':
+			yield ('5UTR', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
+		elif r.feature == 'THREE_PRIME_UTR':
+			yield ('3UTR', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
 		elif r.feature == 'EXON':
 			mother = r.attrs['TRANSCRIPT_ID']
 
@@ -207,10 +207,10 @@ def get_gff_coordinate(gff_file):
 			yield ('GENE', r.attrs['ID'], r.attrs['NAME'])
 		elif r.feature == 'CDS':
 			yield ('CDS', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
-		elif r.feature == 'FIVE_PRIMER_UTR':
-			yield ('UTR', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
-		elif r.feature == 'THREE_PRIMER_UTR':
-			yield ('UTR', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
+		elif r.feature == 'FIVE_PRIME_UTR':
+			yield ('5UTR', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
+		elif r.feature == 'THREE_PRIME_UTR':
+			yield ('3UTR', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
 		elif r.feature == 'EXON':
 			mother = r.attrs['PARENT']
 
