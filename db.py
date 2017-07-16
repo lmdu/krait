@@ -137,8 +137,8 @@ class Database:
 		else:
 			cursor.execute("INSERT INTO option VALUES (?,?,?)", (None, name, value))
 
-	def execute(self, sql):
-		self.get_cursor().execute(sql)
+	def query(self, sql):
+		return self.get_cursor().execute(sql)
 
 	def open(self, dbfile):
 		source = apsw.Connection(dbfile)
@@ -152,13 +152,13 @@ class Database:
 			b.step()
 
 	def begin(self):
-		self.execute("BEGIN;")
+		self.query("BEGIN;")
 
 	def commit(self):
-		self.execute("COMMIT;")
+		self.query("COMMIT;")
 
 	def clear(self, table):
-		self.execute("DELETE FROM %s" % table)
+		self.query("DELETE FROM %s" % table)
 
 """
 class SSRTable(QObject):

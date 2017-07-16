@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS `cssr`(
 	motif TEXT,
 	complexity INTEGER,
 	length INTEGER,
+	gap INTEGER,
 	component TEXT,
 	structure TEXT
 );
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS `vntr`(
 CREATE TABLE IF NOT EXISTS `issr`(
 	id INTEGER PRIMARY KEY,
 	sequence TEXT,
+	standard TEXT,
 	motif TEXT,
 	type INTEGER,
 	start INTEGER,

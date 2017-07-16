@@ -3,101 +3,77 @@
 from __future__ import division
 import os
 import simplejson as json
-import pyfaidx
+import zfasta
 
 from db import *
 from utils import Data
-from plot import Plots
 from config import STAT_JSON
 
 class Statistics(object):
+	_db = None
+	_total_bases = 0
+	_total_sequences = 0
 	_bases = {}
-	_total_sequences = None
-	_total_bases = None
-	unit = 'Mb'
-	letter = 'ATGC'
-	
-	def __init__(self):
-		self.meta_table = MetaTable()
-		self.fasta_table = FastaTable()
-		
-	def _calc_bases(self):
-		'''
-		calculate the number of bases A,T,G,C
-		'''
-		self._total_bases = 0
-		for fasta_file in self.fasta_table.fetchAll():
-			fastas = pyfaidx.Fasta(fasta_file.path, sequence_always_upper=True)
-			for fasta in fastas:
-				seq = fasta[:].seq
-				self._total_bases += len(seq)
+	unit = None
+	letter = None
+	def __init__(self, unit='Mb', letter='ATGC'):
+		self.unit = unit
+		self.letter = letter
 
+	@property
+	def db(self):
+		if self._db is None:
+			self._db = Database()
+		return self._db
+
+	def count_bases(self):
+		for fasta_file in self.db.get_column("SELECT path FROM fasta"):
+			fastas = zfasta.Fasta(fasta_file)
+			for name in fastas:
+				sequence = fastas[name]
+				self._total_bases += len(sequence)
+				self._total_sequences += 1
 				for b in ['A','T','G','C']:
-					self._bases[b] = self._bases.get(b, 0) + seq.count(b)
+					self._bases[b] = self._bases.get(b, 0) + sequence.count(b)
 
-		for b in self._bases:
-			self.meta_table.insert({'name': b, 'value': self._bases[b]})
+		for b in self.bases:
+			self.db.set_option('statis_base_%s' % b, self._bases[b])
 
-		self.meta_table.insert({'name': 'total_bases', 'value': self._total_bases})
+		self.db.set_option('statis_base_total', self._total_bases)
+		self.db.set_option('statis_seqs_count', self._total_sequences)
 
-		return self._bases
-
-	def _db_bases(self):
-		'''
-		get the number of bases A,T,G,C
-		'''
-		for data in self.meta_table.query("SELECT * FROM meta WHERE name IN ('A', 'T', 'G', 'C')"):
-			self._bases[data.name] = data.value
-
-		return self._bases
+	def get_bases(self):
+		for b in ['A', 'T', 'G', 'C']:
+			self._bases[b] = self.db.get_option('statis_base_%s' % b)
 
 	@property
 	def bases(self):
-		if self._bases is None:
-			self._db_bases() or self._calc_bases()
-
+		if not self._bases:
+			self.get_bases()
+		
 		return self._bases
 
 	@property
 	def seqcount(self):
-		'''
-		get the number of sequences in alayzed fastas
-		'''
 		if not self._total_sequences:
-			seq_table = SequenceTable()
-			self._total_sequences = seq_table.get("SELECT COUNT(1) FROM sequence LIMIT 1")
+			self._total_sequences = self.db.get_option('statis_seqs_count')
 
 		return self._total_sequences
 
 	@property
 	def size(self):
-		'''
-		get sequence total length A+G+T+C+N
-		'''
-		if self._total_bases is None:
-			self._total_bases = self.meta_table.getMeta('total_bases')
-
-			if not self._total_bases:
-				self._calc_bases()
+		if not self._total_bases:
+			self._total_bases = self.db.get_option('statis_base_total')
 
 		return self._total_bases
 
 	@property
-	def ns(self):
-		'''
-		get the number and percent of unknown bases
-		@return (ns, percent)
-		'''
-		ns = self.size - self.validsize
-		percent = round(ns/self.size*100, 2)
-		return (ns, percent)
+	def validsize(self):
+		return sum(self.bases.values())
 
 	@property
-	def validsize(self):
-		'''
-		get sequence valid total length A+G+T+C
-		'''
-		return sum(self.bases.values())
+	def ns(self):
+		return self.size - self.validsize
 
 	@property
 	def transize(self):
@@ -133,55 +109,214 @@ class Statistics(object):
 		'''
 		return round(lengths/self.transize, 2)
 
-class MicrosatelliteStatistics(Statistics):
-	_ssr_counts = None
-	_ssr_length = None
+	def type(self, index):
+		types = {1: 'Mono', 2: 'Di', 3: 'Tri', 4: 'Tetra', 5: 'Penta', 6: 'Hexa'}
+		return types[index]
+
+	def results(self):
+		self.count_bases()
+		r = Data()
+		r.seqcount = self.seqcount
+		r.size = self.size
+		r.validsize = self.validsize
+		r.ns = self.ns, round(self.ns/self.size*100, 2)
+		r.gc = self.gc
+		r.unit = self.unit
+		return r
+
+
+class SSRStatistics(Statistics):
+	_ssr_counts = 0
+	_ssr_length = 0
 	
 	def __init__(self):
-		super(MicrosatelliteStatistics, self).__init__()
-		self.ssr_table = MicrosatelliteTable()
+		super(SSRStatistics, self).__init__()
 
 	@property
-	def counts(self):
+	def count(self):
 		'''
 		get total perfect SSR counts and frequency
 		'''
-		if self._ssr_counts is None:
-			self._ssr_counts = self.ssr_table.recordCounts()
+		if not self._ssr_counts:
+			self._ssr_counts = self.db.get_one("SELECT COUNT(1) FROM ssr LIMIT 1")
 		
 		return self._ssr_counts
 
 	@property
-	def lengths(self):
+	def length(self):
 		if self._ssr_length is None:
-			self._ssr_length = self.ssr_table.get("SELECT SUM(length) FROM ssr")
+			self._ssr_length = self.db.get_one("SELECT SUM(length) FROM ssr LIMIT 1")
 		
 		return self._ssr_length
 
 	@property
 	def frequency(self):
-		return self.ra(self.counts)
+		return self.ra(self.count)
 
 	@property
 	def density(self):
-		return self.rd(self.lengths)
-
-	def getMotifLenStat(self):
-		types = {1: 'Mono-', 2: 'Di-', 3: 'Tri-', 4: 'Tetra-', 5: 'Penta-', 6: 'Hexa-'}
-		sql = "SELECT length(motif) AS type, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY type ORDER BY type"
+		return self.rd(self.length)
+		
+	def motifTypeStatis(self):
+		sql = "SELECT type, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY type ORDER BY type"
 		rows = [('Type', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
-		for row in self.ssr_table.query(sql):
+		for row in self.db.query(sql):
+			percent = round(row.count/self.count*100, 2)
+			average = round(row.length/row.count, 2)
+			frequency = self.ra(row.count)
+			density = self.rd(row.length)
+			rows.append((self.type(row.type), row.count, row.length, percent, average, frequency, density))
+		return rows
+
+	def motifCategoryStatis(self):
+		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY standard ORDER BY length(motif),standard"
+		rows = [('Motif', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
+		for row in self.db.query(sql):
+			percent = round(row.count/self.count*100, 2)
+			average = round(row.length/row.count, 2)
+			frequency = self.ra(row.count)
+			density = self.rd(row.length)
+			rows.append((row.standard, row.count, row.length, percent, average, frequency, density))
+		return rows
+
+	def motifRepeatStatis(self):
+		rows = []
+		for i in range(1,7):
+			sql = "SELECT repeat FROM ssr WHERE type=%s" % i
+			rows.append(self.db.get_column(sql))
+		return rows
+		
+		
+	def SSRLengthStatis(self):
+		rows = []
+		for i in range(1,7):
+			sql = "SELECT length FROM ssr WHERE type=%s" % i
+			rows.append(self.db.get_column(sql))
+		return rows
+
+	def results(self):
+		r = Data()
+		r.count = self.count
+		r.length = self.length
+		r.frequency = self.frequency
+		r.density = self.density
+		r.type = self.motifTypeStatis()
+		r.category = self.motifCategoryStatis()
+		r.repeat = self.motifRepeatStatis()
+		r.ssrlen = self.SSRLengthStatis()
+		return r
+
+class CSSRStatistics(Statistics):
+	_cssr_counts = 0
+	_cm_counts = 0
+	_cssr_length = 0
+	def __init__(self):
+		super(CSSRStatistics, self).__init__()
+
+	@property
+	def cssr_count(self):
+		if not self._cssr_counts:
+			self._cssr_counts = self.db.get_one("SELECT SUM(complexity) FROM cssr LIMIT 1")
+
+		return self._cssr_counts
+
+	@property
+	def cm_count(self):
+		if not self._cm_counts:
+			self._cm_counts = self.db.get_one("SELECT COUNT(1) FROM cssr LIMIT 1")
+
+		return self._cm_counts
+
+	@property
+	def length(self):
+		if not self._cssr_length:
+			self._cssr_length = self.db.get_one("SELECT SUM(length) FROM cssr LIMIT 1")
+
+		return self._cssr_length
+
+	@property
+	def frequency(self):
+		return self.ra(self.cm_count)
+
+	@property
+	def density(self):
+		return self.rd(self.length)
+
+	def CSSRComplexityStatis(self):
+		sql = "SELECT complexity,COUNT(1) FROM cssr GROUP BY complexity ORDER BY complexity"
+		rows = [('Complexity', 'Counts')]
+		for row in self.db.query(sql):
+			rows.append(row.values)
+		return rows
+
+	def CSSRLengthStatis(self):
+		sql = "SELECT length,COUNT(1) FROM cssr GROUP BY length ORDER BY length"
+		rows = [('Length', 'Counts')]
+		for row in self.db.query(sql):
+			rows.append(row.values)
+		return rows
+
+	def CSSRGapStatis(self):
+		sql = "SELECT gap,COUNT(1) FROM cssr GROUP BY gap ORDER BY gap"
+		rows = [('Gap length', 'Counts')]
+		for row in self.db.query(sql):
+			rows.append(row.values)
+		return rows
+
+	def result(self):
+		r = Data()
+		r.cssr_count = self.cssr_count
+		r.cm_count = self.cm_count
+		r.length = self.length
+		r.frequency = self.frequency
+		r.density = self.density
+		r.complexity = self.CSSRComplexityStatis()
+		r.cssrlen = self.CSSRLengthStatis()
+		r.gapdis = self.CSSRGapStatis()
+		return r
+
+class ISSRStatistics(Statistics):
+	_issr_counts = 0
+	_issr_length = 0
+	def __init__(self):
+		super(ISSRStatistics, self).__init__()
+
+	@property
+	def count(self):
+		if not _issr_counts:
+			self._issr_counts = self.db.get_one("SELECT COUNT(1) FROM issr LIMIT 1")
+
+		return self._issr_counts
+
+	@property
+	def length(self):
+		if not _issr_length:
+			self._issr_length = self.db.get_one("SELECT SUM(length) FROM issr LIMIT 1")
+
+		return self._issr_length
+
+	@property
+	def frequency(self):
+		return self.ra(self.count)
+
+	def density(self):
+		return self.rd(self.length)
+
+	def motifTypeStatis(self):
+		sql = "SELECT type, SUM(length) AS length, COUNT(1) AS count FROM issr GROUP BY type ORDER BY type"
+		rows = [('Type', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
+		for row in self.db.query(sql):
 			percent = round(row.count/self.counts*100, 2)
 			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
-			rows.append((types[row.type], row.count, row.length, percent, average, frequency, density))
+			rows.append((self.type(row.type), row.count, row.length, percent, average, frequency, density))
 		return rows
 
-	def getMotifTypeStat(self):
+	def motifCategoryStatis(self):
 		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY standard ORDER BY length(motif),standard"
 		rows = [('Motif', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
-		for row in self.ssr_table.query(sql):
+		for row in self.db.query(sql):
 			percent = round(row.count/self.counts*100, 2)
 			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
@@ -189,55 +324,29 @@ class MicrosatelliteStatistics(Statistics):
 			rows.append((row.standard, row.count, row.length, percent, average, frequency, density))
 		return rows
 
-	def getMotifRepeatStat(self):
-		sql = "SELECT repeat, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY repeat ORDER BY repeat"
-		rows = [('Repeat', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
-		for row in self.ssr_table.query(sql):
-			percent = round(row.count/self.counts*100, 2)
-			average = round(row.length/row.count, 2)
-			frequency = self.ra(row.count)
-			density = self.rd(row.length)
-			rows.append((row.repeat, row.count, row.length, percent, average, frequency, density))
+	def ISSRScoreStatis(self):
+		sql = "SELECT score,COUNT(1) AS count FROM ssr GROUP BY type,repeat ORDER BY type,repeat"
+		rows = [('Type', 'repeat', 'Counts')]
+		for row in self.db.query(sql):
+			rows.append((self.type(row.type), row.repeat, row.count))
 		return rows
 
-class StatisticsReport:
-	def __init__(self, unit='Mb', letter='ATGC'):
-		self.data = Data()
-		self.ssr_stat = MicrosatelliteStatistics()
+	def ISSRLengthStatis(self):
+		sql = "SELECT type,length,COUNT(1) AS count FROM ssr GROUP BY type,length ORDER BY type,length"
+		rows = [('Type', 'Length (bp)', 'Counts')]
+		for row in self.db.query(sql):
+			rows.append((self.type(row.type), row.length, row.count))
+		return rows
 
-	def generateDataTable(self):
-		with open(STAT_JSON, 'wb') as fp:
-			json.dump(self.data, fp)
-
-	def readDataTable(self):
-		with open(STAT_JSON, 'rb') as fh:
-			data = json.load(fh)
-		return Data(data)
-
-	def sequenceSummary(self):
-		self.data.seqcount = self.ssr_stat.seqcount
-		self.data.size = self.ssr_stat.size
-		self.data.validsize = self.ssr_stat.validsize
-		self.data.ns = self.ssr_stat.ns
-		self.data.gc = self.ssr_stat.gc
-		self.data.unit = self.ssr_stat.unit
-
-	def microsatelliteSummary(self):
-		self.data.ssrcounts = self.ssr_stat.counts
-		self.data.frequency = self.ssr_stat.frequency
-		self.data.ssrlength = self.ssr_stat.lengths
-		self.data.density = self.ssr_stat.density
-		
-		self.data.ssrtypes = self.ssr_stat.getMotifLenStat()
-		Plots.SSRLenPie(self.data.ssrtypes)
-
-		self.data.ssrmotifs = self.ssr_stat.getMotifTypeStat()
-		Plots.SSRMotifScatter(self.data.ssrmotifs)
-		Plots.mostMoitfBar(self.data.ssrmotifs)
-
-
-
-
-
-		self.data.ssrrepeats = self.ssr_stat.getMotifRepeatStat()
+	def result(self):
+		r = Data()
+		r.count = self.count
+		r.length = self.length
+		r.frequency = self.frequency
+		r.density = self.density
+		r.type = self.motifTypeStatis()
+		r.category = self.motifCategoryStatis()
+		r.score = self.ISSRScoreStatis()
+		r.issrlen = self.ISSRLengthStatis()
+		return r
 

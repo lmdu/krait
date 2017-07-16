@@ -256,9 +256,9 @@ class SSRMainWindow(QMainWindow):
 
 		#statistics report
 		self.statisticsAct = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
-		self.statisticsAct.triggered.connect(self.generateStatisticsReport)
+		self.statisticsAct.triggered.connect(self.performStatistics)
 		self.statisticsMenuAct = QAction(self.tr("Perform Statistics"), self)
-		self.statisticsMenuAct.triggered.connect(self.generateStatisticsReport)
+		self.statisticsMenuAct.triggered.connect(self.performStatistics)
 
 		#about action
 		self.aboutAct = QAction(self.tr("About"), self)
@@ -710,7 +710,8 @@ class SSRMainWindow(QMainWindow):
 		mis_penalty = int(self.settings.value('ssr/mismatch'))
 		gap_penalty = int(self.settings.value('ssr/gap'))
 		score = int(self.settings.value('ssr/score'))
-		worker = ISSRWorker(fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score)
+		level = int(self.settings.value('ssr/level'))
+		worker = ISSRWorker(fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score, level)
 		self.executeTask(worker, self.showISSR)
 
 	def searchOrShowISSR(self):
@@ -833,14 +834,12 @@ class SSRMainWindow(QMainWindow):
 		sqlwhere = format_sql_where(filters)
 		self.model.setFilter(sqlwhere)
 
-	def generateStatisticsReport(self):
-		worker = StatisticsWorker(self.reportor, self)
-		worker.update_message.connect(self.showStatisticsReport)
-		worker.start()
+	def performStatistics(self):
+		worker = StatisWorker()
+		self.executeTask(worker, self.showStatistics)	
 
-	def showStatisticsReport(self, html):
-		self.reportor.setHtml(html)
-		self.setCentralWidget(self.reportor)
+	def showStatistics(self):
+		pass
 
 	def showSSRSequence(self, index):
 		'''
@@ -1074,9 +1073,12 @@ class TableModel(QAbstractTableModel):
 		if column == 0:
 			return
 		
-		col = self.headers[column-1]
+		colname = self.headers[column-1]
 		if order == Qt.SortOrder.DescendingOrder:
-			self.query[2] = "ORDER BY %s DESC" % (col)
+			self.query[2] = "ORDER BY %s DESC" % colname
+			self.select()
+		elif order == Qt.AscendingOrder:
+			self.query[2] = 'ORDER BY %s' % colname
 			self.select()
 		else:
 			self.query[2] = ''

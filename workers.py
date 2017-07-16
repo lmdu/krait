@@ -8,6 +8,7 @@ import pyfaidx
 import multiprocessing
 from PySide.QtCore import *
 
+import plot
 import zfasta
 import motif
 import tandem
@@ -17,7 +18,7 @@ from ssr import *
 from db import *
 from utils import *
 from config import *
-from statistics import StatisticsReport
+from statistics import *
 from utils import Data
 
 class Worker(QObject):
@@ -78,11 +79,14 @@ class SSRWorker(Worker):
 			seq_counts = len(seqs)
 			#start search perfect microsatellites
 			for name in seqs:
-				self.update_message.emit("Search perfect SSRs from %s" % name)
+				self.update_message.emit("Reading sequence %s" % name)
 				time.sleep(0)
 				seq = seqs[name]
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
+
+				self.update_message.emit("Search perfect SSRs from %s" % name)
+				time.sleep(0)
 				ssrs = tandem.search_ssr(seq, self.min_repeats)
 				
 				def values():
@@ -106,9 +110,10 @@ class ISSRWorker(Worker):
 	'''
 	perfect microsatellite search thread
 	'''
-	def __init__(self, fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score):
+	def __init__(self, fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score, standard_level):
 		super(ISSRWorker, self).__init__()
 		self.fastas = fastas
+		self.motifs = motif.StandardMotif(standard_level)
 		self.fasta_counts = len(self.fastas)
 		self.seed_repeat = seed_repeat
 		self.seed_length = seed_length
@@ -125,22 +130,28 @@ class ISSRWorker(Worker):
 			
 			#use fasta and create fasta file index
 			self.update_message.emit("Building fasta index for %s" % fasta_file)
+			time.sleep(0)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
-			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
 			seq_counts = len(seqs)
 			#start search perfect microsatellites
-			for name, seq in seqs:
-				self.update_message.emit("Search imperfect SSRs from %s" % name)
+			for name in seqs:
+				self.update_message.emit("Reading sequence %s" % name)
+				time.sleep(0)
+				seq = seqs[name]
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
+
+				self.update_message.emit("Search imperfect SSRs from %s" % name)
+				time.sleep(0)
 				issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 2000)
 				
 				def values():
 					for issr in issrs:
-						row = [None, name]
+						row = [None, name, self.motifs.standard(issr[0])]
 						row.extend(issr)
 						yield row
 
@@ -195,9 +206,10 @@ class CSSRWorker(Worker):
 		component = "%s-%s" % (cssrs[0].id, cssrs[-1].id)
 		motif = "-".join([cssr.motif for cssr in cssrs])
 		length = sum(cssr.length for cssr in cssrs)
+		gap = sum(cssr.start-cssrs[idx].end-1 for idx, cssr in enumerate(cssrs[1:]))
 		structure = "-".join(["(%s)%s" % (cssr.motif, cssr.repeat) for cssr in cssrs])
-		sql = "INSERT INTO cssr VALUES (?,?,?,?,?,?,?,?,?)"
-		self.db.get_cursor().execute(sql, (None, seqname, start, end, motif, complexity, length, component, structure))
+		sql = "INSERT INTO cssr VALUES (?,?,?,?,?,?,?,?,?,?)"
+		self.db.get_cursor().execute(sql, (None, seqname, start, end, motif, complexity, length, gap, component, structure))
 
 
 class VNTRWorker(Worker):
@@ -208,9 +220,6 @@ class VNTRWorker(Worker):
 		self.max_motif = max_motif
 		self.repeats = repeats
 		self.fasta_counts = len(self.fastas)
-		
-		self.ssr_table = SatelliteTable()
-		self.seq_table = SequenceTable()
 
 	def process(self):
 		current_fastas = 0
@@ -227,10 +236,15 @@ class VNTRWorker(Worker):
 			current_seqs = 0
 			seq_counts = len(seqs)
 			#start search perfect microsatellites
-			for name, seq in seqs:
-				self.update_message.emit("Search Satellites from %s" % name)
+			for name in seqs:
+				self.update_message.emit("Reading sequence %s" % name)
+				time.sleep(0)
+				seq = seqs[name]
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
+
+				self.update_message.emit("Search VNTRs from %s" % name)
+				time.sleep(0)
 				vntrs = tandem.search_vntr(seq, self.min_motif, self.max_motif, self.repeats)
 				
 				def values():
@@ -239,7 +253,7 @@ class VNTRWorker(Worker):
 						row.extend(vntr)
 						yield row
 
-				self.update_message.emit("Insert Satellites to database")
+				self.update_message.emit("Insert VNTRs to database")
 				cursor = self.db.get_cursor()
 				cursor.execute("BEGIN TRANSACTION;")
 				cursor.executemany(sql, values())
@@ -247,15 +261,67 @@ class VNTRWorker(Worker):
 				self.update_progress.emit(int(seq_progress*fasta_progress*100)) 
 				
 		self.update_progress.emit(100)
-		self.update_message.emit('Satellites search completed')
+		self.update_message.emit('VNTRs search completed')
 		self.finished.emit()
 
+class StatisWorker(Worker):
+	def __init__(self, unit='Mb', letter='ATGC', dpi=96):
+		super(StatisWorker, self).__init__()
+		self.unit = unit
+		self.letter = letter
+		self.dpi = dpi
+
+	def process(self):
+		self.update_message.emit("Doing sequence statistics...")
+		seq_statis = Statistics(self.unit, self.letter).results()
+		self.db.set_option('seq_statis', json.dumps(seq_statis))
+		
+		if not self.db.is_empty('ssr'):
+			self.update_message.emit("Doing perfect SSR statistics...")
+			ssr_statis = SSRStatistics().results()
+			self.db.set_option('ssr_statis', json.dumps(ssr_statis))
+
+			#generate ssr type distribution pie plot
+			x = [row[1] for row in ssr_statis.type[1:]]
+			l = [row[0] for row in ssr_statis.type[1:]]
+			plot.pie(x, l, "ssr_type", self.dpi)
+
+			#generate ssr repeat distribution box plot
+			x = ssr_statis.repeat
+			l = ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']
+			plot.box(x, l, "ssr_repeat", self.dpi)
+
+			#generate ssr length distribution box plot
+			x = ssr_statis.ssrlen
+			plot.box(x, l, "ssr_length", self.dpi)
+
+
+		if not self.db.is_empty('issr'):
+			self.update_message.emit("Doing imperfect SSR statistics...")
+			issr_statis = ISSRStatistics().results()
+			self.db.set_option('issr_statis', json.dumps(issr_statis))
+
+		if not self.db.is_empty('cssr'):
+			self.update_message.emit("Doing compound SSR statistics...")
+			cssr_statis = CSSRStatistics().results()
+			self.db.set_option('cssr_statis', json.dumps(cssr_statis))
+
+		if not self.db.is_empty('vntr'):
+			self.update_message.emit("Doing VNTR statistics...")
+			vntr_statis = VNTRStatistics().results()
+			self.db.set_option('vntr_statis', json.dumps(vntr_statis))
+
+		self.update_progress.emit(100)
+		self.update_message.emit("Statistics was completed")
+		self.finished.emit()
+
+
 class StatisticsWorker(Worker):
-	def __init__(self, editor, parent):
-		super(StatisticsWorker, self).__init__(parent)
+	def __init__(self, editor):
+		super(StatisticsWorker, self).__init__()
 		self.editor = editor
 
-	def run(self):
+	def process(self):
 		stat = StatisticsReport()
 		stat.sequenceSummary()
 		stat.microsatelliteSummary()
@@ -269,7 +335,7 @@ class StatisticsWorker(Worker):
 
 		with open('report.html') as fh:
 			content = jinja2.Template(fh.read()).render(**data)
-		self.update_message.emit(content)
+		self.editor.setHtml(content)
 
 
 class PrimerWorker(Worker):
