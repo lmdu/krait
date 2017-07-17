@@ -273,6 +273,7 @@ class StatisWorker(Worker):
 
 	def process(self):
 		self.update_message.emit("Doing sequence statistics...")
+		'''
 		seq_statis = Statistics(self.unit, self.letter).results()
 		self.db.set_option('seq_statis', json.dumps(seq_statis))
 		
@@ -289,11 +290,11 @@ class StatisWorker(Worker):
 			#generate ssr repeat distribution box plot
 			x = ssr_statis.repeat
 			l = ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']
-			plot.box(x, l, "ssr_repeat", self.dpi)
+			plot.box(x, l, "SSR repeats", "ssr_repeat", self.dpi)
 
 			#generate ssr length distribution box plot
 			x = ssr_statis.ssrlen
-			plot.box(x, l, "ssr_length", self.dpi)
+			plot.box(x, l, "SSR length (bp)", "ssr_length", self.dpi)
 
 
 		if not self.db.is_empty('issr'):
@@ -301,15 +302,63 @@ class StatisWorker(Worker):
 			issr_statis = ISSRStatistics().results()
 			self.db.set_option('issr_statis', json.dumps(issr_statis))
 
+			#generate issr type distribution pie plot
+			x = [row[1] for row in issr_statis.type[1:]]
+			l = [row[0] for row in issr_statis.type[1:]]
+			plot.pie(x, l, "issr_type", self.dpi)
+
+			#generate ssr repeat distribution box plot
+			x = issr_statis.score
+			l = ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']
+			plot.box(x, l, "iSSR score", "issr_score", self.dpi)
+
+			#generate ssr length distribution box plot
+			x = issr_statis.issrlen
+			plot.box(x, l, "iSSR length (bp)", "issr_length", self.dpi)
+
+		
 		if not self.db.is_empty('cssr'):
 			self.update_message.emit("Doing compound SSR statistics...")
 			cssr_statis = CSSRStatistics().results()
 			self.db.set_option('cssr_statis', json.dumps(cssr_statis))
 
+			#generate cssr complexity distribution
+			x = [row[0] for row in cssr_statis.complexity[1:]]
+			y = [row[1] for row in cssr_statis.complexity[1:]]
+			plot.line(x, y, 'cSSR complexity', 'cSSR Counts', 'cssr_complexity')
+
+			#genrate cssr length distribution
+			x = [row[0] for row in cssr_statis.cssrlen[1:]]
+			y = [row[1] for row in cssr_statis.cssrlen[1:]]
+			plot.line(x, y, 'cSSR length (bp)', 'cSSR Counts', 'cssr_length')
+
+			#genrate cssr gap distribution
+			x = [row[0] for row in cssr_statis.gap[1:]]
+			y = [row[1] for row in cssr_statis.gap[1:]]
+			plot.line(x, y, 'Gap length (bp)', 'cSSR Counts', 'cssr_gap')
+
+
 		if not self.db.is_empty('vntr'):
 			self.update_message.emit("Doing VNTR statistics...")
 			vntr_statis = VNTRStatistics().results()
 			self.db.set_option('vntr_statis', json.dumps(vntr_statis))
+
+			#generate vntr type distribution
+			x = [row[0] for row in vntr_statis.type]
+			y = [row[1] for row in vntr_statis.type]
+			plot.line(x, y, 'VNTR motif length (bp)', 'VNTR Counts', 'vntr_type')
+
+			#genrate vntr length distribution
+			x = [row[0] for row in vntr_statis.vntrlen]
+			y = [row[1] for row in vntr_statis.vntrlen]
+			plot.line(x, y, 'VNTR length (bp)', 'cSSR Counts', 'vntr_length')
+
+			#genrate vntr repeat distribution
+			x = [row[0] for row in vntr_statis.repeat]
+			y = [row[1] for row in vntr_statis.repeat]
+			plot.line(x, y, 'VNTR repeats', 'cSSR Counts', 'vntr_repe')
+		'''
+
 
 		self.update_progress.emit(100)
 		self.update_message.emit("Statistics was completed")

@@ -5,6 +5,7 @@ import sys
 import csv
 import apsw
 import time
+import json
 import platform
 
 from PySide.QtCore import *
@@ -839,7 +840,15 @@ class SSRMainWindow(QMainWindow):
 		self.executeTask(worker, self.showStatistics)	
 
 	def showStatistics(self):
-		pass
+		seq_statis = json.loads(self.db.get_option('seq_statis'))
+		ssr_statis = json.loads(self.db.get_option('ssr_statis'))
+		issr_statis = json.loads(self.db.get_option('issr_statis'))
+		cssr_statis = json.loads(self.db.get_option('cssr_statis'))
+		vntr_statis = json.loads(self.db.get_option('vntr_statis'))
+
+		content = template_render('report.html', seq=seq_statis, ssr=ssr_statis, issr=issr_statis, cssr=cssr_statis, vntr=vntr_statis)
+		self.setCentralWidget(self.reportor)
+		self.reportor.setHtml(content)
 
 	def showSSRSequence(self, index):
 		'''

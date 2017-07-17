@@ -12,8 +12,12 @@ from config import CACHE_PATH
 def cache_path(name):
 	return os.path.join(CACHE_PATH, "%s.png" % name)
 
-def line(x, y, name, dpi=96):
-	pass
+def line(x, y, xlabel, ylabel, name, dpi=96):
+	plt.plot(x, y, linewidth=2)
+	plt.xlabel(xlabel)
+	plt.ylabel(ylabel)
+	plt.savefig(cache_path(name), dpi=dpi, bbox_inches='tight')
+	plt.close()
 
 def pie(x, label, name, dpi=96):
 	plt.pie(x, labels=label, autopct='%1.1f%%')
@@ -29,18 +33,18 @@ def bar(x, y, xlabel, ylabel, name, dpi=96):
 	plt.savefig(cache_path(name), dpi=dpi, bbox_inches='tight')
 	plt.close()
 
-def box(x, labels, name, dpi=96):
-	colors = ['pink', 'lightblue', 'lightgreen', 'red', 'yellow', 'purple']
-	bplot = plt.boxplot(x, 
-		notch = True, 
+def box(x, xlabels, ylabel, name, dpi=96):
+	colors = ['pink', 'lightblue', 'lightgreen', 'orangered', 'goldenrod', 'orchid']
+	bplot = plt.boxplot(x,
+		notch = False, 
 		vert = True, 
 		patch_artist = True,
-		labels = labels,
+		labels = xlabels,
 		showfliers = False
 	)
-	#for path, color in zip(bplot['boxes'], colors):
-	#	path.set_facecolor(color)
-
+	for path, color in zip(bplot['boxes'], colors):
+		path.set_facecolor(color)
+	plt.ylabel(ylabel)
 	plt.savefig(cache_path(name), dpi=dpi, bbox_inches='tight')
 	plt.close()
 

@@ -144,7 +144,7 @@ class SSRStatistics(Statistics):
 
 	@property
 	def length(self):
-		if self._ssr_length is None:
+		if not self._ssr_length:
 			self._ssr_length = self.db.get_one("SELECT SUM(length) FROM ssr LIMIT 1")
 		
 		return self._ssr_length
@@ -185,7 +185,6 @@ class SSRStatistics(Statistics):
 			sql = "SELECT repeat FROM ssr WHERE type=%s" % i
 			rows.append(self.db.get_column(sql))
 		return rows
-		
 		
 	def SSRLengthStatis(self):
 		rows = []
@@ -263,7 +262,7 @@ class CSSRStatistics(Statistics):
 			rows.append(row.values)
 		return rows
 
-	def result(self):
+	def results(self):
 		r = Data()
 		r.cssr_count = self.cssr_count
 		r.cm_count = self.cm_count
@@ -272,7 +271,7 @@ class CSSRStatistics(Statistics):
 		r.density = self.density
 		r.complexity = self.CSSRComplexityStatis()
 		r.cssrlen = self.CSSRLengthStatis()
-		r.gapdis = self.CSSRGapStatis()
+		r.gap = self.CSSRGapStatis()
 		return r
 
 class ISSRStatistics(Statistics):
@@ -283,14 +282,14 @@ class ISSRStatistics(Statistics):
 
 	@property
 	def count(self):
-		if not _issr_counts:
+		if not self._issr_counts:
 			self._issr_counts = self.db.get_one("SELECT COUNT(1) FROM issr LIMIT 1")
 
 		return self._issr_counts
 
 	@property
 	def length(self):
-		if not _issr_length:
+		if not self._issr_length:
 			self._issr_length = self.db.get_one("SELECT SUM(length) FROM issr LIMIT 1")
 
 		return self._issr_length
@@ -299,6 +298,7 @@ class ISSRStatistics(Statistics):
 	def frequency(self):
 		return self.ra(self.count)
 
+	@property
 	def density(self):
 		return self.rd(self.length)
 
@@ -306,7 +306,7 @@ class ISSRStatistics(Statistics):
 		sql = "SELECT type, SUM(length) AS length, COUNT(1) AS count FROM issr GROUP BY type ORDER BY type"
 		rows = [('Type', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
 		for row in self.db.query(sql):
-			percent = round(row.count/self.counts*100, 2)
+			percent = round(row.count/self.count*100, 2)
 			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
@@ -314,10 +314,10 @@ class ISSRStatistics(Statistics):
 		return rows
 
 	def motifCategoryStatis(self):
-		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY standard ORDER BY length(motif),standard"
+		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM issr GROUP BY standard ORDER BY length(motif),standard"
 		rows = [('Motif', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
 		for row in self.db.query(sql):
-			percent = round(row.count/self.counts*100, 2)
+			percent = round(row.count/self.count*100, 2)
 			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
@@ -325,20 +325,20 @@ class ISSRStatistics(Statistics):
 		return rows
 
 	def ISSRScoreStatis(self):
-		sql = "SELECT score,COUNT(1) AS count FROM ssr GROUP BY type,repeat ORDER BY type,repeat"
-		rows = [('Type', 'repeat', 'Counts')]
-		for row in self.db.query(sql):
-			rows.append((self.type(row.type), row.repeat, row.count))
+		rows = []
+		for i in range(1,7):
+			sql = "SELECT score FROM issr WHERE type=%s" % i
+			rows.append(self.db.get_column(sql))
 		return rows
 
 	def ISSRLengthStatis(self):
-		sql = "SELECT type,length,COUNT(1) AS count FROM ssr GROUP BY type,length ORDER BY type,length"
-		rows = [('Type', 'Length (bp)', 'Counts')]
-		for row in self.db.query(sql):
-			rows.append((self.type(row.type), row.length, row.count))
+		rows = []
+		for i in range(1,7):
+			sql = "SELECT length FROM issr WHERE type=%s" % i
+			rows.append(self.db.get_column(sql))
 		return rows
 
-	def result(self):
+	def results(self):
 		r = Data()
 		r.count = self.count
 		r.length = self.length
@@ -349,4 +349,57 @@ class ISSRStatistics(Statistics):
 		r.score = self.ISSRScoreStatis()
 		r.issrlen = self.ISSRLengthStatis()
 		return r
+
+class VNTRStatistics(Statistics):
+	_vntr_counts = 0
+	_vntr_length = 0
+	def __init__(self):
+		super(VNTRStatistics, self).__init__()
+
+	@property
+	def count(self):
+		if not self._vntr_counts:
+			self._vntr_counts = self.db.get_one("SELECT COUNT(1) FROM vntr LIMIT 1")
+		return self._vntr_counts
+
+	@property
+	def length(self):
+		if not self._vntr_length:
+			self._vntr_length = self.db.get_one("SELECT SUM(length) FROM vntr LIMIT 1")
+		return self._vntr_length
+
+	@property
+	def frequency(self):
+		return self.ra(self.count)
+
+	@property
+	def density(self):
+		return self.rd(self.length)
+
+	def motifTypeStatis(self):
+		sql = "SELECT type, COUNT(1) AS count FROM vntr GROUP BY type"
+		rows = [row.values for row in self.db.query(sql)]
+		return rows
+
+	def motifRepeatStatis(self):
+		sql = "SELECT repeat, COUNT(1) AS count FROM vntr GROUP BY repeat"
+		rows = [row.values for row in self.db.query(sql)]
+		return rows
+
+	def VNTRLengthStatis(self):
+		sql = "SELECT length, COUNT(1) AS count FROM vntr GROUP BY length"
+		rows = [row.values for row in self.db.query(sql)]
+		return rows
+
+	def results(self):
+		r = Data()
+		r.count = self.count
+		r.length = self.length
+		r.frequency = self.frequency
+		r.density = self.density
+		r.type = self.motifTypeStatis()
+		r.repeat = self.motifRepeatStatis()
+		r.vntrlen = self.VNTRLengthStatis()
+		return r
+
 
