@@ -3,8 +3,6 @@
 import sys
 import apsw
 import random
-from PySide.QtCore import QObject
-from PySide.QtSql import QSqlDatabase, QSqlQuery
 
 import config
 import utils
@@ -128,7 +126,10 @@ class Database:
 		return True
 
 	def get_option(self, name):
-		return self.get_one("SELECT value FROM option WHERE name='%s' LIMIT 1" % name)
+		opt = self.get_one("SELECT value FROM option WHERE name='%s' LIMIT 1" % name)
+		if opt and opt.isdigit():
+			return int(opt)
+		return opt
 
 	def set_option(self, name, value):
 		cursor = self.get_cursor()

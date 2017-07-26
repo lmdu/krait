@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import pyfaidx
 from db import *
-from zfasta import *
 from utils import *
 
 class Detail(object):
@@ -10,23 +9,25 @@ class Detail(object):
 		self.fasta = None
 		self.db = Database()
 
-	def getSequence(self, name, start, end):
+	def getSequence(self, chrom, start, end):
 		'''
 		get the sequence of tandem repeat (TR) with left and right
 		flanking sequences
-		@para name str, the sequence name where TR located
+		@para chrom str, the sequence name where TR located
 		@para start int, the 1-based start location of TR
 		@para end int, the 1-based end location of TR
 		@return tuple, (left flank, self, right flank)
 		'''
-		sequence = self.fasta.get_sequence_by_loci(name, start, end)
+		sequence = str(self.fasta[chrom][start-1:end])
 		left_start = start - self.flank
+		
 		if left_start < 1:
 			left_start = 1
-		left_flank = self.fasta.get_sequence_by_loci(name, left_start, start-1)
-		right_flank = self.fasta.get_sequence_by_loci(name, end+1, end+self.flank)
 
-		return sequence, left_flank, right_flank
+		lflank = str(self.fasta[chrom][left_start:start])
+		rflank = str(self.fasta[chrom][end+1:end+self.flank])
+
+		return sequence, lflank, rflank
 
 	def formatTarget(self, bases):
 		return "".join('<span class="{0}">{0}</span>'.format(b) for b in bases)
@@ -34,18 +35,17 @@ class Detail(object):
 	def formatPrimer(self, flank, start, length):
 		res = []
 		for i, b in enumerate(flank):
-			if start < i < start+length:
+			if start <= i+1 <= start+length-1:
 				res.append('<span class="{0}">{0}</span>'.format(b))
 			else:
 				res.append(b)
-
 		return "".join(res)
 
 class SequenceDetail(Detail):
-	def __init__(self, table, identify, flank=100):
+	def __init__(self, table, _id, flank=100):
 		super(SequenceDetail, self).__init__()
 		self.table = table
-		self.id = identify
+		self.id = _id
 		self.flank = flank
 
 	def generateHtml(self):
@@ -54,7 +54,7 @@ class SequenceDetail(Detail):
 			"WHERE f.id=s.fid AND t.sequence=s.name AND t.id={1}"
 		)
 		fasta_file = self.db.get_one(sql.format(self.table, self.id))
-		self.fasta = Fasta(fasta_file)
+		self.fasta = pyfaidx.Fasta(fasta_file)
 
 		sql = "SELECT * FROM %s WHERE id=%s" % (self.table, self.id)
 		ssr = self.db.get_row(sql)
@@ -66,10 +66,10 @@ class SequenceDetail(Detail):
 
 
 class PrimerDetail(Detail):
-	def __init__(self, table, identify, flank):
+	def __init__(self, table, _id, flank):
 		super(PrimerDetail, self).__init__()
 		self.table = table
-		self.id = identify
+		self.id = _id
 		self.flank = flank
 
 	def generateHtml(self):
@@ -84,7 +84,7 @@ class PrimerDetail(Detail):
 		)
 
 		fasta_file = self.db.get_one(sql.format(table, tid))
-		self.fasta = Fasta(fasta_file)
+		self.fasta = pyfaidx.Fasta(fasta_file)
 
 		sql = "SELECT * FROM %s WHERE id=%s" % (table, tid)
 		ssr = self.db.get_row(sql)
@@ -93,7 +93,7 @@ class PrimerDetail(Detail):
 		tandem = "%s%s%s" % (
 			self.formatPrimer(left, primer.start1, primer.length1),
 			self.formatTarget(seq),
-			self.formatPrimer(right, primer.start2, primer.length2)
+			self.formatPrimer(right, primer.start2-len(seq)-len(left), primer.length2)
 		)
 
 		return template_render("sequence.html", tandem=tandem, ssr=ssr)

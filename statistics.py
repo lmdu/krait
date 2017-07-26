@@ -56,7 +56,11 @@ class Statistics(object):
 	@property
 	def seqcount(self):
 		if not self._total_sequences:
-			self._total_sequences = self.db.get_option('statis_seqs_count')
+			seq_counts = self.db.get_option('statis_seqs_count')
+			if seq_counts:
+				self._total_sequences = seq_counts
+			else:
+				self.count_bases()
 
 		return self._total_sequences
 
@@ -113,8 +117,21 @@ class Statistics(object):
 		types = {1: 'Mono', 2: 'Di', 3: 'Tri', 4: 'Tetra', 5: 'Penta', 6: 'Hexa'}
 		return types[index]
 
+	def region(self, cat):
+		total_counts = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % cat)
+		sql = "SELECT feature,COUNT(1) AS count FROM location WHERE category='%s' GROUP BY feature"
+		rows = []
+		feat_counts = 0
+		for row in self.db.query(sql % cat):
+			rows.append((row.feature, row.count))
+			feat_counts += row.count
+		
+		if rows:
+			rows.append(('Intergenic', total_counts-feat_counts))
+		
+		return rows
+
 	def results(self):
-		self.count_bases()
 		r = Data()
 		r.seqcount = self.seqcount
 		r.size = self.size
@@ -169,7 +186,7 @@ class SSRStatistics(Statistics):
 		return rows
 
 	def motifCategoryStatis(self):
-		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY standard ORDER BY length(motif),standard"
+		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY standard ORDER BY type,standard"
 		rows = [('Motif', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
 		for row in self.db.query(sql):
 			percent = round(row.count/self.count*100, 2)
@@ -183,14 +200,16 @@ class SSRStatistics(Statistics):
 		rows = []
 		for i in range(1,7):
 			sql = "SELECT repeat FROM ssr WHERE type=%s" % i
-			rows.append(self.db.get_column(sql))
+			r = self.db.get_column(sql)
+			if r: rows.append(r)
 		return rows
 		
 	def SSRLengthStatis(self):
 		rows = []
 		for i in range(1,7):
 			sql = "SELECT length FROM ssr WHERE type=%s" % i
-			rows.append(self.db.get_column(sql))
+			r = self.db.get_column(sql)
+			if r: rows.append(r)
 		return rows
 
 	def results(self):
@@ -203,6 +222,7 @@ class SSRStatistics(Statistics):
 		r.category = self.motifCategoryStatis()
 		r.repeat = self.motifRepeatStatis()
 		r.ssrlen = self.SSRLengthStatis()
+		r.region = self.region('ssr')
 		return r
 
 class CSSRStatistics(Statistics):
@@ -272,6 +292,7 @@ class CSSRStatistics(Statistics):
 		r.complexity = self.CSSRComplexityStatis()
 		r.cssrlen = self.CSSRLengthStatis()
 		r.gap = self.CSSRGapStatis()
+		r.region = self.region('cssr')
 		return r
 
 class ISSRStatistics(Statistics):
@@ -314,7 +335,7 @@ class ISSRStatistics(Statistics):
 		return rows
 
 	def motifCategoryStatis(self):
-		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM issr GROUP BY standard ORDER BY length(motif),standard"
+		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM issr GROUP BY standard ORDER BY type,standard"
 		rows = [('Motif', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
 		for row in self.db.query(sql):
 			percent = round(row.count/self.count*100, 2)
@@ -328,14 +349,16 @@ class ISSRStatistics(Statistics):
 		rows = []
 		for i in range(1,7):
 			sql = "SELECT score FROM issr WHERE type=%s" % i
-			rows.append(self.db.get_column(sql))
+			r = self.db.get_column(sql)
+			if r: rows.append(r)
 		return rows
 
 	def ISSRLengthStatis(self):
 		rows = []
 		for i in range(1,7):
 			sql = "SELECT length FROM issr WHERE type=%s" % i
-			rows.append(self.db.get_column(sql))
+			r = self.db.get_column(sql)
+			if r: rows.append()
 		return rows
 
 	def results(self):
@@ -348,6 +371,7 @@ class ISSRStatistics(Statistics):
 		r.category = self.motifCategoryStatis()
 		r.score = self.ISSRScoreStatis()
 		r.issrlen = self.ISSRLengthStatis()
+		r.region = self.region('issr')
 		return r
 
 class VNTRStatistics(Statistics):
@@ -400,6 +424,7 @@ class VNTRStatistics(Statistics):
 		r.type = self.motifTypeStatis()
 		r.repeat = self.motifRepeatStatis()
 		r.vntrlen = self.VNTRLengthStatis()
+		r.region = self.region('vntr')
 		return r
 
 

@@ -6,13 +6,14 @@
 		body{font-size: 14px;}
 		td{padding: 5px 10px;}
 		th{padding: 5px 0px;}
+		img{display: block;}
 	</style>
 </head>
 <body>
 <div id="content">
 <h1 align="center">The summary statistical analysis report</h1>
 <p>
-	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="80%">
+	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
 		<tr bgcolor="#ffffff"><td>Total number of sequences</td><td align="right">Fasta</td><td align="right">{{ seq.seqcount }}</td></tr>
 		<tr bgcolor="#ffffff"><td>Total length of sequences</td><td align="right">A+T+C+G+N</td><td align="right">{{ seq.size }} bp</td></tr>
 		<tr bgcolor="#ffffff"><td>Total valid length of sequences</td><td align="right">A+T+C+G</td><td align="right">{{ seq.validsize }} bp</td></tr>
@@ -21,9 +22,9 @@
 	</table>
 </p>
 
-{% macro table(title, rows) -%}
-<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="80%">
-<caption><p><b>Table. </b>{{ title }} <a href="#"><img src="expcsv.png"></a></p></caption>
+{% macro table(title, rows, name) -%}
+<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
+<caption><p><b>Table. </b>{{ title }} <a href="table:{{ name }}"><img src="expcsv.png"></a></p></caption>
 <tr bgcolor="#ffffff">
 	{% for col in rows[0] %}
 	<th>{{ col }}</th>
@@ -33,21 +34,22 @@
 <tr bgcolor="#ffffff">
 	{% for col in row %}
 	<td>{{ col }}</td>
-	{% endfor %}	
+	{% endfor %}
 </tr>
 {% endfor %}
 </table>
 {%- endmacro %}
 
 {% macro figure(title, name) -%}
-<center><img src="{{ name }}.png" align="middle" width="700"></center>
-<center><b>Fig. </b>{{ title }} <a href="{{ name }}"><img src="expfig.png"></a></center>
+<center><img src="{{ name }}.png" align="middle" width="1000"></center>
+<center><b>Fig. </b>{{ title }} <a href="figure:{{ name }}"><img src="expfig.png"></a></center>
 {% endmacro%}
 
 <!-- perfect SSRs statistics -->
+{% if ssr %}
 <h2 align="center">The summary of perfect SSRs</h2>
 <p>
-	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="80%">
+	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
 		<tr bgcolor="#ffffff"><td>Total number of perfect SSRs</td><td align="right">counts</td><td align="right">{{ ssr.count }}</td></tr>
 		<tr bgcolor="#ffffff"><td>Total length of perfect SSRs</td><td align="right">bp</td><td align="right">{{ ssr.length }}</td></tr>
 		<tr bgcolor="#ffffff"><td>The average length of SSRs</td><td align="right">total ssr length/total ssr counts</td><td align="right">{{ (ssr.length/ssr.count)|round(2,'ceil') }}</td></tr>
@@ -58,16 +60,24 @@
 	</table>
 </p>
 
-<p>{{ table('The perfect SSR types summary', ssr.type) }}</p>
+<p>{{ table('The perfect SSR types summary', ssr.type, 'ssr-type') }}</p>
 <p>{{ figure('The distribution of perfect SSRs types', 'ssr_type') }}</p>
-<p>{{ table('The motif category summary', ssr.category) }}</p>
+{% if ssr.region %}
+<p>{{ figure('The distribution of perfect SSRs in different region', 'ssr_region') }}</p>
+{% endif %}
+<p>{{ table('The most abundant motif categories', ssr.category|sortfilter(1), 'ssr-category') }}</p>
+<p>{{ figure('The most abundant motif categories in each SSR type', 'ssr_motif') }}</p>
 <p>{{ figure('The distribution of ssr repeats', 'ssr_repeat') }}</p>
 <p>{{ figure('The distribution of ssr length', 'ssr_length') }}</p>
 
+
+{% endif %}
+
 <!-- compound SSRs statistics -->
+{% if cssr %}
 <h2 align="center">The summary of compound SSRs</h2>
 <p>
-	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="80%">
+	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
 		<tr bgcolor="#ffffff"><td>Total number of compound SSRs</td><td align="right"></td><td align="right">{{ cssr.cm_count }}</td></tr>
 		<tr bgcolor="#ffffff"><td>Total number of SSRs</td><td></td><td>{{ cssr.ssr_count }}</td>
 		<tr bgcolor="#ffffff"><td>Relative abundace</td><td align="right">total SSRs/toal valid length</td><td align="right">{{ cssr.frequency }} loci/{{ seq.unit }}</td></tr>
@@ -75,40 +85,56 @@
 	</table>
 </p>
 
+{% if cssr.region %}
+<p>{{ figure('The distribution of compound SSRs in different region', 'cssr_region') }}</p>
+{% endif %}
+
 <p>{{ figure('The complexity distribution of compound SSRs', 'cssr_complexity') }}</p>
 <p>{{ figure('The length distribution of compound SSRs', 'cssr_length') }}</p>
 <p>{{ figure('The gap length distribution of compound SSRs', 'cssr_gap') }}</p>
-
+{% endif %}
 <!-- imperfect SSRs statistics -->
+{% if cssr %}
 <h2 align="center">The summary of imperfect SSRs</h2>
 <p>
-	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="80%">
+	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
 		<tr bgcolor="#ffffff"><td>Total number of imperfect SSRs</td><td align="right"></td><td align="right">{{ issr.count }}</td></tr>
 		<tr bgcolor="#ffffff"><td>Relative abundace</td><td align="right">total SSRs/toal valid length</td><td align="right">{{ issr.frequency }} loci/{{ seq.unit }}</td></tr>
 		<tr bgcolor="#ffffff"><td>Relative density</td><td align="right">total SSR length/toal valid length</td><td align="right">{{ issr.density }} bp/{{ seq.unit }}</td></tr>
 	</table>
 </p>
 
-<p>{{ table('The summary of imperfect SSR types', issr.type) }}</p>
+<p>{{ table('The summary of imperfect SSR types', issr.type, 'issr-type') }}</p>
 <p>{{ figure('The distribution of imperfect SSR types', 'issr_type') }}</p>
-<p>{{ table('The summary of imperfect SSR motif category', issr.category) }}</p>
+
+{% if issr.region %}
+<p>{{ figure('The distribution of imperfect SSRs in different region', 'issr_region') }}</p>
+{% endif %}
+
+<p>{{ table('The summary of imperfect SSR motif category', issr.category, 'issr-category') }}</p>
 <p>{{ figure('The distribution of imperfect SSR score', 'issr_score') }}</p>
 <p>{{ figure('The distribution of imperfect SSR length', 'issr_length') }}</p>
 
+{% endif %}
 <!-- VNTRs statistics -->
+{% if vntr %}
 <h2 align="center">The summary of VNTRs</h2>
 <p>
-	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="80%">
+	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
 		<tr bgcolor="#ffffff"><td>Total number of VNTRs</td><td align="right"></td><td align="right">{{ vntr.count }}</td></tr>
 		<tr bgcolor="#ffffff"><td>Relative abundace</td><td align="right">total SSRs/toal valid length</td><td align="right">{{ vntr.frequency }} loci/{{ seq.unit }}</td></tr>
 		<tr bgcolor="#ffffff"><td>Relative density</td><td align="right">total SSR length/toal valid length</td><td align="right">{{ vntr.density }} bp/{{ seq.unit }}</td></tr>
 	</table>
 </p>
 
+{% if vntr.region %}
+<p>{{ figure('The distribution of VNTRs in different region', 'vntr_region') }}</p>
+{% endif %}
+
 <p>{{ figure('The distribution of VNTR types', 'vntr_type') }}</p>
 <p>{{ figure('The distribution of VNTR repeats', 'vntr_repeat') }}</p>
 <p>{{ figure('The distribution of VNTR length', 'vntr_length') }}</p>
-
+{% endif %}
 
 </div>
 </body>

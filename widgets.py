@@ -6,12 +6,13 @@ import csv
 import apsw
 import time
 import json
+import shutil
 import platform
 
 from PySide.QtCore import *
 from PySide.QtGui import *
 from PySide.QtSql import *
-#from PySide.QtWebKit import *
+from PySide.QtWebKit import *
 
 from ssr import *
 from db import *
@@ -45,10 +46,12 @@ class SSRMainWindow(QMainWindow):
 		#self.setCentralWidget(self.browser)
 
 		self.reportor = QTextBrowser()
+		#self.reportor = QWebView()
 		self.reportor.setSearchPaths([CACHE_PATH])
 		self.reportor.setOpenLinks(False)
 		self.reportor.setOpenExternalLinks(False)
 		self.reportor.anchorClicked.connect(self.saveStatTableFigure)
+		#self.reportor.linkClicked.connect(self.saveStatTableFigure)
 
 		#search text input
 		self.filter = SSRFilterInput(self)
@@ -82,11 +85,27 @@ class SSRMainWindow(QMainWindow):
 		self.model.row_col.connect(self.changeRowColCount)
 		self.model.sel_row.connect(self.changeSelectCount)
 
-	def saveStatTableFigure(self, url):
-		action = url.toString()
-		name = QFileDialog.getSaveFileName(self, directory=action, filter="SVG image (*.svg)")
-		if not name: return
-		print name
+	def saveStatTableFigure(self, href):
+		href = href.toString()
+		media, name = href.split(':')
+
+		if media == 'table':
+			table, name = name.split('-')
+			stats_str = self.db.get_option('%s_statis' % table)
+			stats_obj = json.loads(stats_str)
+			outfile, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv)")
+			if not outfile: return
+			write_to_csv(outfile, stats_obj[name][0], stats_obj[name][1:])
+
+		elif media == 'figure':
+			src = os.path.join(CACHE_PATH, "%s.png" % name)
+			dst, fmat = QFileDialog.getSaveFileName(self, dir=name, filter="PNG (*.png);;JPG (*.jpg);;TIFF (*.tif)")
+			if not dst: return
+			img = QImage(src)
+			img.save(dst, fmat.split()[0])
+
+		else:
+			pass
 
 	def readSettings(self):
 		self.settings = QSettings("config.ini", QSettings.IniFormat)
@@ -130,6 +149,8 @@ class SSRMainWindow(QMainWindow):
 		self.exportTableAct.triggered.connect(self.exportTableRows)
 		self.exportFastaAct = QAction(self.tr("Export Fasta"), self)
 		self.exportFastaAct.triggered.connect(self.exportTableFastas)
+		#self.exportStatsAct = QAction(self.tr("Export Statistical Result"), self)
+		#self.exportStatsAct.triggered.connect(self.exportStatisResult)
 		
 		#exit action
 		self.exitAct = QAction(self.tr("Exit"), self)
@@ -245,9 +266,9 @@ class SSRMainWindow(QMainWindow):
 		#design primer
 		self.primerDesignAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
 		self.primerDesignAct.setToolTip(self.tr("Design primers"))
-		self.primerDesignAct.triggered.connect(self.designPrimer)
+		self.primerDesignAct.triggered.connect(self.designOrShowPrimer)
 		self.primerForceAct = QAction(self.tr("Force Design Primer"), self)
-		self.primerForceAct.triggered.connect(self.designOrShowPrimer)
+		self.primerForceAct.triggered.connect(self.designPrimer)
 		self.primerShowAct = QAction(self.tr("Show Designed Primer"), self)
 		self.primerShowAct.triggered.connect(self.showPrimer)
 		self.primerRemoveAct = QAction(self.tr("Remove Designed Primer"), self)
@@ -289,6 +310,7 @@ class SSRMainWindow(QMainWindow):
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exportTableAct)
 		self.fileMenu.addAction(self.exportFastaAct)
+		#self.fileMenu.addAction(self.exportStatsAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exitAct)
 		
@@ -549,6 +571,16 @@ class SSRMainWindow(QMainWindow):
 		flank = int(self.settings.value('ssr/flank'))
 		worker = ExportFastaWorker(table, selected, flank, exp_file)
 		self.executeTask(worker, lambda: QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file))
+
+	def exportStatisResult(self):
+		pdfname, _ = QFileDialog.getSaveFileName(self, filter="PDF (*.pdf)")
+		if not file: return
+		printer = QPrinter(QPrinter.HighResolution)
+		printer.setPageSize(QPrinter.A4)
+		printer.setColorMode(QPrinter.Color)
+		printer.setOutputFormat(QPrinter.PdfFormat)
+		printer.setOutputFileName(pdfname)
+		self.reportor.document().print_(printer)
 
 
 	def doCopy(self):
@@ -846,7 +878,13 @@ class SSRMainWindow(QMainWindow):
 		cssr_statis = json.loads(self.db.get_option('cssr_statis'))
 		vntr_statis = json.loads(self.db.get_option('vntr_statis'))
 
-		content = template_render('report.html', seq=seq_statis, ssr=ssr_statis, issr=issr_statis, cssr=cssr_statis, vntr=vntr_statis)
+		content = template_render('report.html', 
+			seq = seq_statis, 
+			ssr = ssr_statis, 
+			issr = issr_statis, 
+			cssr = cssr_statis, 
+			vntr = vntr_statis
+		)
 		self.setCentralWidget(self.reportor)
 		self.reportor.setHtml(content)
 
@@ -1006,14 +1044,13 @@ class SSRTableView(QTableView):
 		table = self.model().table
 		flank = int(self.parent.settings.value('ssr/flank', 50))
 		_id = self.model().dataset[self.current_row]
+		
 		if table == 'primer':
 			content = PrimerDetail(table, _id, flank).generateHtml()
 		else:
 			content = SequenceDetail(table, _id, flank).generateHtml()
 
-		dialog = SSRDetailDialog(self.parent, content)
-		if dialog.exec_() == QDialog.Accepted:
-			pass
+		SSRDetailDialog(self.parent, "%s detail" % table.upper(), content)
 
 
 class TableModel(QAbstractTableModel):
@@ -1669,18 +1706,17 @@ class PrimerTagLabel(QLabel):
 
 
 class SSRDetailDialog(QDialog):
-	def __init__(self, parent=None, content=None):
+	def __init__(self, parent=None, title=None, content=None):
 		super(SSRDetailDialog, self).__init__(parent)
 		font_id = QFontDatabase.addApplicationFont('font/SpaceMono-Bold.ttf')
 		font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
-
+		self.setWindowTitle(title)
 		self.viewer = QTextBrowser(self)
 		self.viewer.setFontFamily(font_family)
 		self.viewer.setHtml(content)
 
-		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
 		buttonBox.accepted.connect(self.accept)
-		buttonBox.rejected.connect(self.reject)
 		
 		mainLayout = QVBoxLayout()
 		mainLayout.addWidget(self.viewer)
@@ -1688,6 +1724,7 @@ class SSRDetailDialog(QDialog):
 		self.resize(600, 400)
 
 		self.setLayout(mainLayout)
+		self.exec_()
 
 
 

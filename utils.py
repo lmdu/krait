@@ -17,8 +17,12 @@ class Data(dict):
 	def __setattr__(self, name, val):
 		self[name] = val
 
+def sortfilter(it, index=0, count=20):
+	it = sorted(it, key=lambda x:x[index], reverse=True)
+	return it[:20]
 
 env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+env.filters['sortfilter'] = sortfilter
 def template_render(template_name, **kwargs):
 	template = env.get_template(template_name)
 	return template.render(**kwargs)

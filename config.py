@@ -105,11 +105,11 @@ CREATE TABLE IF NOT EXISTS `primer`(
 	target TEXT,
 	entry INTEGER,
 	product INTEGER,
-	left TEXT,
+	forward TEXT,
 	tm1 REAL,
 	gc1 REAL,
 	stability1 REAL,
-	right TEXT,
+	reverse TEXT,
 	tm2 REAL,
 	gc2 REAL,
 	stability2 REAL

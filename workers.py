@@ -9,7 +9,6 @@ import multiprocessing
 from PySide.QtCore import *
 
 import plot
-import zfasta
 import motif
 import tandem
 import intersection
@@ -38,16 +37,17 @@ class Worker(QObject):
 		build index for fasta file and write fasta sequence to database
 		@para fasta_id int, the fasta file id in database
 		@para fasta_path str, the file path of fasta
-		@return object, a Fasta object
+		@return tuple, (Fasta object, sequence counts)
 		'''
-		seqs = zfasta.Fasta(fasta_path)
-		sql = "SELECT 1 FROM seq WHERE name='%s'" % seqs.keys()[0]
+		seqs = pyfaidx.Fasta(fasta_path, sequence_always_upper=True)
+		names = seqs.keys()
+		sql = "SELECT 1 FROM seq WHERE name='%s' LIMIT 1" % names[0]
 		if not self.db.get_one(sql):
-			rows = [(None, name, fasta_id) for name in seqs.keys()]
+			rows = [(None, name, fasta_id) for name in names]
 			sql = "INSERT INTO seq VALUES (?,?,?)"
 			self.db.get_cursor().executemany(sql, rows)
 
-		return seqs
+		return seqs, len(names)
 
 
 class SSRWorker(Worker):
@@ -71,17 +71,17 @@ class SSRWorker(Worker):
 			#use fasta and create fasta file index
 			self.update_message.emit("Building fasta index for %s" % fasta_file)
 			time.sleep(0)
-			seqs = self.build_fasta_index(fasta_id, fasta_file)
+			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
-			seq_counts = len(seqs)
 			#start search perfect microsatellites
-			for name in seqs:
+			for seq in seqs:
+				name = seq.name
 				self.update_message.emit("Reading sequence %s" % name)
 				time.sleep(0)
-				seq = seqs[name]
+				seq = str(seq)
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
 
@@ -105,6 +105,7 @@ class SSRWorker(Worker):
 		self.update_progress.emit(100)
 		self.update_message.emit('Perfect SSRs search completed')
 		self.finished.emit()
+
 
 class ISSRWorker(Worker):
 	'''
@@ -131,17 +132,17 @@ class ISSRWorker(Worker):
 			#use fasta and create fasta file index
 			self.update_message.emit("Building fasta index for %s" % fasta_file)
 			time.sleep(0)
-			seqs = self.build_fasta_index(fasta_id, fasta_file)
+			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
 			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
-			seq_counts = len(seqs)
 			#start search perfect microsatellites
-			for name in seqs:
+			for seq in seqs:
+				name = seq.name
 				self.update_message.emit("Reading sequence %s" % name)
 				time.sleep(0)
-				seq = seqs[name]
+				seq = str(seq)
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
 
@@ -229,17 +230,17 @@ class VNTRWorker(Worker):
 			
 			#use fasta and create fasta file index
 			self.update_message.emit("Building fasta index for %s" % fasta_file)
-			seqs = self.build_fasta_index(fasta_id, fasta_file)
+			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
 			sql = "INSERT INTO vntr VALUES (?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
-			seq_counts = len(seqs)
 			#start search perfect microsatellites
-			for name in seqs:
+			for seq in seqs:
+				name = seq.name
 				self.update_message.emit("Reading sequence %s" % name)
 				time.sleep(0)
-				seq = seqs[name]
+				seq = str(seq)
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
 
@@ -265,7 +266,7 @@ class VNTRWorker(Worker):
 		self.finished.emit()
 
 class StatisWorker(Worker):
-	def __init__(self, unit='Mb', letter='ATGC', dpi=96):
+	def __init__(self, unit='Mb', letter='ATGC', dpi=300):
 		super(StatisWorker, self).__init__()
 		self.unit = unit
 		self.letter = letter
@@ -273,10 +274,10 @@ class StatisWorker(Worker):
 
 	def process(self):
 		self.update_message.emit("Doing sequence statistics...")
-		'''
+
 		seq_statis = Statistics(self.unit, self.letter).results()
 		self.db.set_option('seq_statis', json.dumps(seq_statis))
-		
+
 		if not self.db.is_empty('ssr'):
 			self.update_message.emit("Doing perfect SSR statistics...")
 			ssr_statis = SSRStatistics().results()
@@ -287,14 +288,38 @@ class StatisWorker(Worker):
 			l = [row[0] for row in ssr_statis.type[1:]]
 			plot.pie(x, l, "ssr_type", self.dpi)
 
+			#generate most abundant ssr motif distribution bar plot
+			motifs = [[], [], [], [], [], []]
+			for row in ssr_statis.category[1:]:
+				motifs[len(row[0])-1].append((row[0], row[1]))
+
+			x = []
+			l1 = []
+			for m in motifs:
+				m = sorted(m, key=lambda x: (x[0], -x[1]))
+				for a, b in m[:10]:
+					x.append(b)
+					l1.append(a)
+
+			plot.bar(l1, x, "SSR motif category", "SSR counts", "ssr_motif", self.dpi)
+
 			#generate ssr repeat distribution box plot
 			x = ssr_statis.repeat
-			l = ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']
 			plot.box(x, l, "SSR repeats", "ssr_repeat", self.dpi)
 
 			#generate ssr length distribution box plot
 			x = ssr_statis.ssrlen
 			plot.box(x, l, "SSR length (bp)", "ssr_length", self.dpi)
+
+
+			#generate ssr distribution in diff regions pie plot
+			if ssr_statis.region:
+				x = [row[1] for row in ssr_statis.region]
+				l = [row[0] for row in ssr_statis.region]
+				plot.pie(x, l, "ssr_region", self.dpi)
+
+		else:
+			self.db.set_option('ssr_statis', '[]')
 
 
 		if not self.db.is_empty('issr'):
@@ -309,12 +334,20 @@ class StatisWorker(Worker):
 
 			#generate ssr repeat distribution box plot
 			x = issr_statis.score
-			l = ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']
 			plot.box(x, l, "iSSR score", "issr_score", self.dpi)
 
 			#generate ssr length distribution box plot
 			x = issr_statis.issrlen
 			plot.box(x, l, "iSSR length (bp)", "issr_length", self.dpi)
+
+			#generate ssr distribution in diff regions pie plot
+			if issr_statis.region:
+				x = [row[1] for row in issr_statis.region]
+				l = [row[0] for row in issr_statis.region]
+				plot.pie(x, l, "issr_region", self.dpi)
+
+		else:
+			self.db.set_option('issr_statis', '[]')
 
 		
 		if not self.db.is_empty('cssr'):
@@ -337,6 +370,15 @@ class StatisWorker(Worker):
 			y = [row[1] for row in cssr_statis.gap[1:]]
 			plot.line(x, y, 'Gap length (bp)', 'cSSR Counts', 'cssr_gap')
 
+			#generate ssr distribution in diff regions pie plot
+			if cssr_statis.region:
+				x = [row[1] for row in cssr_statis.region]
+				l = [row[0] for row in cssr_statis.region]
+				plot.pie(x, l, "cssr_region", self.dpi)
+
+		else:
+			self.db.set_option('cssr_statis', '[]')
+
 
 		if not self.db.is_empty('vntr'):
 			self.update_message.emit("Doing VNTR statistics...")
@@ -346,45 +388,30 @@ class StatisWorker(Worker):
 			#generate vntr type distribution
 			x = [row[0] for row in vntr_statis.type]
 			y = [row[1] for row in vntr_statis.type]
-			plot.line(x, y, 'VNTR motif length (bp)', 'VNTR Counts', 'vntr_type')
+			plot.line(x, y, 'VNTR motif length (bp)', 'VNTR Counts', 'vntr_type', self.dpi)
 
 			#genrate vntr length distribution
 			x = [row[0] for row in vntr_statis.vntrlen]
 			y = [row[1] for row in vntr_statis.vntrlen]
-			plot.line(x, y, 'VNTR length (bp)', 'cSSR Counts', 'vntr_length')
+			plot.line(x, y, 'VNTR length (bp)', 'cSSR Counts', 'vntr_length', self.dpi)
 
 			#genrate vntr repeat distribution
 			x = [row[0] for row in vntr_statis.repeat]
 			y = [row[1] for row in vntr_statis.repeat]
-			plot.line(x, y, 'VNTR repeats', 'cSSR Counts', 'vntr_repe')
-		'''
+			plot.line(x, y, 'VNTR repeats', 'cSSR Counts', 'vntr_repeat', self.dpi)
 
+			#generate ssr distribution in diff regions pie plot
+			if vntr_statis.region:
+				x = [row[1] for row in vntr_statis.region]
+				l = [row[0] for row in vntr_statis.region]
+				plot.pie(x, l, "vntr_region", self.dpi)
+
+		else:
+			self.db.set_option('vntr_statis', '[]')
 
 		self.update_progress.emit(100)
 		self.update_message.emit("Statistics was completed")
 		self.finished.emit()
-
-
-class StatisticsWorker(Worker):
-	def __init__(self, editor):
-		super(StatisticsWorker, self).__init__()
-		self.editor = editor
-
-	def process(self):
-		stat = StatisticsReport()
-		stat.sequenceSummary()
-		stat.microsatelliteSummary()
-		stat.generateDataTable()
-		data = stat.readDataTable()
-		#change the rows of ssr motif statistics
-		if data.ssrmotifs:
-			rows = sorted(data.ssrmotifs[1:], key=lambda x: -x[1])
-			data.ssrmotifs = [data.ssrmotifs[0]]
-			data.ssrmotifs.extend(rows[0:MAX_ROWS])
-
-		with open('report.html') as fh:
-			content = jinja2.Template(fh.read()).render(**data)
-		self.editor.setHtml(content)
 
 
 class PrimerWorker(Worker):
@@ -430,9 +457,9 @@ class PrimerWorker(Worker):
 		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
 		
 		self.db.begin()
-		for item in self.db.get_cursor().execute(sql):
+		for item in self.db.query(sql):
 			if seqs is None or item[2] not in seqs:
-				seqs = zfasta.Fasta(item[0])
+				seqs = pyfaidx.Fasta(item[0])
 			
 			start = item[3] - self.flank
 			if start < 1:
@@ -441,7 +468,7 @@ class PrimerWorker(Worker):
 			
 			target = {}
 			target['SEQUENCE_ID'] = "%s-%s" % (self.table, item[1])
-			target['SEQUENCE_TEMPLATE'] = seqs.get_sequence_by_loci(item[2], start, end)
+			target['SEQUENCE_TEMPLATE'] = str(seqs[item[2]][start-1:end])
 			target['SEQUENCE_TARGET'] = [item[3]-start, item[5]]
 			target['SEQUENCE_INTERNAL_EXCLUDED_REGION'] = target['SEQUENCE_TARGET']
 
@@ -510,13 +537,13 @@ class ExportFastaWorker(Worker):
 
 		for item in self.db.get_cursor().execute(sql):
 			if seqs is None or item.sequence not in seqs:
-				seqs = zfasta.Fasta(item.path)
+				seqs = pyfaidx.Fasta(item.path)
 			
 			start = item.start - self.flank
 			if start < 1:
 				start = 1
 			end = item.end + self.flank
-			ssr = seqs.get_sequence_by_loci(item.sequence, start, end)
+			ssr = seqs.get_seq(item.sequence, start-1, end)
 			name = ">%s%s %s:%s-%s|motif:%s" % (self.table.upper(), item.id, item.sequence, item.start, item.end, item.motif)
 			fp.write("%s\n%s" % (name, format_fasta_sequence(ssr, 70)))
 			
