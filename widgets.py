@@ -1711,8 +1711,9 @@ class SSRDetailDialog(QDialog):
 		font_id = QFontDatabase.addApplicationFont('font/SpaceMono-Bold.ttf')
 		font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
 		self.setWindowTitle(title)
-		self.viewer = QTextBrowser(self)
-		self.viewer.setFontFamily(font_family)
+		#self.viewer = QTextBrowser(self)
+		self.viewer = QWebView(self)
+		#self.viewer.setFontFamily(font_family)
 		self.viewer.setHtml(content)
 
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)

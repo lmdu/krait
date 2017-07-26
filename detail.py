@@ -24,21 +24,27 @@ class Detail(object):
 		if left_start < 1:
 			left_start = 1
 
-		lflank = str(self.fasta[chrom][left_start:start])
-		rflank = str(self.fasta[chrom][end+1:end+self.flank])
+		lflank = str(self.fasta[chrom][left_start:start-1])
+		rflank = str(self.fasta[chrom][end:end+self.flank])
 
 		return sequence, lflank, rflank
 
+	def formatBase(self, b, s='-'):
+		if s == '-':
+			return '<div class="base"><div class="{0}">{0}</div><div class="sign" style="color:white">{1}</div></div>'.format(b, s)
+		else:
+			return '<div class="base"><div class="{0}">{0}</div><div class="sign">{1}</div></div>'.format(b, s)
+
 	def formatTarget(self, bases):
-		return "".join('<span class="{0}">{0}</span>'.format(b) for b in bases)
+		return "".join(self.formatBase(b, '+') for b in bases)
 
 	def formatPrimer(self, flank, start, length):
 		res = []
 		for i, b in enumerate(flank):
 			if start <= i+1 <= start+length-1:
-				res.append('<span class="{0}">{0}</span>'.format(b))
+				res.append(self.formatBase(b, '*'))
 			else:
-				res.append(b)
+				res.append(self.formatBase(b))
 		return "".join(res)
 
 class SequenceDetail(Detail):
@@ -93,7 +99,7 @@ class PrimerDetail(Detail):
 		tandem = "%s%s%s" % (
 			self.formatPrimer(left, primer.start1, primer.length1),
 			self.formatTarget(seq),
-			self.formatPrimer(right, primer.start2-len(seq)-len(left), primer.length2)
+			self.formatPrimer(right, primer.start2-primer.length2-len(seq)-len(left)+1, primer.length2)
 		)
 
 		return template_render("sequence.html", tandem=tandem, ssr=ssr)

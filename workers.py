@@ -466,11 +466,12 @@ class PrimerWorker(Worker):
 				start = 1
 			end = item[4] + self.flank
 			
-			target = {}
-			target['SEQUENCE_ID'] = "%s-%s" % (self.table, item[1])
-			target['SEQUENCE_TEMPLATE'] = str(seqs[item[2]][start-1:end])
-			target['SEQUENCE_TARGET'] = [item[3]-start, item[5]]
-			target['SEQUENCE_INTERNAL_EXCLUDED_REGION'] = target['SEQUENCE_TARGET']
+			target = dict(
+				SEQUENCE_ID = "%s-%s" % (self.table, item[1]),
+				SEQUENCE_TEMPLATE = str(seqs[item[2]][start-1:end]),
+				SEQUENCE_TARGET = [item[3]-start, item[5]],
+				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item[3]-start, item[5]]
+			)
 
 			primerdesign.setSeqArgs(target)
 			res = primerdesign.runDesign(False)
