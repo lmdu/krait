@@ -7,6 +7,7 @@ import apsw
 import time
 import json
 import shutil
+import requests
 import platform
 
 from PySide.QtCore import *
@@ -27,7 +28,7 @@ class SSRMainWindow(QMainWindow):
 	def __init__(self):
 		super(SSRMainWindow, self).__init__()
 
-		self.setWindowTitle("Krait - for Genome-wide survey of Microsatellites v0.0.1")
+		self.setWindowTitle("Krait v%s" % VERSION)
 		self.setWindowIcon(QIcon('icons/logo.png'))
 		#self.setWindowIcon(QIcon('logo.ico'))
 
@@ -45,13 +46,13 @@ class SSRMainWindow(QMainWindow):
 		self.setCentralWidget(self.table)
 		#self.setCentralWidget(self.browser)
 
-		self.reportor = QTextBrowser()
-		#self.reportor = QWebView()
-		self.reportor.setSearchPaths([CACHE_PATH])
-		self.reportor.setOpenLinks(False)
-		self.reportor.setOpenExternalLinks(False)
-		self.reportor.anchorClicked.connect(self.saveStatTableFigure)
-		#self.reportor.linkClicked.connect(self.saveStatTableFigure)
+		#self.reportor = QTextBrowser()
+		self.reportor = QWebView()
+		#self.reportor.setSearchPaths([CACHE_PATH])
+		#self.reportor.setOpenLinks(False)
+		#self.reportor.setOpenExternalLinks(False)
+		#self.reportor.anchorClicked.connect(self.saveStatTableFigure)
+		self.reportor.linkClicked.connect(self.saveStatTableFigure)
 
 		#search text input
 		self.filter = SSRFilterInput(self)
@@ -143,14 +144,16 @@ class SSRMainWindow(QMainWindow):
 		self.loadFastaAct.triggered.connect(self.importFasta)
 		self.loadFastasAct = QAction(self.tr("Import Fastas in Folder"), self)
 		self.loadFastasAct.triggered.connect(self.importFastas)
+		self.loadNCBIAct = QAction(self.tr("Import Fasta from NCBI"), self)
+		self.loadNCBIAct.triggered.connect(self.importNCBI)
 		
 		#export the Results
-		self.exportTableAct = QAction(self.tr("Exprot Table"), self)
+		self.exportTableAct = QAction(self.tr("Exprot Selected as Table"), self)
 		self.exportTableAct.triggered.connect(self.exportTableRows)
-		self.exportFastaAct = QAction(self.tr("Export Fasta"), self)
+		self.exportFastaAct = QAction(self.tr("Export Selected as Fasta"), self)
 		self.exportFastaAct.triggered.connect(self.exportTableFastas)
-		#self.exportStatsAct = QAction(self.tr("Export Statistical Result"), self)
-		#self.exportStatsAct.triggered.connect(self.exportStatisResult)
+		self.exportStatsAct = QAction(self.tr("Export Statistical Report"), self)
+		self.exportStatsAct.triggered.connect(self.exportStatisResult)
 		
 		#exit action
 		self.exitAct = QAction(self.tr("Exit"), self)
@@ -281,6 +284,8 @@ class SSRMainWindow(QMainWindow):
 		self.statisticsAct.triggered.connect(self.performStatistics)
 		self.statisticsMenuAct = QAction(self.tr("Perform Statistics"), self)
 		self.statisticsMenuAct.triggered.connect(self.performStatistics)
+		self.statisticsShowAct = QAction(self.tr("Show Statistics"), self)
+		self.statisticsShowAct.triggered.connect(self.showStatistics)
 
 		#about action
 		self.aboutAct = QAction(self.tr("About"), self)
@@ -307,10 +312,11 @@ class SSRMainWindow(QMainWindow):
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.loadFastaAct)
 		self.fileMenu.addAction(self.loadFastasAct)
+		self.fileMenu.addAction(self.loadNCBIAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exportTableAct)
 		self.fileMenu.addAction(self.exportFastaAct)
-		#self.fileMenu.addAction(self.exportStatsAct)
+		self.fileMenu.addAction(self.exportStatsAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exitAct)
 		
@@ -400,6 +406,7 @@ class SSRMainWindow(QMainWindow):
 
 		self.statisticsMenu = QMenu()
 		self.statisticsMenu.addAction(self.statisticsMenuAct)
+		self.statisticsMenu.addAction(self.statisticsShowAct)
 		
 
 	def createToolBars(self):
@@ -525,6 +532,25 @@ class SSRMainWindow(QMainWindow):
 			count += 1
 		self.setStatusMessage("Import %s fastas in %s" % (count, directory))
 
+	def importNCBI(self):
+		'''
+		import fasta file from NCBI database
+		'''
+		base_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=fasta&id=%s'
+
+		acc, flag = QInputDialog.getText(self, 'NCBI Accession number', 'Accession')
+
+		if not (acc and flag): return
+		outfile = os.path.join(DOWNLOAD_PATH, "%s.fa" % acc)
+		r = requests.get(base_url % acc, stream=True)
+		with open(outfile, "wb") as fh:
+			for chunk in r.iter_content(chunk_size=1024):
+				if chunk:
+					fh.write(chunk)
+
+		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, outfile))
+		self.setStatusMessage("Import fasta %s from NCBI" % outfile)
+
 	def exportTableRows(self):
 		selected = self.model.getSelectedRows()
 		if not selected:
@@ -580,7 +606,7 @@ class SSRMainWindow(QMainWindow):
 		printer.setColorMode(QPrinter.Color)
 		printer.setOutputFormat(QPrinter.PdfFormat)
 		printer.setOutputFileName(pdfname)
-		self.reportor.document().print_(printer)
+		self.reportor.print_(printer)
 
 
 	def doCopy(self):
@@ -886,7 +912,7 @@ class SSRMainWindow(QMainWindow):
 			vntr = vntr_statis
 		)
 		self.setCentralWidget(self.reportor)
-		self.reportor.setHtml(content)
+		self.reportor.setHtml(content, QUrl.fromLocalFile(CACHE_PATH))
 
 	def showSSRSequence(self, index):
 		'''
@@ -934,19 +960,17 @@ class SSRMainWindow(QMainWindow):
 		system_info = "%s%s %s" % (platform.system(), platform.release(), platform.architecture()[0])
 		python_info = sys.version.split()[0]
 		about_message =	"""
-			<p><b>Niblet for finding tandem repeats</b></p>
-			<p>Version v0.1.0 Build 20170104<p>
+			<p><b>Krait for finding tandem repeats</b></p>
+			<p>Version v{version} Build {build}<p>
 			<p>System {system} Python {python}</p>
-			<p>Niblet is a user-friendly tool that allows user to extract perfect microsatellites,
-			compound microsatellites, imperfect microsatellites and tandem repeats with any length
-			of motif from DNA fasta sequences and batch design PCR primers and statistics analysis.</p>
+			<p>Krait is a robust and ultrafast tool and provides a user-friendly GUI for no computationally skilled biologists
+			to extract perfect, imperfect and compound microsatellites and VNTRs with any length
+			of motif from DNA fasta sequences and batch design PCR primers and do statistics analysis.</p>
 			<p>GUI was written by <a href="https://pypi.python.org/pypi/PySide/1.2.4">PySide</a>. 
 			Fasta sequences are extracted by using <a href="https://github.com/mdshw5/pyfaidx">pyfaidx</a>.
 			Primer design are performed by using <a href="https://github.com/libnano/primer3-py">primer3-py</a>.
 			</p>
-			<p><b>Cite:</b> Du L. Liu Q. and Yue B. Niblet: a flexible tool for genome-wide survey
-			of tandem repeats.2017</p>
-		""".format(system=system_info, python=python_info)
+		""".format(version=VERSION, build=BUILD, system=system_info, python=python_info)
 
 		QMessageBox.about(self, "About niblet", about_message)
 

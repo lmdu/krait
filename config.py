@@ -5,10 +5,15 @@ from jinja2 import Environment, FileSystemLoader
 
 VERSION = '0.1.0'
 
+BUILD = '20170727'
+
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
 #cache path for plots or temp data
-CACHE_PATH = os.path.join(ROOT_PATH, 'cache')
+CACHE_PATH = os.path.join(ROOT_PATH, 'cache/')
+
+#download fasta file directory
+DOWNLOAD_PATH = os.path.join(ROOT_PATH, 'download')
 
 #Default sqlite3 database file
 DATABASE = os.path.join(CACHE_PATH, 'ssr.db')

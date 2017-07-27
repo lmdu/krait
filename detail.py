@@ -29,14 +29,17 @@ class Detail(object):
 
 		return sequence, lflank, rflank
 
-	def formatBase(self, b, s='-'):
-		if s == '-':
+	def formatBase(self, b, s='.'):
+		if s == '.':
 			return '<div class="base"><div class="{0}">{0}</div><div class="sign" style="color:white">{1}</div></div>'.format(b, s)
 		else:
 			return '<div class="base"><div class="{0}">{0}</div><div class="sign">{1}</div></div>'.format(b, s)
 
 	def formatTarget(self, bases):
-		return "".join(self.formatBase(b, '+') for b in bases)
+		return "".join(self.formatBase(b, '^') for b in bases)
+
+	def formatFlank(self, bases):
+		return "".join(self.formatBase(b) for b in bases)
 
 	def formatPrimer(self, flank, start, length):
 		res = []
@@ -66,9 +69,9 @@ class SequenceDetail(Detail):
 		ssr = self.db.get_row(sql)
 		seq, left, right = self.getSequence(ssr.sequence, ssr.start, ssr.end)
 
-		tandem = "%s%s%s" % (left, self.formatTarget(seq), right)
+		tandem = "%s%s%s" % (self.formatFlank(left), self.formatTarget(seq), self.formatFlank(right))
 
-		return template_render("sequence.html", tandem=tandem, ssr=ssr)
+		return template_render("sequence.html", tandem=tandem, ssr=ssr, table=self.table)
 
 
 class PrimerDetail(Detail):
@@ -102,4 +105,4 @@ class PrimerDetail(Detail):
 			self.formatPrimer(right, primer.start2-primer.length2-len(seq)-len(left)+1, primer.length2)
 		)
 
-		return template_render("sequence.html", tandem=tandem, ssr=ssr)
+		return template_render("sequence.html", tandem=tandem, ssr=ssr, table=self.table)

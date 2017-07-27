@@ -24,11 +24,7 @@
 </style>
 </head>
 <body>
-	<div id="meta">
-		ID: {{ ssr.id }} &nbsp;&nbsp; motif: {{ ssr.motif }} &nbsp;&nbsp; repeats: {{ ssr.repeat }}
-	</div>
-	<div id="loci">{{ ssr.sequence }}: {{ ssr.start }}-{{ ssr.end }}</div>
-	<hr>
+	<div id="name">>{{ table }}-{{ ssr.id }} {{ ssr.sequence }}:{{ ssr.start }}-{{ ssr.end }}</div>
 	<div id="tandem">{{ tandem }}</div>
 </body>
 </html>

@@ -1,64 +1,200 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Statistical report</title>
-	<style type="text/css">
-		body{font-size: 14px;}
-		td{padding: 5px 10px;}
-		th{padding: 5px 0px;}
-		img{display: block;}
-	</style>
+<title>Statistical report</title>
+<style type="text/css">
+@font-face{
+	font-family: "Helvetica";
+	font-weight: normal;
+	font-size: 14px;
+	src: url('HelveticaNeueLTPro-Bd.otf') format('opentye');
+}
+html{
+	font-family:sans-serif;
+	line-height:1.15;
+	-ms-text-size-adjust:100%;
+	-webkit-text-size-adjust:100%;
+}
+img {
+	border-style: none;
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
+body {
+	margin: 0;
+	font-family: Helvetica;
+	font-size: 14px;
+	line-height: 20px;
+	font-weight: 400;
+	color: #3b3b3b;
+	-webkit-font-smoothing: antialiased;
+	font-smoothing: antialiased;
+}
+h1{font-size: 20px;}
+h2{font-size: 18px;}
+.wrapper {
+	margin: 0 auto;
+	padding: 40px;
+	width: 90%;
+}
+.table {
+	margin: 0 0 40px 0;
+	width: 100%;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	display: table;
+}
+/*
+@media screen and (max-width: 580px) {
+	.table {
+		display: block;
+	}
+}*/
+.row {
+	display: table-row;
+	background: #f6f6f6;
+}
+.row:nth-of-type(odd) {
+	background: #e9e9e9;
+}
+.row.header {
+	font-weight: 900;
+	color: #ffffff;
+	background: #ea6153;
+}
+.row.green {
+	background: #27ae60;
+}
+.row.blue {
+	background: #2980b9;
+}
+@media screen and (max-width: 580px) {
+	.row {
+		padding: 8px 0;
+		display: block;
+	}
+}
+.cell {
+	padding: 6px 12px;
+	display: table-cell;
+}
+@media screen and (max-width: 580px) {
+	.cell {
+		padding: 2px 12px;
+		display: block;
+	}
+}
+.btn{
+	
+}
+</style>
 </head>
 <body>
-<div id="content">
+<div class="wrapper">
 <h1 align="center">The summary statistical analysis report</h1>
-<p>
-	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
-		<tr bgcolor="#ffffff"><td>Total number of sequences</td><td align="right">Fasta</td><td align="right">{{ seq.seqcount }}</td></tr>
-		<tr bgcolor="#ffffff"><td>Total length of sequences</td><td align="right">A+T+C+G+N</td><td align="right">{{ seq.size }} bp</td></tr>
-		<tr bgcolor="#ffffff"><td>Total valid length of sequences</td><td align="right">A+T+C+G</td><td align="right">{{ seq.validsize }} bp</td></tr>
-		<tr bgcolor="#ffffff"><td>Unkown bases (Ns) in sequences</td><td align="right">{{ seq.ns[0] }} bp</td><td align="right">{{ seq.ns[1] }}%</td></tr>
-		<tr bgcolor="#ffffff"><td>GC content</td><td align="right">(G+C)/(A+T+C+G) not include Ns</td><td align="right">{{ seq.gc }}%</td></tr>
-	</table>
-</p>
+<div class="table">
+	<div class="row header blue">
+		<div class="cell">Item</div>
+		<div class="cell">Description</div>
+		<div class="cell">Number</div>
+	</div>
+	<div class="row">
+		<div class="cell">Total number of sequences</div>
+		<div class="cell">Fasta</div>
+		<div class="cell">{{ seq.seqcount }}</div>
+	</div>
+	<div class="row">
+		<div class="cell">Total length of sequences</div>
+		<div class="cell">A+T+C+G+N</div>
+		<div class="cell">{{ seq.size }} bp</div>
+	</div>
+	<div class="row">
+		<div class="cell">Total valid length of sequences</div>
+		<div class="cell">A+T+C+G</div>
+		<div class="cell">{{ seq.validsize }} bp</div>
+	</div>
+	<div class="row">
+		<div class="cell">Unkown bases (Ns) in sequences</div>
+		<div class="cell">{{ seq.ns[0] }} bp</div>
+		<div class="cell">{{ seq.ns[1] }}%</div>
+	</div>
+	<div class="row">
+		<div class="cell">GC content</div>
+		<div class="cell">(G+C)/(A+T+C+G) not include Ns</div>
+		<div class="cell">{{ seq.gc }}%</div>
+	</div>
+</div>
+
 
 {% macro table(title, rows, name) -%}
-<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
-<caption><p><b>Table. </b>{{ title }} <a href="table:{{ name }}"><img src="expcsv.png"></a></p></caption>
-<tr bgcolor="#ffffff">
+<p><b>Table. </b>{{ title }} <a class="btn" href="table:{{ name }}">Export full table</a></p>
+<div class="table">
+<div class="row header">
 	{% for col in rows[0] %}
-	<th>{{ col }}</th>
+	<div class="cell">{{ col }}</div>
 	{% endfor %}
-</tr>
+</div>
 {% for row in rows[1:] %}
-<tr bgcolor="#ffffff">
+<div class="row">
 	{% for col in row %}
-	<td>{{ col }}</td>
+	<div class="cell">{{ col }}</div>
 	{% endfor %}
-</tr>
+</div>
 {% endfor %}
-</table>
+</div>
 {%- endmacro %}
 
 {% macro figure(title, name) -%}
 <center><img src="{{ name }}.png" align="middle" width="1000"></center>
-<center><b>Fig. </b>{{ title }} <a href="figure:{{ name }}"><img src="expfig.png"></a></center>
+<center><b>Fig. </b>{{ title }}</center>
 {% endmacro%}
 
 <!-- perfect SSRs statistics -->
 {% if ssr %}
 <h2 align="center">The summary of perfect SSRs</h2>
-<p>
-	<table border="0" bgcolor="black" cellpadding="0" cellspacing="1" align="center" width="90%">
-		<tr bgcolor="#ffffff"><td>Total number of perfect SSRs</td><td align="right">counts</td><td align="right">{{ ssr.count }}</td></tr>
-		<tr bgcolor="#ffffff"><td>Total length of perfect SSRs</td><td align="right">bp</td><td align="right">{{ ssr.length }}</td></tr>
-		<tr bgcolor="#ffffff"><td>The average length of SSRs</td><td align="right">total ssr length/total ssr counts</td><td align="right">{{ (ssr.length/ssr.count)|round(2,'ceil') }}</td></tr>
-		<tr bgcolor="#ffffff"><td>SSRs per sequence</td><td align="right">total SSR counts/sequence counts</td><td align="right">{{ (ssr.count/seq.seqcount)|round|int }}</td></tr>
-		<tr bgcolor="#ffffff"><td>The percetage of sequence occupied by SSRs</td><td align="right">ssr total length/total sequence size</td><td align="right">{{ (ssr.length/seq.size*100)|round(2,'ceil') }}</td></tr>
-		<tr bgcolor="#ffffff"><td>Relative abundace</td><td align="right">total SSRs/total valid length</td><td align="right">{{ ssr.frequency }} loci/{{ seq.unit }}</td></tr>
-		<tr bgcolor="#ffffff"><td>Relative density</td><td align="right">total SSR length/total valid length</td><td align="right">{{ ssr.density }} bp/{{ seq.unit }}</td></tr>
-	</table>
-</p>
+<div class="table">
+	<div class="row header green">
+		<div class="cell">Item</div>
+		<div class="cell">Description</div>
+		<div class="cell">Number</div>
+	</div>
+	<div class="row">
+		<div class="cell">Total number of perfect SSRs</div>
+		<div class="cell">counts</div>
+		<div class="cell">{{ ssr.count }}</div>
+	</div>
+	<div class="row">
+		<div class="cell">Total length of perfect SSRs</div>
+		<div class="cell">bp</div>
+		<div class="cell">{{ ssr.length }}</div>
+	</div>
+	<div class="row">
+		<div class="cell">The average length of SSRs</div>
+		<div class="cell">total ssr length/total ssr counts</div>
+		<div class="cell">{{ (ssr.length/ssr.count)|round(2,'ceil') }}</div>
+	</div>
+	<div class="row">
+		<div class="cell">SSRs per sequence</div>
+		<div class="cell">total SSR counts/sequence counts</div>
+		<div class="cell">{{ (ssr.count/seq.seqcount)|round|int }}</div>
+	</div>
+	<div class="row">
+		<div class="cell">The percetage of sequence occupied by SSRs</div>
+		<div class="cell">ssr total length/total sequence size</div>
+		<div class="cell">{{ (ssr.length/seq.size*100)|round(2,'ceil') }}</div>
+	</div>
+	<div class="row">
+		<div class="cell">Relative abundace</div>
+		<div class="cell">total SSRs/total valid length</div>
+		<div class="cell">{{ ssr.frequency }} loci/{{ seq.unit }}</div>
+	</div>
+	<div class="row">
+		<div class="cell">Relative density</div>
+		<div class="cell">total SSR length/total valid length</div>
+		<div class="cell">{{ ssr.density }} bp/{{ seq.unit }}</div>
+	</div>
+</div>
+
 
 <p>{{ table('The perfect SSR types summary', ssr.type, 'ssr-type') }}</p>
 <p>{{ figure('The distribution of perfect SSRs types', 'ssr_type') }}</p>
