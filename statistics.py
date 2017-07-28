@@ -358,7 +358,7 @@ class ISSRStatistics(Statistics):
 		for i in range(1,7):
 			sql = "SELECT length FROM issr WHERE type=%s" % i
 			r = self.db.get_column(sql)
-			if r: rows.append()
+			if r: rows.append(r)
 		return rows
 
 	def results(self):

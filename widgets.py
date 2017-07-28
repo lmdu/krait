@@ -36,23 +36,11 @@ class SSRMainWindow(QMainWindow):
 		
 		self.table = SSRTableView(self)
 		self.createTableModel()
-		#self.table.verticalHeader().hide()
-		#self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)s
-		##self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-		#self.table.setSortingEnabled(True)
-		#self.table.setContextMenuPolicy(Qt.CustomContextMenu)
-		#self.table.doubleClicked.connect(self.showSSRSequence)
-		#self.model = SSRTableModel()
-		self.setCentralWidget(self.table)
-		#self.setCentralWidget(self.browser)
 
-		#self.reportor = QTextBrowser()
-		self.reportor = QWebView()
-		#self.reportor.setSearchPaths([CACHE_PATH])
-		#self.reportor.setOpenLinks(False)
-		#self.reportor.setOpenExternalLinks(False)
-		#self.reportor.anchorClicked.connect(self.saveStatTableFigure)
-		self.reportor.linkClicked.connect(self.saveStatTableFigure)
+		self.browser = QWebView(self)
+		self.browser.linkClicked.connect(self.saveStatTableFigure)
+
+		self.setCentralWidget(self.browser)
 
 		#search text input
 		self.filter = SSRFilterInput(self)
@@ -78,7 +66,22 @@ class SSRMainWindow(QMainWindow):
 		#read settings
 		self.readSettings()
 
+		#read home page
+		self.homepage()
+
 		self.show()
+
+	def swichMainWidget(self, widget):
+		if widget == 'table':
+			if self.centralWidget() != self.table:
+				self.setCentralWidget(self.table)
+		else:
+			if self.centralWidget() != self.browser:
+				self.setCentralWidget(self.browser)
+
+	def homepage(self):
+		content = template_render('index.html')
+		self.browser.setHtml(content, QUrl.fromLocalFile(CACHE_PATH))
 
 	def createTableModel(self):
 		self.model = TableModel()
@@ -538,7 +541,7 @@ class SSRMainWindow(QMainWindow):
 		'''
 		base_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=fasta&id=%s'
 
-		acc, flag = QInputDialog.getText(self, 'NCBI Accession number', 'Accession')
+		acc, flag = QInputDialog.getText(self, 'Download sequence', 'NCBI Accession Number:%s' % ('\t'*10))
 
 		if not (acc and flag): return
 		outfile = os.path.join(DOWNLOAD_PATH, "%s.fa" % acc)
@@ -606,7 +609,7 @@ class SSRMainWindow(QMainWindow):
 		printer.setColorMode(QPrinter.Color)
 		printer.setOutputFormat(QPrinter.PdfFormat)
 		printer.setOutputFileName(pdfname)
-		self.reportor.print_(printer)
+		self.browser.print_(printer)
 
 
 	def doCopy(self):
@@ -694,6 +697,7 @@ class SSRMainWindow(QMainWindow):
 			self.showSSR()
 	
 	def showSSR(self):
+		self.swichMainWidget('table')
 		self.model.setTable('ssr')
 		self.model.select()
 
@@ -720,6 +724,7 @@ class SSRMainWindow(QMainWindow):
 			self.showCSSR()
 
 	def showCSSR(self):
+		self.swichMainWidget('table')
 		self.model.setTable('cssr')
 		self.model.select()
 
@@ -748,6 +753,7 @@ class SSRMainWindow(QMainWindow):
 			self.showVNTR()
 		
 	def showVNTR(self):
+		self.swichMainWidget('table')
 		self.model.setTable('vntr')
 		self.model.select()
 
@@ -780,6 +786,7 @@ class SSRMainWindow(QMainWindow):
 			self.showISSR()
 
 	def showISSR(self):
+		self.swichMainWidget('table')
 		self.model.setTable('issr')
 		self.model.select()
 
@@ -827,6 +834,7 @@ class SSRMainWindow(QMainWindow):
 			self.showPrimer()
 
 	def showPrimer(self):
+		self.swichMainWidget('table')
 		self.model.setTable('primer')
 		self.model.select()
 
@@ -911,8 +919,8 @@ class SSRMainWindow(QMainWindow):
 			cssr = cssr_statis, 
 			vntr = vntr_statis
 		)
-		self.setCentralWidget(self.reportor)
-		self.reportor.setHtml(content, QUrl.fromLocalFile(CACHE_PATH))
+		self.swichMainWidget()
+		self.browser.setHtml(content, QUrl.fromLocalFile(CACHE_PATH))
 
 	def showSSRSequence(self, index):
 		'''

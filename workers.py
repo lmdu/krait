@@ -26,6 +26,9 @@ class Worker(QObject):
 	finished = Signal()
 	_db = None
 
+	def __init__(self):
+		self.update_progress.emit(0)
+
 	@property
 	def db(self):
 		if self._db is None:
@@ -174,19 +177,19 @@ class CSSRWorker(Worker):
 		self.dmax = dmax
 
 	def process(self):
-		ssrs = self.db.get_all("SELECT * FROM ssr")
-		total = len(ssrs)
+		ssrs = self.db.query("SELECT * FROM ssr")
+		total = self.db.get_one("SELECT COUNT(1) FROM ssr LIMIT 1")
 		self.db.begin()
 		self.update_message.emit("Concatenate compound SSRs")
-		cssrs = [ssrs[0]]
-		for ssr in ssrs[1:]:
+		cssrs = [ssrs.next()]
+		for ssr in ssrs:
 			d = ssr.start - cssrs[-1].end - 1
 			if ssr.sequence == cssrs[-1].sequence and d <= self.dmax:
 				cssrs.append(ssr)
 			else:
 				if len(cssrs) > 1:
 					self.concatenate(cssrs)
-				progress = round(cssrs[-1].id/total*100)
+				progress = int(cssrs[-1].id/total*100)
 				self.update_progress.emit(progress)
 				cssrs = [ssr]
 		
