@@ -14,8 +14,6 @@ app.setOrganizationName('Chengdu University')
 app.setOrganizationDomain('http://www.cdu.edu.cn')
 app.setApplicationName('Krait')
 
-QThread.currentThread().setPriority(QThread.HighPriority)
-
 #set style sheet like css
 with open('style.qss') as qss:
 	app.setStyleSheet(qss.read())

@@ -15,14 +15,11 @@ from PySide.QtGui import *
 from PySide.QtSql import *
 from PySide.QtWebKit import *
 
-from ssr import *
 from db import *
-from zfasta import *
 from utils import *
 from detail import *
 from workers import *
 from config import *
-from primer import *
 
 class SSRMainWindow(QMainWindow):
 	def __init__(self):
@@ -541,7 +538,7 @@ class SSRMainWindow(QMainWindow):
 		'''
 		base_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=fasta&id=%s'
 
-		acc, flag = QInputDialog.getText(self, 'Download sequence', 'NCBI Accession Number:%s' % ('\t'*10))
+		acc, flag = QInputDialog.getText(self, 'Download sequence', 'NCBI Accession Number:%s' % ('\t'*5))
 
 		if not (acc and flag): return
 		outfile = os.path.join(DOWNLOAD_PATH, "%s.fa" % acc)

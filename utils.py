@@ -3,8 +3,8 @@
 import csv
 import gzip
 import pyfaidx
-import intersection
 
+from libs import intersection
 from config import *
 
 class Data(dict):

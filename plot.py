@@ -3,14 +3,16 @@
 from __future__ import division
 import os
 import math
+
 import matplotlib
-from numpy import sin, cos, pi
 matplotlib.use('Agg')
 matplotlib.rc('font', size=8)
+
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-paper')
 
-from config import CACHE_PATH
+from numpy import sin, cos, pi
+from config import *
 
 def cache_path(name):
 	return os.path.join(CACHE_PATH, "%s.png" % name)

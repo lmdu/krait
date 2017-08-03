@@ -1,3 +1,0 @@
-LIBRARY repeats.pyd
-EXPORTS
-initrepeats

@@ -5,20 +5,17 @@ import time
 import json
 import jinja2
 import pyfaidx
-import multiprocessing
 from PySide.QtCore import *
 
 import plot
 import motif
-import tandem
-import intersection
-import primerdesign
-from ssr import *
+from libs import tandem
+from libs import intersection
+from libs import primerdesign
 from db import *
 from utils import *
 from config import *
 from statistics import *
-from utils import Data
 
 class Worker(QObject):
 	update_progress = Signal(int)

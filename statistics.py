@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import os
-import simplejson as json
-import zfasta
+import json
 
 from db import *
-from utils import Data
-from config import STAT_JSON
+from utils import *
+from config import *
 
 class Statistics(object):
 	_db = None
