@@ -24,6 +24,7 @@ class Worker(QObject):
 	_db = None
 
 	def __init__(self):
+		super(Worker, self).__init__()
 		self.update_progress.emit(0)
 
 	@property
@@ -81,7 +82,7 @@ class SSRWorker(Worker):
 				name = seq.name
 				self.update_message.emit("Reading sequence %s" % name)
 				time.sleep(0)
-				seq = str(seq)
+				seq = str(seq[:].seq)
 				current_seqs += 1
 				seq_progress = current_seqs/seq_counts
 
