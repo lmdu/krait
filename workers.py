@@ -4,14 +4,11 @@ from __future__ import division
 import time
 import json
 import jinja2
-import pyfaidx
 from PySide.QtCore import *
 
 import plot
 import motif
-from libs import tandem
-from libs import intersection
-from libs import primerdesign
+from libs import *
 from db import *
 from utils import *
 from config import *
@@ -25,7 +22,7 @@ class Worker(QObject):
 
 	def __init__(self):
 		super(Worker, self).__init__()
-		self.update_progress.emit(0)
+		self.emit_progress(0)
 
 	@property
 	def db(self):
@@ -40,15 +37,27 @@ class Worker(QObject):
 		@para fasta_path str, the file path of fasta
 		@return tuple, (Fasta object, sequence counts)
 		'''
-		seqs = pyfaidx.Fasta(fasta_path, sequence_always_upper=True)
-		names = seqs.keys()
-		sql = "SELECT 1 FROM seq WHERE name='%s' LIMIT 1" % names[0]
+		seqs = fasta.GzipFasta(fasta_path)
+		sql = "SELECT 1 FROM seq WHERE name='%s' LIMIT 1" % seqs.keys[0]
 		if not self.db.get_one(sql):
-			rows = [(None, name, fasta_id) for name in names]
+			rows = [(None, name, fasta_id) for name in seqs.keys]
 			sql = "INSERT INTO seq VALUES (?,?,?)"
-			self.db.get_cursor().executemany(sql, rows)
+			self.db.insert(sql, rows)
 
-		return seqs, len(names)
+		return seqs, len(seqs.keys)
+
+	def emit_progress(self, percent):
+		self.update_progress.emit(percent)
+		time.sleep(0)
+
+	def emit_message(self, msg):
+		self.update_message.emit(msg)
+		time.sleep(0)
+
+	def emit_finish(self, msg):
+		self.update_progress.emit(100)
+		self.update_message.emit(msg)
+		self.finished.emit()
 
 
 class SSRWorker(Worker):
@@ -70,42 +79,32 @@ class SSRWorker(Worker):
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
-			self.update_message.emit("Building fasta index for %s" % fasta_file)
-			time.sleep(0)
+			self.emit_message("Building fasta index for %s" % fasta_file)
+
 			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
 			#start search perfect microsatellites
-			for seq in seqs:
-				name = seq.name
-				self.update_message.emit("Reading sequence %s" % name)
-				time.sleep(0)
-				seq = str(seq[:].seq)
-				current_seqs += 1
-				seq_progress = current_seqs/seq_counts
+			with seqs:
+				for name, seq in seqs:
+					current_seqs += 1
+					seq_progress = current_seqs/seq_counts
 
-				self.update_message.emit("Search perfect SSRs from %s" % name)
-				time.sleep(0)
-				ssrs = tandem.search_ssr(seq, self.min_repeats)
-				
-				def values():
-					for ssr in ssrs:
-						row = [None, name, self.motifs.standard(ssr[0])]
-						row.extend(ssr)
-						yield row
+					self.emit_message("Search perfect SSRs from %s" % name)
+					ssrs = tandem.search_ssr(seq, self.min_repeats)
+					
+					def values():
+						for ssr in ssrs:
+							row = [None, name, self.motifs.standard(ssr[0])]
+							row.extend(ssr)
+							yield row
 
-				cursor = self.db.get_cursor()
-				cursor.execute("BEGIN;")
-				cursor.executemany(sql, values())
-				cursor.execute("COMMIT;")
-				self.update_progress.emit(int(seq_progress*fasta_progress*100))
-				time.sleep(0)
+					self.db.insert(sql, values())
+					self.emit_progress(int(seq_progress*fasta_progress*100))
 				
-		self.update_progress.emit(100)
-		self.update_message.emit('Perfect SSRs search completed')
-		self.finished.emit()
+		self.emit_finish('Perfect SSRs search completed')
 
 
 class ISSRWorker(Worker):
@@ -131,42 +130,33 @@ class ISSRWorker(Worker):
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
-			self.update_message.emit("Building fasta index for %s" % fasta_file)
-			time.sleep(0)
+			self.emit_message("Building fasta index for %s" % fasta_file)
+
 			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
 			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
 			#start search perfect microsatellites
-			for seq in seqs:
-				name = seq.name
-				self.update_message.emit("Reading sequence %s" % name)
-				time.sleep(0)
-				seq = str(seq)
-				current_seqs += 1
-				seq_progress = current_seqs/seq_counts
+			with seqs:
+				for name, seq in seqs:
+					current_seqs += 1
+					seq_progress = current_seqs/seq_counts
 
-				self.update_message.emit("Search imperfect SSRs from %s" % name)
-				time.sleep(0)
-				issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 2000)
-				
-				def values():
-					for issr in issrs:
-						row = [None, name, self.motifs.standard(issr[0])]
-						row.extend(issr)
-						yield row
+					self.emit_message("Search imperfect SSRs from %s" % name)
 
-				self.update_message.emit("Insert iSSRs to database")
-				cursor = self.db.get_cursor()
-				cursor.execute("BEGIN;")
-				cursor.executemany(sql, values())
-				cursor.execute("COMMIT;")
-				self.update_progress.emit(int(seq_progress*fasta_progress*100)) 
+					issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 2000)
+					
+					def values():
+						for issr in issrs:
+							row = [None, name, self.motifs.standard(issr[0])]
+							row.extend(issr)
+							yield row
+
+					self.db.insert(sql, values())
+					self.emit_progress(int(seq_progress*fasta_progress*100))
 				
-		self.update_progress.emit(100)
-		self.update_message.emit('Imperfect SSRs search completed')
-		self.finished.emit()
+		self.emit_finish('Imperfect SSRs search completed')
 
 
 class CSSRWorker(Worker):
@@ -178,7 +168,7 @@ class CSSRWorker(Worker):
 		ssrs = self.db.query("SELECT * FROM ssr")
 		total = self.db.get_one("SELECT COUNT(1) FROM ssr LIMIT 1")
 		self.db.begin()
-		self.update_message.emit("Concatenate compound SSRs")
+		self.emit_message("Concatenate compound SSRs")
 		cssrs = [ssrs.next()]
 		for ssr in ssrs:
 			d = ssr.start - cssrs[-1].end - 1
@@ -188,7 +178,7 @@ class CSSRWorker(Worker):
 				if len(cssrs) > 1:
 					self.concatenate(cssrs)
 				progress = int(cssrs[-1].id/total*100)
-				self.update_progress.emit(progress)
+				self.emit_progress(progress)
 				cssrs = [ssr]
 		
 		if len(cssrs) > 1:
@@ -196,9 +186,7 @@ class CSSRWorker(Worker):
 
 		self.db.commit()
 
-		self.update_progress.emit(100)
-		self.update_message.emit("Compound SSRs search completed")
-		self.finished.emit()
+		self.emit_finish("Compound SSRs search completed")
 
 	def concatenate(self, cssrs):
 		seqname = cssrs[-1].sequence
@@ -211,7 +199,9 @@ class CSSRWorker(Worker):
 		gap = sum(cssr.start-cssrs[idx].end-1 for idx, cssr in enumerate(cssrs[1:]))
 		structure = "-".join(["(%s)%s" % (cssr.motif, cssr.repeat) for cssr in cssrs])
 		sql = "INSERT INTO cssr VALUES (?,?,?,?,?,?,?,?,?,?)"
-		self.db.get_cursor().execute(sql, (None, seqname, start, end, motif, complexity, length, gap, component, structure))
+		self.db.get_cursor().execute(sql,
+			(None, seqname, start, end, motif, complexity, length, gap, component, structure)
+		)
 
 
 class VNTRWorker(Worker):
@@ -230,41 +220,31 @@ class VNTRWorker(Worker):
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
-			self.update_message.emit("Building fasta index for %s" % fasta_file)
+			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
 			#insert ssr to database
 			sql = "INSERT INTO vntr VALUES (?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
 			#start search perfect microsatellites
-			for seq in seqs:
-				name = seq.name
-				self.update_message.emit("Reading sequence %s" % name)
-				time.sleep(0)
-				seq = str(seq)
-				current_seqs += 1
-				seq_progress = current_seqs/seq_counts
+			with seqs:
+				for name, seq in seqs:
+					current_seqs += 1
+					seq_progress = current_seqs/seq_counts
 
-				self.update_message.emit("Search VNTRs from %s" % name)
-				time.sleep(0)
-				vntrs = tandem.search_vntr(seq, self.min_motif, self.max_motif, self.repeats)
-				
-				def values():
-					for vntr in vntrs:
-						row = [None, name]
-						row.extend(vntr)
-						yield row
+					self.emit_message("Search VNTRs from %s" % name)
+					vntrs = tandem.search_vntr(seq, self.min_motif, self.max_motif, self.repeats)
+					
+					def values():
+						for vntr in vntrs:
+							row = [None, name]
+							row.extend(vntr)
+							yield row
 
-				self.update_message.emit("Insert VNTRs to database")
-				cursor = self.db.get_cursor()
-				cursor.execute("BEGIN TRANSACTION;")
-				cursor.executemany(sql, values())
-				cursor.execute("COMMIT;")
-				self.update_progress.emit(int(seq_progress*fasta_progress*100)) 
+					self.db.insert(sql, values())
+					self.emit_progress(int(seq_progress*fasta_progress*100)) 
 				
-		self.update_progress.emit(100)
-		self.update_message.emit('VNTRs search completed')
-		self.finished.emit()
+		self.emit_finish('VNTRs search completed')
 
 class StatisWorker(Worker):
 	def __init__(self, unit='Mb', letter='ATGC', dpi=300):
@@ -274,13 +254,13 @@ class StatisWorker(Worker):
 		self.dpi = dpi
 
 	def process(self):
-		self.update_message.emit("Doing sequence statistics...")
+		self.emit_message("Doing sequence statistics...")
 
 		seq_statis = Statistics(self.unit, self.letter).results()
 		self.db.set_option('seq_statis', json.dumps(seq_statis))
 
 		if not self.db.is_empty('ssr'):
-			self.update_message.emit("Doing perfect SSR statistics...")
+			self.emit_message("Doing perfect SSR statistics...")
 			ssr_statis = SSRStatistics().results()
 			self.db.set_option('ssr_statis', json.dumps(ssr_statis))
 
@@ -324,7 +304,7 @@ class StatisWorker(Worker):
 
 
 		if not self.db.is_empty('issr'):
-			self.update_message.emit("Doing imperfect SSR statistics...")
+			self.emit_message("Doing imperfect SSR statistics...")
 			issr_statis = ISSRStatistics().results()
 			self.db.set_option('issr_statis', json.dumps(issr_statis))
 
@@ -352,7 +332,7 @@ class StatisWorker(Worker):
 
 		
 		if not self.db.is_empty('cssr'):
-			self.update_message.emit("Doing compound SSR statistics...")
+			self.emit_message("Doing compound SSR statistics...")
 			cssr_statis = CSSRStatistics().results()
 			self.db.set_option('cssr_statis', json.dumps(cssr_statis))
 
@@ -382,7 +362,7 @@ class StatisWorker(Worker):
 
 
 		if not self.db.is_empty('vntr'):
-			self.update_message.emit("Doing VNTR statistics...")
+			self.emit_message("Doing VNTR statistics...")
 			vntr_statis = VNTRStatistics().results()
 			self.db.set_option('vntr_statis', json.dumps(vntr_statis))
 
@@ -410,9 +390,7 @@ class StatisWorker(Worker):
 		else:
 			self.db.set_option('vntr_statis', '[]')
 
-		self.update_progress.emit(100)
-		self.update_message.emit("Statistics was completed")
-		self.finished.emit()
+		self.emit_finish("Statistics was completed")
 
 
 class PrimerWorker(Worker):
@@ -460,7 +438,7 @@ class PrimerWorker(Worker):
 		self.db.begin()
 		for item in self.db.query(sql):
 			if seqs is None or item[2] not in seqs:
-				seqs = pyfaidx.Fasta(item[0])
+				seqs = fasta.GzipFasta(item[0])
 			
 			start = item[3] - self.flank
 			if start < 1:
@@ -469,7 +447,7 @@ class PrimerWorker(Worker):
 			
 			target = dict(
 				SEQUENCE_ID = "%s-%s" % (self.table, item[1]),
-				SEQUENCE_TEMPLATE = str(seqs[item[2]][start-1:end]),
+				SEQUENCE_TEMPLATE = seqs.get_seq_by_loci(item[2], start, end),
 				SEQUENCE_TARGET = [item[3]-start, item[5]],
 				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item[3]-start, item[5]]
 			)
@@ -477,9 +455,6 @@ class PrimerWorker(Worker):
 			primerdesign.setSeqArgs(target)
 			res = primerdesign.runDesign(False)
 			current += 1
-
-			#with open(target['SEQUENCE_ID'], 'wb') as fh:
-			#	json.dump(res, fh, indent=4)
 
 			primer_count = res['PRIMER_PAIR_NUM_RETURNED']
 			for i in range(primer_count):
@@ -500,12 +475,11 @@ class PrimerWorker(Worker):
 				meta.extend(res['PRIMER_RIGHT_%s' % i])
 				self.db.get_cursor().execute("INSERT INTO primer_meta VALUES (?,?,?,?,?)", meta)
 		
-			self.update_progress.emit(round(current/total_ids*100))
+			self.emit_progress(int(current/total_ids*100))
 
 		self.db.commit()
 
-		self.update_message.emit('Primer design completed')
-		self.finished.emit()
+		self.emit_finish('Primer design completed')
 
 class ExportFastaWorker(Worker):
 	def __init__(self, table, ids, flank, outfile):
@@ -537,25 +511,24 @@ class ExportFastaWorker(Worker):
 
 		fp = open(self.outfile, 'w')
 
-		for item in self.db.get_cursor().execute(sql):
+		for item in self.db.query(sql):
 			if seqs is None or item.sequence not in seqs:
-				seqs = pyfaidx.Fasta(item.path)
+				seqs = fasta.GzipFasta(item.path)
 			
 			start = item.start - self.flank
 			if start < 1:
 				start = 1
 			end = item.end + self.flank
-			ssr = seqs.get_seq(item.sequence, start-1, end)
+			ssr = seqs.get_seq_by_loci(item.sequence, start, end)
 			name = ">%s%s %s:%s-%s|motif:%s" % (self.table.upper(), item.id, item.sequence, item.start, item.end, item.motif)
 			fp.write("%s\n%s" % (name, format_fasta_sequence(ssr, 70)))
 			
 			current += 1
-			self.update_progress.emit(round(current/total_ids*100))
+			self.emit_progress(int(current/total_ids*100))
 
 		fp.close()
 
-		self.update_message.emit("Export fasta completed.")
-		self.finished.emit()
+		self.emit_finish("Export fasta completed.")
 
 class LocateWorker(Worker):
 	"""
@@ -570,7 +543,7 @@ class LocateWorker(Worker):
 		self.annot_file = annot_file
 
 	def process(self):
-		self.update_message.emit("Building interval tree")
+		self.emit_message("Building interval tree")
 		interval_forest = {}
 		genes_info = {}
 		f = check_gene_annot_format(self.annot_file)
@@ -579,7 +552,7 @@ class LocateWorker(Worker):
 		else:
 			features = get_gtf_coordinate(self.annot_file)
 
-		self.update_message.emit("Building interval tree")
+		self.emit_message("Building interval tree")
 		for feature in features:
 			if feature[0] == 'GENE':
 				genes_info[feature[1]] = feature[2]
@@ -593,11 +566,11 @@ class LocateWorker(Worker):
 		total = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
 		current = 0
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
-			self.update_message.emit("Processing %ss on %s" % (self.table.upper(), ssr.sequence))
+			self.emit_message("Processing %ss on %s" % (self.table.upper(), ssr.sequence))
 			current += 1
 			progress = int(current/total*100)
 			if progress%2 == 0:
-				self.update_progress.emit(progress)
+				self.emit_progress(progress)
 
 			if ssr.sequence not in interval_forest:
 				continue
@@ -615,11 +588,10 @@ class LocateWorker(Worker):
 					self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
 					break
 
-		self.update_message.emit("Creating query index")
-		self.db.get_cursor().execute("CREATE INDEX loci ON location (target, category)")
-		self.db.get_cursor().execute("CREATE INDEX sel ON location (category, feature)")
+		self.emit_message("Creating query index")
+		self.db.query("CREATE INDEX loci ON location (target, category)")
+		self.db.query("CREATE INDEX sel ON location (category, feature)")
 
-		self.update_progress.emit(100)
-		self.update_message.emit("%s location completed." % self.table)
-		self.finished.emit()
+		self.emit_finish("%s location completed." % self.table)
+
 		

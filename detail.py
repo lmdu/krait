@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pyfaidx
-
+from libs import *
 from db import *
 from utils import *
 
@@ -19,14 +18,14 @@ class Detail(object):
 		@para end int, the 1-based end location of TR
 		@return tuple, (left flank, self, right flank)
 		'''
-		sequence = str(self.fasta[chrom][start-1:end])
+		sequence = self.fasta[chrom][start-1:end]
 		left_start = start - self.flank
 		
 		if left_start < 1:
 			left_start = 1
 
-		lflank = str(self.fasta[chrom][left_start:start-1])
-		rflank = str(self.fasta[chrom][end:end+self.flank])
+		lflank = self.fasta[chrom][left_start:start-1]
+		rflank = self.fasta[chrom][end:end+self.flank]
 
 		return sequence, lflank, rflank
 
@@ -64,7 +63,7 @@ class SequenceDetail(Detail):
 			"WHERE f.id=s.fid AND t.sequence=s.name AND t.id={1}"
 		)
 		fasta_file = self.db.get_one(sql.format(self.table, self.id))
-		self.fasta = pyfaidx.Fasta(fasta_file)
+		self.fasta = fasta.GzipFasta(fasta_file)
 
 		sql = "SELECT * FROM %s WHERE id=%s" % (self.table, self.id)
 		ssr = self.db.get_row(sql)
@@ -94,7 +93,7 @@ class PrimerDetail(Detail):
 		)
 
 		fasta_file = self.db.get_one(sql.format(table, tid))
-		self.fasta = pyfaidx.Fasta(fasta_file)
+		self.fasta = fasta.GzipFasta(fasta_file)
 
 		sql = "SELECT * FROM %s WHERE id=%s" % (table, tid)
 		ssr = self.db.get_row(sql)

@@ -62,13 +62,13 @@ class Database:
 		PRAGMA journal_mode = OFF;
 		PRAGMA temp_store = MEMORY;
 		'''
-		self.get_cursor().execute(sql)
+		self.query(sql)
 
 	def get_cursor(self):
 		return conn.cursor()
 
 	def create_table(self):
-		self.get_cursor().execute(config.CREATE_TABLES_SQL)
+		self.query(config.CREATE_TABLES_SQL)
 
 	def get_last_insert_rowid(self):
 		return conn.last_insert_rowid()
@@ -86,14 +86,14 @@ class Database:
 
 	def drop_tables(self):
 		for table in self.get_tables():
-			self.get_cursor().execute("DROP TABLE %s" % table)
+			self.query("DROP TABLE %s" % table)
 
 	def get_tables(self):
 		sql = "SELECT name FROM sqlite_master WHERE type='table'"
-		return [row[0] for row in self.get_cursor().execute(sql)]
+		return [row[0] for row in self.query(sql)]
 
 	def get_one(self, sql):
-		for row in self.get_cursor().execute(sql):
+		for row in self.query(sql):
 			try:
 				return row[0]
 			except IndexError:
@@ -103,19 +103,19 @@ class Database:
 		'''
 		get data from multiple rows
 		'''
-		return self.get_cursor().execute(sql).fetchall()
+		return self.query(sql).fetchall()
 
 	def get_row(self, sql):
 		'''
 		get data from one row
 		'''
-		return self.get_cursor().execute(sql).fetchone()
+		return self.query(sql).fetchone()
 
 	def get_column(self, sql):
 		'''
 		get all values in a column
 		'''
-		return [row[0] for row in self.get_cursor().execute(sql)]
+		return [row[0] for row in self.query(sql)]
 
 	def is_empty(self, table):
 		'''
@@ -132,14 +132,18 @@ class Database:
 		return opt
 
 	def set_option(self, name, value):
-		cursor = self.get_cursor()
 		if self.get_option(name):
-			cursor.execute("UPDATE option SET value=? WHERE name=?", (value, name))
+			self.query("UPDATE option SET value=? WHERE name=?", (value, name))
 		else:
-			cursor.execute("INSERT INTO option VALUES (?,?,?)", (None, name, value))
+			self.query("INSERT INTO option VALUES (?,?,?)", (None, name, value))
 
 	def query(self, sql):
 		return self.get_cursor().execute(sql)
+
+	def insert(self, sql, rows):
+		self.begin()
+		self.get_cursor().executemany(sql, rows)
+		self.commit()
 
 	def open(self, dbfile):
 		source = apsw.Connection(dbfile)
@@ -160,151 +164,3 @@ class Database:
 
 	def clear(self, table):
 		self.query("DELETE FROM %s" % table)
-
-"""
-class SSRTable(QObject):
-	table = None
-	fields = []
-	
-	def __init__(self):
-		self._createTable()
-		self.prepareInsert()
-
-	def __iter__(self):
-		return self.fetchSSRs()
-
-	def _createTable(self):
-		sql = ",".join(["%s %s" % (f, t) for f,t,_ in self.fields])
-		sql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (self.table, sql)
-		QSqlQuery(sql)
-
-	def recordCounts(self):
-		'''
-		get the number of records in the table
-		@return int, counts of records
-		'''
-		return self.get("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
-
-
-	def fetchAll(self):
-		'''
-		get all the records in the table and return one in each time
-		'''
-		query = QSqlQuery("SELECT * FROM %s" % self.table)
-		while query.next():
-			yield Data({field[0]: field[2](query.value(idx)) for idx, field in enumerate(self.fields)})
-
-	def query(self, sql):
-		query = QSqlQuery(sql)
-		rec = query.record()
-		fields = {rec.fieldName(i): i for i in range(rec.count())}
-		while query.next():
-			yield Data({field: query.value(fields[field]) for field in fields})
-
-	def get(self, sql):
-		query = QSqlQuery(sql)
-		while query.next():
-			return query.value(0)
-
-	def prepareInsert(self):
-		'''
-		prepare insert data into table
-		'''
-		sql = ",".join([":%s" % f for f,_,_ in self.fields])
-		sql = "INSERT INTO %s VALUES (%s)" % (self.table, sql)
-		self._query = QSqlQuery()
-		self._query.prepare(sql)
-
-	def insert(self, data):
-		'''
-		insert data into table
-		@para data dict, a record with fields and values
-		'''
-		for field in data:
-			self._query.bindValue(":%s" % field, data[field])
-		self._query.exec_()
-
-
-class MicrosatelliteTable(SSRTable):
-	table = 'ssr'
-	fields = [
-		("mid", "INTEGER PRIMARY KEY", int),
-		("sequence", "TEXT", str),
-		("start", "INTEGER", int),
-		("stop", "INTEGER", int),
-		("motif", "TEXT", str),
-		("standard", "TEXT", str),
-		("type", "INTEGER", int),
-		("repeat", "INTEGER", int),
-		("length", "INTEGER", int)
-	]
-	
-	def __init__(self):
-		super(MicrosatelliteTable, self).__init__()
-
-class CompoundTable(SSRTable):
-	table = 'cssr'
-	fields = [
-		("cid", "INTEGER PRIMARY KEY", int),
-		("sequence", "TEXT", str),
-		("start", "INTEGER", int),
-		("stop", "INTEGER", int),
-		("motif", "TEXT", str),
-		("standard", "TEXT", str),
-		("complexity", "INTEGER", int),
-		("length", "INTEGER", int),
-		("component", "TEXT", str),
-		("structure", "TEXT", str)
-	]
-
-	def __init__(self):
-		super(CompoundTable, self).__init__()
-
-class SatelliteTable(SSRTable):
-	table = 'vntr'
-	fields = [
-		("sid", "INTEGER PRIMARY KEY", int),
-		("sequence", "TEXT", str),
-		("start", "INTEGER", int),
-		("stop", "INTEGER", int),
-		("motif", "TEXT", str),
-		("type", "INTEGER", int),
-		("repeat", "INTEGER", int),
-		("length", "INTEGER", int)
-	]
-
-class FastaTable(SSRTable):
-	table = 'fasta'
-	fields = [
-		("fid", "INTEGER PRIMARY KEY", int),
-		("path", "TEXT", str)
-	]
-
-class SequenceTable(SSRTable):
-	table = 'sequence'
-	fields = [
-		("sid", "INTEGER PRIMARY KEY", int),
-		("name", "TEXT", str),
-		("fid", "INTEGER", int)
-	]
-
-class MetaTable(SSRTable):
-	table = 'meta'
-	fields = [
-		("name", "TEXT", str),
-		("value", "TEXT", str)
-	]
-
-	def __init__(self):
-		super(MetaTable, self).__init__()
-
-	def getMeta(self, name):
-		'''
-		get the meta information 
-		@para name str, meta name
-		@return str
-		'''
-		self._query.exec_("SELECT value FROM meta WHERE name='%s' LIMIT 1" % name)
-		while self._query.next():
-			return self._query.value(0)
-"""
