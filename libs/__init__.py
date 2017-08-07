@@ -3,3 +3,4 @@
 from . import tandem
 from . import intersection
 from . import primerdesign
+from . import fasta
