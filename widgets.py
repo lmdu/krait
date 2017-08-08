@@ -144,8 +144,6 @@ class SSRMainWindow(QMainWindow):
 		self.loadFastaAct.triggered.connect(self.importFasta)
 		self.loadFastasAct = QAction(self.tr("Import Fastas in Folder"), self)
 		self.loadFastasAct.triggered.connect(self.importFastas)
-		self.loadNCBIAct = QAction(self.tr("Import Fasta from NCBI"), self)
-		self.loadNCBIAct.triggered.connect(self.importNCBI)
 		
 		#export the Results
 		self.exportTableAct = QAction(self.tr("Exprot Selected as Table"), self)
@@ -287,6 +285,10 @@ class SSRMainWindow(QMainWindow):
 		self.statisticsShowAct = QAction(self.tr("Show Statistics"), self)
 		self.statisticsShowAct.triggered.connect(self.showStatistics)
 
+		#tool action
+		self.downloadNCBIAct = QAction(self.tr("Download sequence from NCBI"), self)
+		self.downloadNCBIAct.triggered.connect(self.downloadFasta)
+
 		#about action
 		self.aboutAct = QAction(self.tr("About"), self)
 		self.aboutAct.triggered.connect(self.openAboutMessage)
@@ -312,7 +314,6 @@ class SSRMainWindow(QMainWindow):
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.loadFastaAct)
 		self.fileMenu.addAction(self.loadFastasAct)
-		self.fileMenu.addAction(self.loadNCBIAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exportTableAct)
 		self.fileMenu.addAction(self.exportFastaAct)
@@ -344,6 +345,7 @@ class SSRMainWindow(QMainWindow):
 		self.viewMenu.addAction(self.VNTRRemoveAct)
 
 		#self.toolMenu.addAction(self.bestDmaxAct)
+		self.toolMenu.addAction(self.downloadNCBIAct)
 		self.toolMenu.addAction(self.primerForceAct)
 		self.toolMenu.addAction(self.statisticsAct)
 		self.toolMenu.addAction(self.locateAct)
@@ -462,6 +464,8 @@ class SSRMainWindow(QMainWindow):
 		
 		#add progressing bar
 		self.progressBar = QProgressBar(self)
+		self.progressBar.setMaximum(100)
+		self.progressBar.setMinimum(0)
 		self.statusBar.addPermanentWidget(self.progressBar)
 		
 
@@ -532,24 +536,18 @@ class SSRMainWindow(QMainWindow):
 			count += 1
 		self.setStatusMessage("Import %s fastas in %s" % (count, directory))
 
-	def importNCBI(self):
+	def downloadFasta(self):
 		'''
-		import fasta file from NCBI database
+		download fasta file from NCBI database
 		'''
-		base_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=fasta&id=%s'
-
-		acc, flag = QInputDialog.getText(self, 'Download sequence', 'NCBI Accession Number:%s' % ('\t'*5))
-
-		if not (acc and flag): return
-		outfile = os.path.join(DOWNLOAD_PATH, "%s.fa" % acc)
-		r = requests.get(base_url % acc, stream=True)
-		with open(outfile, "wb") as fh:
-			for chunk in r.iter_content(chunk_size=1024):
-				if chunk:
-					fh.write(chunk)
-
-		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, outfile))
-		self.setStatusMessage("Import fasta %s from NCBI" % outfile)
+		dialog = DownloadDialog(self)
+		status = dialog.exec_()
+		if not status: return
+		acc, out = dialog.get()
+		if not acc or not out: return
+		self.progressBar.setMaximum(0)
+		worker = EutilWorker(acc, out)
+		self.executeTask(worker, lambda: self.progressBar.setMaximum(100))
 
 	def exportTableRows(self):
 		selected = self.model.getSelectedRows()
@@ -1756,6 +1754,44 @@ class SSRDetailDialog(QDialog):
 		self.setLayout(mainLayout)
 		self.exec_()
 
+class DownloadDialog(QDialog):
+	def __init__(self, parent=None):
+		super(DownloadDialog, self).__init__(parent)
+		self.setMinimumWidth(500)
+		self.setWindowTitle("Download sequence from NCBI")
+		self.acc_label = QLabel(self.tr("NCBI Accession Number:"), self)
+		self.acc_input = QLineEdit(self)
+		self.out_label = QLabel(self.tr("Select output path:"), self)
+		self.out_input = QLineEdit(self)
+		self.browser_btn = QPushButton(self.tr("Browser"), self)
+		self.browser_btn.clicked.connect(self.select)
+		self.out_input.setReadOnly(True)
+
+		layout = QGridLayout()
+		layout.setColumnStretch(0, 1)
+		layout.addWidget(self.acc_label, 0, 0)
+		layout.addWidget(self.acc_input, 1, 0, 1, 2)
+		layout.addWidget(self.out_label, 2, 0)
+		layout.addWidget(self.out_input, 3, 0)
+		layout.addWidget(self.browser_btn, 3, 1)
+
+		buttonBox = QDialogButtonBox(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+		buttonBox.accepted.connect(self.accept)
+		buttonBox.rejected.connect(self.reject)
+
+		layout.addWidget(buttonBox, 4, 0, 1)
+
+		self.setLayout(layout)
+
+	def select(self):
+		exp_file, _ = QFileDialog.getSaveFileName(self, filter="Fasta (*.fa);;Fasta (*.fasta)")
+		if exp_file:
+			self.out_input.setText(exp_file)
+
+	def get(self):
+		acc = self.acc_input.text().strip()
+		out = self.out_input.text()
+		return acc, out
 
 
 #class SSRTableModel(QSqlTableModel):

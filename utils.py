@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import division
 import csv
 import gzip
-import pyfaidx
 
-from libs import intersection
+from libs import *
 from config import *
 
 class Data(dict):
@@ -256,24 +256,24 @@ def get_ssr_sequence(seq_file, seq_name, start, stop, flank):
 	@para flank, the length of the flanking sequence
 	@return ssr sequence with flanking sequences
 	'''
-	fasta = pyfaidx.Fasta(seq_file, sequence_always_upper=True)
+	fastas = fasta.Fasta(seq_file, sequence_always_upper=True)
 	
 	#get ssr sequence
-	ssr = fasta[seq_name][start-1:stop].seq
+	ssr = fastas[seq_name][start-1:stop].seq
 	
 	#get left flanking sequence
 	left_flank_start = start - flank - 1
 	if left_flank_start < 0:
 		left_flank_start = 0
-	left_flank = fasta[seq_name][left_flank_start:start]
+	left_flank = fastas[seq_name][left_flank_start:start]
 	
-	seq_len = len(fasta[seq_name][:])
+	seq_len = len(fastas[seq_name])
 	
 	#get right flanking sequence
 	right_flank_stop = stop + flank
 	if right_flank_stop > seq_len:
 		right_flank_stop = seq_len
-	right_flank = fasta[seq_name][stop:right_flank_stop]
+	right_flank = fastas[seq_name][stop:right_flank_stop]
 
 	highlighter = SequenceHighlighter()
 	meta = '%s:%s-%s %s' % (seq_name, left_flank_start+1, start, len(left_flank))
@@ -281,3 +281,15 @@ def get_ssr_sequence(seq_file, seq_name, start, stop, flank):
 	highlighter.format_ssr(ssr)
 	highlighter.format_flank(right_flank)
 	return highlighter.render()
+
+def human_size(size):
+	if size < 1000:
+		return '%s bp' % round(size, 2)
+
+	size = size/1000
+	if size < 1000:
+		return '%s kb' % round(size, 2)
+
+	size = size/1000
+	return '%s Mb' % round(size, 2)
+

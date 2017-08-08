@@ -4,6 +4,7 @@ from __future__ import division
 import time
 import json
 import jinja2
+import requests
 from PySide.QtCore import *
 
 import plot
@@ -594,4 +595,38 @@ class LocateWorker(Worker):
 
 		self.emit_finish("%s location completed." % self.table)
 
-		
+class EutilWorker(Worker):
+	def __init__(self, acc, outfile, bank='nucleotide'):
+		super(EutilWorker, self).__init__()
+		self.acc = acc
+		self.outfile = outfile
+		self.bank = bank
+		self.base = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=%s&rettype=fasta&id=%s'
+
+	def process(self):
+		url = self.base % (self.bank, self.acc)
+		self.emit_message("Downloading %s fasta sequence from NCBI..." % self.acc)
+		message = "Download %s fasta completed" % self.acc
+		try:
+			r = requests.get(url, timeout=10, stream=True)
+		except:
+			message = "Can not connect to NCBI server"
+		else:
+			if r.status_code == requests.codes.ok:
+				self.total = 0
+				self.start = time.time()
+				with open(self.outfile, "wb") as fh:
+					for chunk in r.iter_content(chunk_size=1024):
+						self.total += len(chunk)
+						fh.write(chunk)
+						self.emit_message(self.progressing())
+			else:
+				message = "Network request %s error" % r.status_code
+
+		self.emit_finish(message)
+
+	def progressing(self):
+		total = human_size(self.total)
+		timer = time.time() - self.start
+		speed = human_size(self.total/timer)
+		return "Downloaded %s, Speed %s/s" % (total, speed)
