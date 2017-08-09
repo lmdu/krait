@@ -616,12 +616,15 @@ class EutilWorker(Worker):
 				self.total = 0
 				self.start = time.time()
 				with open(self.outfile, "wb") as fh:
-					for chunk in r.iter_content(chunk_size=1024):
-						self.total += len(chunk)
-						fh.write(chunk)
-						self.emit_message(self.progressing())
+					try:
+						for chunk in r.iter_content(chunk_size=1024):
+							self.total += len(chunk)
+							fh.write(chunk)
+							self.emit_message(self.progressing())
+					except Exception, e:
+						message = str(e)
 			else:
-				message = "Network request %s error" % r.status_code
+				message = "%s error: %s" % (r.status_code, r.reason)
 
 		self.emit_finish(message)
 

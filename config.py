@@ -3,7 +3,7 @@
 import os
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = '0.8.1'
+VERSION = '0.8.3'
 
 BUILD = '20170728'
 

@@ -284,12 +284,12 @@ def get_ssr_sequence(seq_file, seq_name, start, stop, flank):
 
 def human_size(size):
 	if size < 1000:
-		return '%s bp' % round(size, 2)
+		return '%s B' % round(size, 2)
 
-	size = size/1000
+	size = size/1024
 	if size < 1000:
-		return '%s kb' % round(size, 2)
+		return '%s KB' % round(size, 2)
 
-	size = size/1000
-	return '%s Mb' % round(size, 2)
+	size = size/1024
+	return '%s MB' % round(size, 2)
 

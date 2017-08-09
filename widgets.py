@@ -140,17 +140,20 @@ class SSRMainWindow(QMainWindow):
 		self.saveAsProjectAct.triggered.connect(self.saveProjectAs)
 		
 		#load fasta file or genome action
-		self.loadFastaAct = QAction(self.tr("Import Fasta Sequence"), self)
+		self.loadFastaAct = QAction(self.tr("Import Fasta"), self)
 		self.loadFastaAct.triggered.connect(self.importFasta)
+		self.loadFastaAct.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_O))
 		self.loadFastasAct = QAction(self.tr("Import Fastas in Folder"), self)
 		self.loadFastasAct.triggered.connect(self.importFastas)
 		
 		#export the Results
 		self.exportTableAct = QAction(self.tr("Exprot Selected as Table"), self)
 		self.exportTableAct.triggered.connect(self.exportTableRows)
+		self.exportTableAct.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_T))
 		self.exportFastaAct = QAction(self.tr("Export Selected as Fasta"), self)
 		self.exportFastaAct.triggered.connect(self.exportTableFastas)
 		self.exportStatsAct = QAction(self.tr("Export Statistical Report"), self)
+		self.exportStatsAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_P))
 		self.exportStatsAct.triggered.connect(self.exportStatisResult)
 		
 		#exit action
@@ -182,22 +185,24 @@ class SSRMainWindow(QMainWindow):
 		#toolbar actions
 		#search perfect ssrs tool button
 		self.SSRSearchAct = QAction(QIcon("icons/ssr.png"), self.tr("SSRs"), self)
-		self.SSRSearchAct.setToolTip(self.tr("Search Perfect SSRs"))
+		self.SSRSearchAct.setToolTip(self.tr("Search for Perfect SSRs"))
 		self.SSRSearchAct.triggered.connect(self.searchOrShowSSR)
-		self.SSRForceAct = QAction(self.tr("Force SSR Search"), self)
+		self.SSRForceAct = QAction(self.tr("Search for SSRs"), self)
+		self.SSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_1))
 		self.SSRForceAct.triggered.connect(self.searchSSR)
 		self.SSRShowAct = QAction(self.tr("Show Perfect SSRs"), self)
 		self.SSRShowAct.triggered.connect(self.showSSR)
 		self.SSRRemoveAct = QAction(self.tr("Remove Perfect SSRs"), self)
 		self.SSRRemoveAct.triggered.connect(self.removeSSR)
-		self.SSRSetAct = QAction(self.tr("Specify Minimal Repeats"), self)
+		self.SSRSetAct = QAction(self.tr("Specify Minimum Repeats"), self)
 		self.SSRSetAct.triggered.connect(self.setPreference)
 		
 		#search compound ssrs tool button
 		self.CSSRSearchAct = QAction(QIcon("icons/cssr.png"), self.tr("cSSRs"), self)
-		self.CSSRSearchAct.setToolTip(self.tr("Search Compound SSRs Using dMax"))
+		self.CSSRSearchAct.setToolTip(self.tr("Search for Compound SSRs"))
 		self.CSSRSearchAct.triggered.connect(self.searchOrShowCSSR)
-		self.CSSRForceAct = QAction(self.tr("Force cSSRs Search"), self)
+		self.CSSRForceAct = QAction(self.tr("Search for cSSRs"), self)
+		self.CSSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_2))
 		self.CSSRForceAct.triggered.connect(self.searchCSSR)
 		self.CSSRShowAct = QAction(self.tr("Show Compound SSRs"), self)
 		self.CSSRShowAct.triggered.connect(self.showCSSR)
@@ -205,14 +210,15 @@ class SSRMainWindow(QMainWindow):
 		self.CSSRRemoveAct.triggered.connect(self.removeCSSR)
 		#self.bestDmaxAct = QAction(self.tr("Estimate best dMax"), self)
 		#self.bestDmaxAct.triggered.connect(self.estimateBestMaxDistance)
-		self.CSSRSetAct = QAction(self.tr("Specify Maximal Distance (dMAX)"), self)
+		self.CSSRSetAct = QAction(self.tr("Specify Maximal Distance"), self)
 		self.CSSRSetAct.triggered.connect(self.setPreference)
 
 		#search VNTRs
-		self.VNTRSearchAct = QAction(QIcon("icons/satellite.png"), self.tr("VNTRs"), self)
-		self.VNTRSearchAct.setToolTip(self.tr("Search Minisatellites or Macrosatellites"))
+		self.VNTRSearchAct = QAction(QIcon("icons/vntr.png"), self.tr("VNTRs"), self)
+		self.VNTRSearchAct.setToolTip(self.tr("Search for Minisatellites or Macrosatellites"))
 		self.VNTRSearchAct.triggered.connect(self.searchOrShowVNTR)
-		self.VNTRForceAct = QAction(self.tr("Force Search VNTRs"), self)
+		self.VNTRForceAct = QAction(self.tr("Search for VNTRs"), self)
+		self.VNTRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_4))
 		self.VNTRForceAct.triggered.connect(self.searchVNTR)
 		self.VNTRShowAct = QAction(self.tr("Show VNTRs"), self)
 		self.VNTRShowAct.triggered.connect(self.showVNTR)
@@ -223,9 +229,10 @@ class SSRMainWindow(QMainWindow):
 
 		#search imperfect microsatellites
 		self.ISSRSearchAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
-		self.ISSRSearchAct.setToolTip(self.tr("Search Imperfect SSRs"))
+		self.ISSRSearchAct.setToolTip(self.tr("Search for Imperfect SSRs"))
 		self.ISSRSearchAct.triggered.connect(self.searchOrShowISSR)
-		self.ISSRForceAct = QAction(self.tr("Force Search iSSRs"), self)
+		self.ISSRForceAct = QAction(self.tr("Search for iSSRs"), self)
+		self.ISSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_3))
 		self.ISSRForceAct.triggered.connect(self.searchISSR)
 		self.ISSRShowAct = QAction(self.tr("Show Imperfect SSRs"), self)
 		self.ISSRShowAct.triggered.connect(self.showISSR)
@@ -235,32 +242,35 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRSetAct.triggered.connect(self.setPreference)
 
 		#locate ssrs
-		self.locateAct = QAction(QIcon("icons/annotation.png"), self.tr("Mark"), self)
-		self.locateAct.setToolTip(self.tr("Locate SSR in which genomic region"))
+		self.locateAct = QAction(QIcon("icons/locate.png"), self.tr("Locate"), self)
+		self.locateAct.setToolTip(self.tr("Locate SSRs in genes"))
 		self.locateAct.triggered.connect(self.locateTandem)
+		self.locateToolAct = QAction(self.tr("Locate SSRs in genes"), self)
+		self.locateToolAct.triggered.connect(self.locateTandem)
+
 		self.locateSetAct = QAction(self.tr("Import Annotation File"), self)
 		self.locateSetAct.triggered.connect(self.provideAnnotation)
-		self.removeLocateAct = QAction(self.tr("Remove makers"), self)
+		self.removeLocateAct = QAction(self.tr("Remove locations"), self)
 		self.removeLocateAct.triggered.connect(self.removeMarker)
 		
 		cds_icon = QPixmap(16, 16)
 		cds_icon.fill(QColor(245, 183, 177))
-		self.showCDSAct = QAction(QIcon(cds_icon), self.tr("Show Markers in CDS"), self)
+		self.showCDSAct = QAction(QIcon(cds_icon), self.tr("Show SSRs in CDS"), self)
 		self.showCDSAct.triggered.connect(self.showCDSMarker)
 
 		exon_icon = QPixmap(16, 16)
 		exon_icon.fill(QColor(169, 223, 191))
-		self.showExonAct = QAction(QIcon(exon_icon), self.tr("Show Markers in Exon"), self)
+		self.showExonAct = QAction(QIcon(exon_icon), self.tr("Show SSRs in Exon"), self)
 		self.showExonAct.triggered.connect(self.showExonMarker)
 
 		utr_icon = QPixmap(16, 16)
 		utr_icon.fill(QColor(250, 215, 160))
-		self.showUTRAct = QAction(QIcon(utr_icon), self.tr("Show Markers in UTR"), self)
+		self.showUTRAct = QAction(QIcon(utr_icon), self.tr("Show SSRs in UTR"), self)
 		self.showUTRAct.triggered.connect(self.showUTRMarker)
 
 		intron_icon = QPixmap(16, 16)
 		intron_icon.fill(QColor(174, 214, 241))
-		self.showIntronAct = QAction(QIcon(intron_icon), self.tr("Show Markers in Intron"), self)
+		self.showIntronAct = QAction(QIcon(intron_icon), self.tr("Show SSRs in Intron"), self)
 		self.showIntronAct.triggered.connect(self.showIntronMarker)
 
 
@@ -347,8 +357,8 @@ class SSRMainWindow(QMainWindow):
 		#self.toolMenu.addAction(self.bestDmaxAct)
 		self.toolMenu.addAction(self.downloadNCBIAct)
 		self.toolMenu.addAction(self.primerForceAct)
+		self.toolMenu.addAction(self.locateToolAct)
 		self.toolMenu.addAction(self.statisticsAct)
-		self.toolMenu.addAction(self.locateAct)
 
 		self.helpMenu.addAction(self.documentAct)
 		self.helpMenu.addSeparator()
