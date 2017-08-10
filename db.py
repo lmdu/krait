@@ -133,9 +133,9 @@ class Database:
 
 	def set_option(self, name, value):
 		if self.get_option(name):
-			self.query("UPDATE option SET value=? WHERE name=?", (value, name))
+			self.get_cursor().execute("UPDATE option SET value=? WHERE name=?", (value, name))
 		else:
-			self.query("INSERT INTO option VALUES (?,?,?)", (None, name, value))
+			self.get_cursor().execute("INSERT INTO option VALUES (?,?,?)", (None, name, value))
 
 	def query(self, sql):
 		return self.get_cursor().execute(sql)

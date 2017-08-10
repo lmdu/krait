@@ -257,7 +257,12 @@ class StatisWorker(Worker):
 	def process(self):
 		self.emit_message("Doing sequence statistics...")
 
-		seq_statis = Statistics(self.unit, self.letter).results()
+		try:
+			seq_statis = Statistics(self.unit, self.letter).results()
+		except Exception, e:
+			self.emit_finish(str(e))
+			return
+
 		self.db.set_option('seq_statis', json.dumps(seq_statis))
 
 		if not self.db.is_empty('ssr'):

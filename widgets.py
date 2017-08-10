@@ -60,6 +60,9 @@ class SSRMainWindow(QMainWindow):
 		#annotation file
 		self.annot_file = ''
 
+		#statistical results
+		self.statis_result = None
+
 		#read settings
 		self.readSettings()
 
@@ -191,6 +194,7 @@ class SSRMainWindow(QMainWindow):
 		self.SSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_1))
 		self.SSRForceAct.triggered.connect(self.searchSSR)
 		self.SSRShowAct = QAction(self.tr("Show Perfect SSRs"), self)
+		self.SSRShowAct.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_1))
 		self.SSRShowAct.triggered.connect(self.showSSR)
 		self.SSRRemoveAct = QAction(self.tr("Remove Perfect SSRs"), self)
 		self.SSRRemoveAct.triggered.connect(self.removeSSR)
@@ -205,6 +209,7 @@ class SSRMainWindow(QMainWindow):
 		self.CSSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_2))
 		self.CSSRForceAct.triggered.connect(self.searchCSSR)
 		self.CSSRShowAct = QAction(self.tr("Show Compound SSRs"), self)
+		self.CSSRShowAct.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_2))
 		self.CSSRShowAct.triggered.connect(self.showCSSR)
 		self.CSSRRemoveAct = QAction(self.tr("Remove Compound SSRs"), self)
 		self.CSSRRemoveAct.triggered.connect(self.removeCSSR)
@@ -221,6 +226,7 @@ class SSRMainWindow(QMainWindow):
 		self.VNTRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_4))
 		self.VNTRForceAct.triggered.connect(self.searchVNTR)
 		self.VNTRShowAct = QAction(self.tr("Show VNTRs"), self)
+		self.VNTRShowAct.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_4))
 		self.VNTRShowAct.triggered.connect(self.showVNTR)
 		self.VNTRRemoveAct = QAction(self.tr("Remove VNTRs"), self)
 		self.VNTRRemoveAct.triggered.connect(self.removeVNTR)
@@ -235,6 +241,7 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_3))
 		self.ISSRForceAct.triggered.connect(self.searchISSR)
 		self.ISSRShowAct = QAction(self.tr("Show Imperfect SSRs"), self)
+		self.ISSRShowAct.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_3))
 		self.ISSRShowAct.triggered.connect(self.showISSR)
 		self.ISSRRemoveAct = QAction(self.tr("Remove Imperfect SSRs"), self)
 		self.ISSRRemoveAct.triggered.connect(self.removeISSR)
@@ -278,7 +285,7 @@ class SSRMainWindow(QMainWindow):
 		self.primerDesignAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
 		self.primerDesignAct.setToolTip(self.tr("Design primers"))
 		self.primerDesignAct.triggered.connect(self.designOrShowPrimer)
-		self.primerForceAct = QAction(self.tr("Force Design Primer"), self)
+		self.primerForceAct = QAction(self.tr("Design Primers"), self)
 		self.primerForceAct.triggered.connect(self.designPrimer)
 		self.primerShowAct = QAction(self.tr("Show Designed Primer"), self)
 		self.primerShowAct.triggered.connect(self.showPrimer)
@@ -289,23 +296,29 @@ class SSRMainWindow(QMainWindow):
 
 		#statistics report
 		self.statisticsAct = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
-		self.statisticsAct.triggered.connect(self.performStatistics)
-		self.statisticsMenuAct = QAction(self.tr("Perform Statistics"), self)
-		self.statisticsMenuAct.triggered.connect(self.performStatistics)
-		self.statisticsShowAct = QAction(self.tr("Show Statistics"), self)
+		self.statisticsAct.triggered.connect(self.doOrShowStatistics)
+		self.statisticsForceAct = QAction(self.tr("Statistical Analysis"), self)
+		self.statisticsForceAct.triggered.connect(self.performStatistics)
+		self.statisticsShowAct = QAction(self.tr("Show Statistical Result"), self)
 		self.statisticsShowAct.triggered.connect(self.showStatistics)
+		self.statisticsRemoveAct = QAction(self.tr("Remove Statistical Result"), self)
+		self.statisticsRemoveAct.triggered.connect(self.removeStatistics)
 
 		#tool action
 		self.downloadNCBIAct = QAction(self.tr("Download sequence from NCBI"), self)
 		self.downloadNCBIAct.triggered.connect(self.downloadFasta)
 
 		#about action
-		self.aboutAct = QAction(self.tr("About"), self)
+		self.aboutAct = QAction(self.tr("About Krait"), self)
 		self.aboutAct.triggered.connect(self.openAboutMessage)
 
 		#documentation action
 		self.documentAct = QAction(self.tr("Documentation"), self)
 		self.documentAct.triggered.connect(self.openDocumentation)
+
+		#report issue action
+		self.issueAct = QAction(self.tr("Report issue..."), self)
+		self.issueAct.triggered.connect(self.reportIssue)
 		
 
 	def createMenus(self):
@@ -355,12 +368,14 @@ class SSRMainWindow(QMainWindow):
 		self.viewMenu.addAction(self.VNTRRemoveAct)
 
 		#self.toolMenu.addAction(self.bestDmaxAct)
-		self.toolMenu.addAction(self.downloadNCBIAct)
 		self.toolMenu.addAction(self.primerForceAct)
 		self.toolMenu.addAction(self.locateToolAct)
-		self.toolMenu.addAction(self.statisticsAct)
+		self.toolMenu.addAction(self.statisticsForceAct)
+		self.toolMenu.addSeparator()
+		self.toolMenu.addAction(self.downloadNCBIAct)
 
 		self.helpMenu.addAction(self.documentAct)
+		self.helpMenu.addAction(self.issueAct)
 		self.helpMenu.addSeparator()
 		self.helpMenu.addAction(self.aboutAct)
 
@@ -370,6 +385,7 @@ class SSRMainWindow(QMainWindow):
 		self.SSRMenu = QMenu()
 		self.SSRMenu.addAction(self.SSRForceAct)
 		self.SSRMenu.addAction(self.SSRShowAct)
+		self.SSRMenu.addSeparator()
 		self.SSRMenu.addAction(self.SSRRemoveAct)
 		self.SSRMenu.addSeparator()
 		self.SSRMenu.addAction(self.loadFastaAct)
@@ -380,6 +396,7 @@ class SSRMainWindow(QMainWindow):
 		self.CSSRMenu = QMenu()
 		self.CSSRMenu.addAction(self.CSSRForceAct)
 		self.CSSRMenu.addAction(self.CSSRShowAct)
+		self.CSSRMenu.addSeparator()
 		self.CSSRMenu.addAction(self.CSSRRemoveAct)
 		self.CSSRMenu.addSeparator()
 		#self.CSSRMenu.addAction(self.bestDmaxAct)
@@ -388,6 +405,7 @@ class SSRMainWindow(QMainWindow):
 		self.VNTRMenu = QMenu()
 		self.VNTRMenu.addAction(self.VNTRForceAct)
 		self.VNTRMenu.addAction(self.VNTRShowAct)
+		self.VNTRMenu.addSeparator()
 		self.VNTRMenu.addAction(self.VNTRRemoveAct)
 		self.VNTRMenu.addSeparator()
 		self.VNTRMenu.addAction(self.VNTRSetAct)
@@ -395,6 +413,7 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRMenu = QMenu()
 		self.ISSRMenu.addAction(self.ISSRForceAct)
 		self.ISSRMenu.addAction(self.ISSRShowAct)
+		self.ISSRMenu.addSeparator()
 		self.ISSRMenu.addAction(self.ISSRRemoveAct)
 		self.ISSRMenu.addSeparator()
 		self.ISSRMenu.addAction(self.ISSRSetAct)
@@ -412,13 +431,16 @@ class SSRMainWindow(QMainWindow):
 		self.primerMenu = QMenu()
 		self.primerMenu.addAction(self.primerForceAct)
 		self.primerMenu.addAction(self.primerShowAct)
+		self.primerMenu.addSeparator()
 		self.primerMenu.addAction(self.primerRemoveAct)
 		self.primerMenu.addSeparator()
 		self.primerMenu.addAction(self.primerSetAct)
 
 		self.statisticsMenu = QMenu()
-		self.statisticsMenu.addAction(self.statisticsMenuAct)
+		self.statisticsMenu.addAction(self.statisticsForceAct)
 		self.statisticsMenu.addAction(self.statisticsShowAct)
+		self.statisticsMenu.addSeparator()
+		self.statisticsMenu.addAction(self.statisticsRemoveAct)
 		
 
 	def createToolBars(self):
@@ -527,7 +549,8 @@ class SSRMainWindow(QMainWindow):
 		'''
 		Import a fasta file from a directory
 		'''
-		fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta *.fa.gz *.fasta.gz);;All files (*.*)")
+		fasta, _ = QFileDialog.getOpenFileName(self, 
+			filter="Fasta (*.fa *.fna *.fas *.fasta *.fna.gz *.fa.gz *.fasta.gz);;All files (*.*)")
 		if not fasta: return
 		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, fasta))
 		#self.fasta_table.insert(Data(fid=None, path=fasta))
@@ -907,8 +930,18 @@ class SSRMainWindow(QMainWindow):
 		self.model.setFilter(sqlwhere)
 
 	def performStatistics(self):
+		if self.db.is_empty('fasta'):
+			return QMessageBox.warning(self, "Warning", "No fasta file inputted")
+
 		worker = StatisWorker()
-		self.executeTask(worker, self.showStatistics)	
+		self.executeTask(worker, self.showStatistics)
+
+	def doOrShowStatistics(self):
+		if self.statis_result:
+			self.swichMainWidget()
+			self.browser.setHtml(self.statis_result, QUrl.fromLocalFile(CACHE_PATH))
+		else:
+			self.performStatistics()
 
 	def showStatistics(self):
 		seq_statis = json.loads(self.db.get_option('seq_statis'))
@@ -917,7 +950,7 @@ class SSRMainWindow(QMainWindow):
 		cssr_statis = json.loads(self.db.get_option('cssr_statis'))
 		vntr_statis = json.loads(self.db.get_option('vntr_statis'))
 
-		content = template_render('report.html', 
+		self.statis_result = template_render('report.html', 
 			seq = seq_statis, 
 			ssr = ssr_statis, 
 			issr = issr_statis, 
@@ -925,7 +958,12 @@ class SSRMainWindow(QMainWindow):
 			vntr = vntr_statis
 		)
 		self.swichMainWidget()
-		self.browser.setHtml(content, QUrl.fromLocalFile(CACHE_PATH))
+		self.browser.setHtml(self.statis_result, QUrl.fromLocalFile(CACHE_PATH))
+
+	def removeStatistics(self):
+		if self.statis_result:
+			self.statis_result = None
+			self.browser.setHtml('')
 
 	def showSSRSequence(self, index):
 		'''
@@ -970,25 +1008,29 @@ class SSRMainWindow(QMainWindow):
 		self.statusBar.showMessage(msg)
 
 	def openAboutMessage(self):
-		system_info = "%s%s %s" % (platform.system(), platform.release(), platform.architecture()[0])
-		python_info = sys.version.split()[0]
+		#system_info = "%s%s %s" % (platform.system(), platform.release(), platform.architecture()[0])
+		#python_info = sys.version.split()[0]
 		about_message =	"""
-			<p><b>Krait for finding tandem repeats</b></p>
+			<p><b>Krait for microsatellite investigation</b></p>
 			<p>Version v{version} Build {build}<p>
-			<p>System {system} Python {python}</p>
-			<p>Krait is a robust and ultrafast tool and provides a user-friendly GUI for no computationally skilled biologists
-			to extract perfect, imperfect and compound microsatellites and VNTRs with any length
-			of motif from DNA fasta sequences and batch design PCR primers and do statistics analysis.</p>
-			<p>GUI was written by <a href="https://pypi.python.org/pypi/PySide/1.2.4">PySide</a>. 
-			Fasta sequences are extracted by using <a href="https://github.com/mdshw5/pyfaidx">pyfaidx</a>.
-			Primer design are performed by using <a href="https://github.com/libnano/primer3-py">primer3-py</a>.
+			<p>Krait is a robust and ultrafast tool and provides a user-friendly GUI for no computationally
+			skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs with any length
+			of motif from DNA fasta sequences and design PCR primers and do statistics analysis.</p>
+			<p><a href="https://pypi.python.org/pypi/PySide/1.2.4">PySide</a> for GUI. 
+			<a href="http://lh3lh3.users.sourceforge.net/kseq.shtml">Kseq.h</a> for parsing fasta.
+			<a href="https://github.com/libnano/primer3-py">primer3-py</a> and 
+			<a href="http://primer3.sourceforge.net/">primer3</a> for primer design. 
+			Intersection from <a href="https://github.com/bxlab/bx-python">bx-python</a> for locating SSRs
 			</p>
-		""".format(version=VERSION, build=BUILD, system=system_info, python=python_info)
+		""".format(version=VERSION, build=BUILD)
 
-		QMessageBox.about(self, "About niblet", about_message)
+		QMessageBox.about(self, "About Krait", about_message)
 
 	def openDocumentation(self):
 		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/niblet"))
+
+	def reportIssue(self):
+		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait/issues"))
 
 class SSRFilterInput(QLineEdit):
 	def __init__(self, parent=None):

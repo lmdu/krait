@@ -4,6 +4,7 @@ from __future__ import division
 import os
 import json
 
+from libs import *
 from db import *
 from utils import *
 from config import *
@@ -27,8 +28,8 @@ class Statistics(object):
 
 	def count_bases(self):
 		for fasta_file in self.db.get_column("SELECT path FROM fasta"):
-			fastas = zfasta.Fasta(fasta_file)
-			for name in fastas:
+			fastas = fasta.GzipFasta(fasta_file)
+			for name in fastas.keys:
 				sequence = fastas[name]
 				self._total_bases += len(sequence)
 				self._total_sequences += 1
