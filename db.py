@@ -54,13 +54,13 @@ class Database:
 		self.optimize()
 
 	def optimize(self):
+		#PRAGMA page_size=1024;
+		#PRAGMA cache_size=8192;
+		#PRAGMA locking_mode=EXCLUSIVE;
+		#PRAGMA journal_mode = OFF;
+		#PRAGMA temp_store = MEMORY;
 		sql = '''
 		PRAGMA synchronous=OFF;
-		PRAGMA page_size=1024;
-		PRAGMA cache_size=8192;
-		PRAGMA locking_mode=EXCLUSIVE;
-		PRAGMA journal_mode = OFF;
-		PRAGMA temp_store = MEMORY;
 		'''
 		self.query(sql)
 

@@ -26,10 +26,12 @@ class SSRMainWindow(QMainWindow):
 		super(SSRMainWindow, self).__init__()
 
 		self.setWindowTitle("Krait v%s" % VERSION)
-		self.setWindowIcon(QIcon('icons/logo.png'))
-		#self.setWindowIcon(QIcon('logo.ico'))
+		#self.setWindowIcon(QIcon('icons/logo.png'))
+		self.setWindowIcon(QIcon('logo.ico'))
 
-		#self.browser = SSRWebView()
+		#stacked widget
+		self.main_widget = QStackedWidget(self)
+		self.setCentralWidget(self.main_widget)
 		
 		self.table = SSRTableView(self)
 		self.createTableModel()
@@ -37,7 +39,10 @@ class SSRMainWindow(QMainWindow):
 		self.browser = QWebView(self)
 		self.browser.linkClicked.connect(self.saveStatTableFigure)
 
-		self.setCentralWidget(self.browser)
+		self.main_widget.addWidget(self.table)
+		self.main_widget.addWidget(self.browser)
+
+		#self.setCentralWidget(self.browser)
 
 		#search text input
 		self.filter = SSRFilterInput(self)
@@ -73,11 +78,9 @@ class SSRMainWindow(QMainWindow):
 
 	def swichMainWidget(self, widget):
 		if widget == 'table':
-			if self.centralWidget() != self.table:
-				self.setCentralWidget(self.table)
+			self.main_widget.setCurrentIndex(0)
 		else:
-			if self.centralWidget() != self.browser:
-				self.setCentralWidget(self.browser)
+			self.main_widget.setCurrentIndex(1)
 
 	def homepage(self):
 		content = template_render('index.html')
@@ -120,6 +123,17 @@ class SSRMainWindow(QMainWindow):
 
 	def closeEvent(self, event):
 		self.writeSettings()
+		ret = QMessageBox.question(self, "Closing", 
+			"Would you like to save results before exiting",
+			QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+		)
+
+		if ret == QMessageBox.Yes:
+			self.saveProject()
+		elif ret == QMessageBox.Cancel:
+			event.ignore()
+		elif ret == QMessageBox.No:
+			event.accept()
 
 	def createActions(self):
 		#open a project action
@@ -178,7 +192,7 @@ class SSRMainWindow(QMainWindow):
 		self.pasteAct.triggered.connect(self.doPaste)
 	
 		self.selectAllAct = QAction(self.tr("Select All"), self)
-		self.selectAllAct.setShortcut(QKeySequence.SelectAll)
+		#self.selectAllAct.setShortcut(QKeySequence.SelectAll)
 		self.selectAllAct.triggered.connect(self.doSelectAll)
 
 		self.preferenceAct = QAction(self.tr("Preferences"), self)
@@ -292,7 +306,7 @@ class SSRMainWindow(QMainWindow):
 		self.primerRemoveAct = QAction(self.tr("Remove Designed Primer"), self)
 		self.primerRemoveAct.triggered.connect(self.removePrimer)
 		self.primerSetAct = QAction(self.tr("Specify Primer3 Settings"), self)
-		self.primerSetAct.triggered.connect(self.setPreference)
+		self.primerSetAct.triggered.connect(self.setPrimerSettings)
 
 		#statistics report
 		self.statisticsAct = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
@@ -314,6 +328,7 @@ class SSRMainWindow(QMainWindow):
 
 		#documentation action
 		self.documentAct = QAction(self.tr("Documentation"), self)
+		self.documentAct.setShortcut(QKeySequence.HelpContents)
 		self.documentAct.triggered.connect(self.openDocumentation)
 
 		#report issue action
@@ -669,11 +684,18 @@ class SSRMainWindow(QMainWindow):
 		if dialog.exec_() == QDialog.Accepted:
 			dialog.saveSettings()
 
+	def setPrimerSettings(self):
+		dialog = PreferenceDialog(self, self.settings)
+		dialog.gotoPrimer()
+		if dialog.exec_() == QDialog.Accepted:
+			dialog.saveSettings()
+
+
 	def executeTask(self, worker, finish_callback):
 		#check the running task
 		if hasattr(self, 'work_thread') and self.work_thread.isRunning():
-			QMessageBox.warning(self, "Warning", "Task is running! Please wait until finished.")
-			return
+			return QMessageBox.warning(self, "Warning", "Task is running! Please wait until finished.")
+			
 
 		self.worker = worker
 		self.worker.update_message.connect(self.setStatusMessage)
@@ -938,7 +960,7 @@ class SSRMainWindow(QMainWindow):
 
 	def doOrShowStatistics(self):
 		if self.statis_result:
-			self.swichMainWidget()
+			self.swichMainWidget('browser')
 			self.browser.setHtml(self.statis_result, QUrl.fromLocalFile(CACHE_PATH))
 		else:
 			self.performStatistics()
@@ -957,7 +979,7 @@ class SSRMainWindow(QMainWindow):
 			cssr = cssr_statis, 
 			vntr = vntr_statis
 		)
-		self.swichMainWidget()
+		self.swichMainWidget('browser')
 		self.browser.setHtml(self.statis_result, QUrl.fromLocalFile(CACHE_PATH))
 
 	def removeStatistics(self):
@@ -1079,8 +1101,10 @@ class SSRTableView(QTableView):
 		deselect_action = QAction("Deselect", self)
 		deselect_action.triggered.connect(self.deselectCurrentRow)
 		select_all_action = QAction("Select All", self)
+		select_all_action.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_A))
 		select_all_action.triggered.connect(self.selectAll)
 		deselect_all_action = QAction("Deselect All", self)
+		deselect_all_action.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_A))
 		deselect_all_action.triggered.connect(self.deselectAll)
 
 		delete_action = QAction("Delete All", self)
@@ -1400,18 +1424,19 @@ class PreferenceDialog(QDialog):
 		self.general_tab = GeneralTab(self.settings)
 		self.primer_tab = PrimerTab(self.settings)
 
-		tabWidget = QTabWidget()
-		tabWidget.addTab(self.general_tab, 'SSR search')
-		tabWidget.addTab(self.primer_tab, 'Primer design')
+		self.tabWidget = QTabWidget()
+		self.tabWidget.addTab(self.general_tab, 'SSR search')
+		self.tabWidget.addTab(self.primer_tab, 'Primer design')
 
-		buttonBox = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+		buttonBox = QDialogButtonBox(QDialogButtonBox.RestoreDefaults | QDialogButtonBox.Save | QDialogButtonBox.Cancel)
 		buttonBox.accepted.connect(self.accept)
 		buttonBox.rejected.connect(self.reject)
+		buttonBox.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.resetSettings)
 
 		spacerItem = QSpacerItem(10, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
 		mainLayout = QVBoxLayout()
-		mainLayout.addWidget(tabWidget)
+		mainLayout.addWidget(self.tabWidget)
 		mainLayout.addItem(spacerItem)
 		mainLayout.addWidget(buttonBox)
 
@@ -1420,6 +1445,15 @@ class PreferenceDialog(QDialog):
 	def saveSettings(self):
 		self.general_tab.saveSettings()
 		self.primer_tab.saveSettings()
+
+	def resetSettings(self):
+		self.settings.clear()
+		self.general_tab.getSettings()
+		self.primer_tab.getSettings()
+		self.saveSettings()
+
+	def gotoPrimer(self):
+		self.tabWidget.setCurrentIndex(1)
 
 
 class GeneralTab(QWidget):
@@ -1787,13 +1821,9 @@ class PrimerTagLabel(QLabel):
 class SSRDetailDialog(QDialog):
 	def __init__(self, parent=None, title=None, content=None):
 		super(SSRDetailDialog, self).__init__(parent)
-		font_id = QFontDatabase.addApplicationFont('font/SpaceMono-Bold.ttf')
-		font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
 		self.setWindowTitle(title)
-		#self.viewer = QTextBrowser(self)
 		self.viewer = QWebView(self)
-		#self.viewer.setFontFamily(font_family)
-		self.viewer.setHtml(content)
+		self.viewer.setHtml(content, QUrl.fromLocalFile(CACHE_PATH))
 
 		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
 		buttonBox.accepted.connect(self.accept)

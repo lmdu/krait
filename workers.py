@@ -178,10 +178,10 @@ class CSSRWorker(Worker):
 			else:
 				if len(cssrs) > 1:
 					self.concatenate(cssrs)
-				progress = int(cssrs[-1].id/total*100)
-				self.emit_progress(progress)
+					progress = int(cssrs[-1].id/total*100)
+					#self.emit_progress(progress)
 				cssrs = [ssr]
-		
+
 		if len(cssrs) > 1:
 			self.concatenate(cssrs)
 
