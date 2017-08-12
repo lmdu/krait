@@ -234,12 +234,12 @@ h2{font-size: 18px;}
 	<div class="row">
 		<div class="cell">Total number of cSSRs</div>
 		<div class="cell">cSSR: individual SSRs being part of a compound SSRs</div>
-		<div class="cell">{{ cssr.ssr_count }}</div>
+		<div class="cell">{{ cssr.cssr_count }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Percentage of cSSRs</div>
 		<div class="cell">cSSR%</div>
-		<div class="cell">{{ cssr.ssr_count/ssr.count|round(2, 'ceil') }}%</div>
+		<div class="cell">{{ cssr.cssr_count/ssr.count|round(2, 'ceil') }}%</div>
 	</div>
 	<div class="row">
 		<div class="cell">Relative abundace</div>

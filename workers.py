@@ -572,7 +572,7 @@ class LocateWorker(Worker):
 		total = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
 		current = 0
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
-			self.emit_message("Processing %ss on %s" % (self.table.upper(), ssr.sequence))
+			self.emit_message("Locating %ss in sequence %s" % (self.table.upper(), ssr.sequence))
 			current += 1
 			progress = int(current/total*100)
 			if progress%2 == 0:
