@@ -12,7 +12,7 @@ Krait is a robust and ultrafast tool with a user-friendly graphic interface for 
 * Supporting export FASTA, GFF3 or CSV
 * Downloading DNA sequence from NCBI database
 
-#Download
+# Download
 <a href="">Windows 32bit</a>
 <a href="">Windows 64bit</a>
 <a href="">Linux</a>
