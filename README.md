@@ -1,3 +1,13 @@
-[![Travis](https://img.shields.io/travis/rust-lang/rust.svg)]()
-[![GitHub release](https://img.shields.io/github/release/qubyte/rubidium.svg)]()
-[![AUR](https://img.shields.io/aur/license/yaourt.svg)]()
+# Krait: Microsatellite investigation and primer design
+
+<img src="icons/logo.png" align="left" hspace="10" vspace="6">
+**Krait** is a robust and ultrafast tool with a user-friendly graphic interface for genome-wide investigation of microsatellites, which attempts to overcome the limitations of the currently available tools. Krait is written in Python and can be run as a standalone desktop application on Windows, Linux or Mac systems without dependencies. The microsatellite search engine is written in C and compiled as Python modules for import into Krait
+
+# Features
+* Identification of perfect SSRs, imperfect SSRs (iSSRs), compound SSRs (cSSRs) and VNTRs from extremely large genome
+* Locating the SSRs in gene coding region
+* Design primer for microsatellite
+* Statistical analysis and plotting
+* Supporting gzip compressed fasta as input file
+* Supporting export FASTA, GFF3 or CSV
+* Downloading DNA sequence from NCBI database
