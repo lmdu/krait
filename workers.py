@@ -104,7 +104,7 @@ class SSRWorker(Worker):
 
 					self.db.insert(sql, values())
 					self.emit_progress(int(seq_progress*fasta_progress*100))
-				
+
 		self.emit_finish('Perfect SSRs search completed')
 
 
@@ -156,7 +156,7 @@ class ISSRWorker(Worker):
 
 					self.db.insert(sql, values())
 					self.emit_progress(int(seq_progress*fasta_progress*100))
-				
+	
 		self.emit_finish('Imperfect SSRs search completed')
 
 

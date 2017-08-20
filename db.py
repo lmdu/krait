@@ -50,19 +50,9 @@ class Database:
 	def __init__(self):
 		if not self.get_tables():
 			self.create_table()
-		
-		self.optimize()
 
-	def optimize(self):
-		#PRAGMA page_size=1024;
-		#PRAGMA cache_size=8192;
-		#PRAGMA locking_mode=EXCLUSIVE;
-		#PRAGMA journal_mode = OFF;
-		#PRAGMA temp_store = MEMORY;
-		sql = '''
-		PRAGMA synchronous=OFF;
-		'''
-		self.query(sql)
+	def get_size(self):
+		return apsw.memoryused()
 
 	def get_cursor(self):
 		return conn.cursor()
@@ -109,7 +99,8 @@ class Database:
 		'''
 		get data from one row
 		'''
-		return self.query(sql).fetchone()
+		for row in self.query(sql):
+			return row
 
 	def get_column(self, sql):
 		'''

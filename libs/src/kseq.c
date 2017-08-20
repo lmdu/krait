@@ -77,6 +77,7 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 	kstream_t *ks;
 	gzFile fp;
 	PyObject *result = PyList_New(0);
+	PyObject *tmp;
 	
 	fp = gzopen(fasta_path, "rb");
 	seq = kseq_init(fp);
@@ -85,7 +86,9 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 		position++;
 		if(c == 62){
 			if(start){
-				PyList_Append(result, Py_BuildValue("(sii)", seq->name.s, start, position-start-1));
+				tmp = Py_BuildValue("(sii)", seq->name.s, start, position-start-1);
+				PyList_Append(result, tmp);
+				Py_DECREF(tmp);
 			}
 			position += ks_getuntil(ks, 0, &seq->name, &c);
 			position++;
@@ -96,7 +99,9 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 			start = position;
 		}
 	}
-	PyList_Append(result, Py_BuildValue("(sii)", seq->name.s, start, position-start));
+	tmp = Py_BuildValue("(sii)", seq->name.s, start, position-start);
+	PyList_Append(result, tmp);
+	Py_DECREF(tmp);
 	return result;
 }
 
@@ -109,15 +114,15 @@ static PyObject *extract_seq(PyObject *self, PyObject *args){
 	gzFile fp;
 	int l;
 	kseq_t *seq;
+	PyObject *retval;
 	fp = gzopen(fasta_path, "rb");
 	seq = kseq_init(fp);
 	gzseek(fp, start, SEEK_SET);
 	while((l=kseq_read(seq))>=0){
-		return Py_BuildValue("s", seq->seq.s);
+		retval = Py_BuildValue("s", seq->seq.s);
 	}
-
 	gzclose(fp);
-	return Py_BuildValue("");
+	return retval;
 }
 
 static PyMethodDef add_methods[] = {

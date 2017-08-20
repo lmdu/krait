@@ -21,6 +21,7 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 	char motif[7] = "\0";
 
 	PyObject *result = PyList_New(0);
+	PyObject *tmp;
 
 	if (!PyArg_ParseTuple(args, "s(iiiiii)", &seq, &mono, &di, &tri, &tetra, &penta, &hexa)){
 		return NULL;
@@ -33,8 +34,9 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 	rep[4] = penta;
 	rep[5] = hexa;
 
-	len = strlen(seq);
+	Py_BEGIN_ALLOW_THREADS
 
+	len = strlen(seq);
 	for (i=0; i<len; i++)
 	{
 		if (seq[i] == 78)
@@ -56,9 +58,9 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 				strncpy(motif, seq+start, j);
 				motif[j] = '\0';
 				length = repeat*j;
-				PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
-				//printf("%d,%d,%d,%d\n", j, repeat, start, length);
-				//return Py_BuildValue("s", motif);
+				tmp = Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length);
+				PyList_Append(result, tmp);
+				Py_DECREF(tmp);
 				i = start + length;
 				j = 0;
 			}
@@ -68,9 +70,9 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 			}
 		}
 	}
+	Py_END_ALLOW_THREADS
 	return result;
 };
-
 //search perfect satellite variable number tandem repeat
 static PyObject *search_vntr(PyObject *self, PyObject *args)
 {
@@ -88,6 +90,7 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 	char *motif;
 
 	PyObject *result = PyList_New(0);
+	PyObject *tmp;
 
 	if (!PyArg_ParseTuple(args, "siii", &seq, &min, &max, &mrep)){
 		return NULL;
@@ -117,7 +120,9 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 				strncpy(motif, seq+start, j);
 				motif[j] = '\0';
 				length = j*repeat;
-				PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
+				tmp = Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length);
+				PyList_Append(result, tmp);
+				Py_DECREF(tmp);
 				i = start + length;
 				j = min;
 			}
@@ -169,6 +174,15 @@ static int** initial_matrix(int size){
 
 	return matrix;
 }
+
+static void release_matrix(int **matrix, int size){
+	int i;
+	for(i=0; i<=size; i++){
+		free(matrix[i]);
+	}
+	free(matrix);
+}
+
 static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, int size, int max_error){
 	char ref1;
 	char ref2;
@@ -238,7 +252,7 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 	return res;
 }
 
-static int* build_matrix(char *seq, char *motif, int **matrix, int start, int size, int max_error){
+static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, int size, int max_error){
 	char ref1;
 	char ref2;
 	int i = 1;
@@ -386,6 +400,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	int score;
 
 	PyObject *result = PyList_New(0);
+	PyObject *tmp;
 
 	if (!PyArg_ParseTuple(args, "siiiiiii", &seq, &seed_repeats, &seed_minlen, &max_errors, &mis_penalty, &gap_penalty, &required_score, &size)){
 		return NULL;
@@ -417,9 +432,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 			{
 				strncpy(motif, seq+seed_start, j);
 				motif[j] = '\0';
-				//PyList_Append(result, Py_BuildValue("(siiiii)", motif, j, repeat, start+1, start+length, length));
-				//printf("%d,%d,%d,%d\n", j, repeat, start, length);
-				//return Py_BuildValue("s", motif);
+
 				//seed end is the same to seed start 0-based coodinates
 				seed_end = seed_start + seed_length-seed_length%j - 1;
 				matches = seed_length-seed_length%j;
@@ -443,7 +456,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				if(extend_len > size){
 					extend_len = size;
 				}
-				extend_end = build_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
+				extend_end = build_right_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
 				extend_ok = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
 				end = extend_start + *(extend_ok+1) + 1;
 				
@@ -452,9 +465,9 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				score = matches - substitution*mis_penalty - (insertion+deletion)*gap_penalty;
 				
 				if(score>=required_score){
-					PyList_Append(result, Py_BuildValue("(siiiiiiiii)", motif, j, start, end, length, matches, substitution, insertion, deletion, score));
-					//printf("%s,%d,%d,%d,%d,%d,%d,%d,%d,%f\n", motif, j, start, end, length, matches, substitution, insertion, deletion, identity);
-					//printf("%d,%d\n", *extend_ok, *(extend_ok+1));
+					tmp = Py_BuildValue("(siiiiiiiii)", motif, j, start, end, length, matches, substitution, insertion, deletion, score);
+					PyList_Append(result, tmp);
+					Py_DECREF(tmp);
 					i = end;
 					j = 0;
 				}else{
@@ -465,6 +478,8 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 			}
 		}
 	}
+
+	release_matrix(matrix, size);
 	return result;
 };
 

@@ -1162,35 +1162,40 @@ class TableModel(QAbstractTableModel):
 	def __init__(self, parent=None):
 		super(TableModel, self).__init__(parent)
 		self.headers = []
-		self.dataset = []
+		self.total = 0
 		self.selected = set()
 		self.read_row = 0
 		self.db = Database()
 		self.query = ['', '', '']
 
+		self.cache_row_index = -1
+		self.cache_row = None
+
 	def getRowCounts(self):
-		return len(self.dataset)
+		return self.total
 
 	def getAllItems(self):
-		return self.dataset
+		return self.total
 
 	def selectRow(self, row):
 		if row not in self.selected:
 			self.beginResetModel()
 			self.selected.add(row)
 			self.endResetModel()
+			self.sel_row.emit(len(self.selected))
 
 	def deselectRow(self, row):
 		if row in self.selected:
 			self.beginResetModel()
 			self.selected.remove(row)
 			self.endResetModel()
+			self.sel_row.emit(len(self.selected))
 
 	def selectAll(self):
 		self.beginResetModel()
-		self.selected = set(range(len(self.dataset)))
+		self.selected = set(range(self.total))
 		self.endResetModel()
-		self.sel_row.emit(len(self.dataset))
+		self.sel_row.emit(len(self.selected))
 
 	def deselectAll(self):
 		self.beginResetModel()
@@ -1201,8 +1206,7 @@ class TableModel(QAbstractTableModel):
 	def setTable(self, table):
 		self.table = table
 		self.headers = self.db.get_fields(self.table)
-		self.query = ['', '', '']
-		self.query[0] = "SELECT id FROM %s" % self.table
+		self.query = ["SELECT %s FROM {0}".format(self.table), '', '']
 
 	def tableName(self):
 		return self.table
@@ -1234,40 +1238,47 @@ class TableModel(QAbstractTableModel):
 			self.select()
 
 	def select(self):
-		sql = " ".join(self.query)
-		data = self.db.get_column(sql)
-		self.injectData(data)
-
-	def injectData(self, data):
+		self.sql = " ".join(self.query)
 		self.beginResetModel()
 		self.read_row = 0
 		self.selected = set()
-		self.dataset = data
+		self.total = self.db.get_one(self.sql % "COUNT(1)")
 		self.endResetModel()
-		self.row_col.emit((self.table, len(self.dataset), len(self.headers)))
+		self.row_col.emit((self.table, self.total, len(self.headers)))
 
 	def clear(self):
-		self.dataset = []
+		self.total = 0
 		self.headers = []
 		self.selected = set()
 
 	def getSelectedRows(self):
-		if len(self.selected) == len(self.dataset):
-			return self.dataset
+		if len(self.selected) == self.total:
+			return self.total
 		else:
-			ids = [self.dataset[idx] for idx in self.selected]
-			ids.sort()
-			return ids
-
+			#ids = [self.dataset[idx] for idx in self.selected]
+			#ids.sort()
+			#return ids
+			return self.selected
 
 	def value(self, index):
-		ID = self.dataset[index.row()]
-		col = self.headers[index.column()-1]
-		return self.db.get_one("SELECT %s FROM %s WHERE id=%s LIMIT 1" % (col, self.table, ID))
+		#ID = self.dataset[index.row()]
+		#col = self.headers[index.column()-1]
+		col = index.column() - 1
+		row = index.row()
+		if row == self.cache_row_index:
+			return self.cache_row[col]
+
+		self.cache_row_index = row
+		self.cache_row = self.db.get_row("%s LIMIT %s,1" % (self.sql % '*', row))
+		return self.cache_row[col]
 
 	def rowColor(self, index):
-		ID = self.dataset[index.row()]
-		feature = self.db.get_one("SELECT feature FROM location WHERE target=%s AND category='%s' LIMIT 1" % (ID, self.table))
+		#ID = self.dataset[index.row()]
+		ID = self.db.get_one("SELECT id FROM %s LIMIT %s,1" % (self.table, index.row()))
+		sql = "SELECT feature FROM location WHERE target=%s AND category='%s' LIMIT 1" % (ID, self.table)
+		feature = self.db.get_one(sql)
+		if not feature:
+			return QColor(255, 255, 255)
 		if feature == 'CDS':
 			return QColor(245, 183, 177)
 		elif feature == 'EXON':
@@ -1316,7 +1327,6 @@ class TableModel(QAbstractTableModel):
 
 		elif role == Qt.BackgroundColorRole:
 			return self.rowColor(index)
-
 
 		return None
 
@@ -1369,12 +1379,12 @@ class TableModel(QAbstractTableModel):
 		return flag
 
 	def canFetchMore(self, parent):
-		return not parent.isValid() and (self.read_row < len(self.dataset))
+		return not parent.isValid() and (self.read_row < self.total)
 
 	def fetchMore(self, parent):
 		if parent.isValid():
 			return
-		remainder = len(self.dataset) - self.read_row
+		remainder = self.total - self.read_row
 		fetch_row = min(100, remainder)
 		self.beginInsertRows(QModelIndex(), self.read_row, self.read_row+fetch_row-1)
 		self.read_row += fetch_row
