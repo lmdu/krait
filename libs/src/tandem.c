@@ -34,8 +34,6 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 	rep[4] = penta;
 	rep[5] = hexa;
 
-	Py_BEGIN_ALLOW_THREADS
-
 	len = strlen(seq);
 	for (i=0; i<len; i++)
 	{
@@ -70,7 +68,6 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 			}
 		}
 	}
-	Py_END_ALLOW_THREADS
 	return result;
 };
 //search perfect satellite variable number tandem repeat
