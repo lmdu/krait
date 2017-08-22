@@ -14,3 +14,6 @@ Krait is a robust and ultrafast tool with a user-friendly graphic interface for 
 
 # Download
 [https://github.com/lmdu/krait/releases](https://github.com/lmdu/krait/releases)
+
+# Documentation
+[https://github.com/lmdu/krait/blob/master/doc/Manual.pdf](https://github.com/lmdu/krait/blob/master/doc/Manual.pdf)
