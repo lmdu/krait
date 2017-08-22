@@ -155,3 +155,6 @@ class Database:
 
 	def clear(self, table):
 		self.query("DELETE FROM %s" % table)
+
+	def changes(self):
+		return conn.changes()

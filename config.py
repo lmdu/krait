@@ -3,32 +3,17 @@
 import os
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = '0.8.5'
+VERSION = '0.8.6'
 
-BUILD = '20170820'
+BUILD = '20170822'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
 #cache path for plots or temp data
 CACHE_PATH = os.path.join(ROOT_PATH, 'cache/')
 
-#download fasta file directory
-DOWNLOAD_PATH = os.path.join(ROOT_PATH, 'download')
-
-#Default sqlite3 database file
-DATABASE = os.path.join(CACHE_PATH, 'ssr.db')
-
-#primer3 exetutable
-PRIMER3_EXE = os.path.join(ROOT_PATH, 'primer3_core.exe')
-
-#primer3 temp configure file
-PRIMER3_SETTINGS = os.path.join(CACHE_PATH, 'primer3.conf')
-
 #primer3 config folder
 PRIMER3_CONFIG = os.path.join(ROOT_PATH, 'primer3_config/')
-
-#statistical json data store file
-STAT_JSON = os.path.join(CACHE_PATH, 'stat.json')
 
 #max table row display in statistical table
 MAX_ROWS = 20

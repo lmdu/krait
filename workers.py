@@ -510,7 +510,7 @@ class ExportFastaWorker(Worker):
 				"SELECT t.*, f.path FROM %s AS t,fasta AS f,seq AS s "
 				"WHERE f.id=s.fid AND t.sequence=s.name AND t.id IN (%s)"
 			)
-			sql = sql % (self.table, ",".join(map(str, self.ids)))
+			sql = sql % (self.table, ",".join(map(str, self.ids.values())))
 
 		current = 0
 		seqs = None

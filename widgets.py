@@ -78,9 +78,22 @@ class SSRMainWindow(QMainWindow):
 
 	def swichMainWidget(self, widget):
 		if widget == 'table':
+			self.exportTableAct.setEnabled(True)
+			self.exportStatsAct.setDisabled(True)
 			self.main_widget.setCurrentIndex(0)
+			if self.model.tableName() in ('ssr', 'issr', 'cssr', 'vntr'):
+				self.exportFastaAct.setEnabled(True)
+				self.exportGFFAct.setEnabled(True)
+			else:
+				self.exportFastaAct.setDisabled(True)
+				self.exportGFFAct.setDisabled(True)
+
 		else:
+			self.exportTableAct.setDisabled(True)
+			self.exportStatsAct.setEnabled(True)
 			self.main_widget.setCurrentIndex(1)
+			self.exportFastaAct.setDisabled(True)
+			self.exportGFFAct.setDisabled(True)
 
 	def homepage(self):
 		content = template_render('index.html')
@@ -123,6 +136,10 @@ class SSRMainWindow(QMainWindow):
 
 	def closeEvent(self, event):
 		self.writeSettings()
+		if not self.db.changes():
+			event.accept()
+			return
+
 		ret = QMessageBox.question(self, "Closing", 
 			"Would you like to save results before exiting",
 			QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
@@ -166,11 +183,17 @@ class SSRMainWindow(QMainWindow):
 		#export the Results
 		self.exportTableAct = QAction(self.tr("Exprot Selected as Table"), self)
 		self.exportTableAct.triggered.connect(self.exportTableRows)
+		self.exportTableAct.setDisabled(True)
 		self.exportTableAct.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_T))
 		self.exportFastaAct = QAction(self.tr("Export Selected as Fasta"), self)
 		self.exportFastaAct.triggered.connect(self.exportTableFastas)
+		self.exportFastaAct.setDisabled(True)
+		self.exportGFFAct = QAction(self.tr("Export Selected as GFF"), self)
+		self.exportGFFAct.triggered.connect(self.exportTableGFF)
+		self.exportGFFAct.setDisabled(True)
 		self.exportStatsAct = QAction(self.tr("Export Statistical Report"), self)
 		self.exportStatsAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_P))
+		self.exportStatsAct.setDisabled(True)
 		self.exportStatsAct.triggered.connect(self.exportStatisResult)
 		
 		#exit action
@@ -355,6 +378,7 @@ class SSRMainWindow(QMainWindow):
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exportTableAct)
 		self.fileMenu.addAction(self.exportFastaAct)
+		self.fileMenu.addAction(self.exportGFFAct)
 		self.fileMenu.addAction(self.exportStatsAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exitAct)
@@ -611,20 +635,37 @@ class SSRMainWindow(QMainWindow):
 		if len(selected) == self.db.get_one("SELECT COUNT(1) FROM %s" % table):
 			sql = "SELECT * FROM %s" % table
 		else:
-			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected)))
+			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected.values())))
 
-		cursor = self.db.get_cursor()
-		cursor.execute(sql)
+		rows = self.db.query(sql)
 
 		if exp_file.endswith('.csv'):
-			write_to_csv(exp_file, headers, cursor)
-		elif exp_file.endswith('.gff'):
-			write_to_gff(exp_file, table.upper(), cursor)
-		elif exp_file.endswith('.gtf'):
-			write_to_gtf(exp_file, table.upper(), cursor)
+			write_to_csv(exp_file, headers, rows)
 		else:
-			write_to_tab(exp_file, headers, cursor)
+			write_to_tab(exp_file, headers, rows)
 
+		QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file)
+
+	def exportTableGFF(self):
+		selected = self.model.getSelectedRows()
+		if not selected:
+			return QMessageBox.warning(self, 'Warning', "Please select rows in table to export.")
+
+		table = self.model.tableName()
+		headers = self.model.columnNames()
+
+		exp_file, _ = QFileDialog.getSaveFileName(self, filter="GFF3 (*.gff)")
+		if not exp_file: return
+
+		if len(selected) == self.db.get_one("SELECT COUNT(1) FROM %s" % table):
+			sql = "SELECT * FROM %s" % table
+		else:
+			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected.values())))
+		
+		rows = self.db.query(sql)
+
+		write_to_gff(exp_file, table.upper(), rows)
+		
 		QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file)
 
 	def exportTableFastas(self):
@@ -634,8 +675,8 @@ class SSRMainWindow(QMainWindow):
 
 		table = self.model.tableName()
 
-		if table not in ('ssr', 'issr', 'cssr', 'vntr'):
-			return QMessageBox.warning(self, 'Warning', "Your selected rows are not SSRs")
+		#if table not in ('ssr', 'issr', 'cssr', 'vntr'):
+		#	return QMessageBox.warning(self, 'Warning', "Your selected rows are not SSRs")
 
 		exp_file, _ = QFileDialog.getSaveFileName(self, filter="Fasta (*.fa);;Fasta (*.fasta)")
 		if not exp_file: return
@@ -747,9 +788,9 @@ class SSRMainWindow(QMainWindow):
 			self.showSSR()
 	
 	def showSSR(self):
-		self.swichMainWidget('table')
 		self.model.setTable('ssr')
 		self.model.select()
+		self.swichMainWidget('table')
 
 	def removeSSR(self):
 		self.db.clear('ssr')
@@ -774,9 +815,9 @@ class SSRMainWindow(QMainWindow):
 			self.showCSSR()
 
 	def showCSSR(self):
-		self.swichMainWidget('table')
 		self.model.setTable('cssr')
 		self.model.select()
+		self.swichMainWidget('table')
 
 	def removeCSSR(self):
 		self.db.clear('cssr')
@@ -803,9 +844,9 @@ class SSRMainWindow(QMainWindow):
 			self.showVNTR()
 		
 	def showVNTR(self):
-		self.swichMainWidget('table')
 		self.model.setTable('vntr')
 		self.model.select()
+		self.swichMainWidget('table')
 
 	def removeVNTR(self):
 		self.db.clear('vntr')
@@ -836,9 +877,9 @@ class SSRMainWindow(QMainWindow):
 			self.showISSR()
 
 	def showISSR(self):
-		self.swichMainWidget('table')
 		self.model.setTable('issr')
 		self.model.select()
+		self.swichMainWidget('table')
 
 	def removeISSR(self):
 		self.db.clear('issr')
@@ -884,9 +925,9 @@ class SSRMainWindow(QMainWindow):
 			self.showPrimer()
 
 	def showPrimer(self):
-		self.swichMainWidget('table')
 		self.model.setTable('primer')
 		self.model.select()
+		self.swichMainWidget('table')
 
 	def removePrimer(self):
 		self.db.clear('primer')
@@ -920,7 +961,7 @@ class SSRMainWindow(QMainWindow):
 		data = self.db.get_column(sql)
 		if not data:
 			return QMessageBox.warning(self, "Warning", "No %ss located in %s region" % (table.upper(), marker))
-		self.model.injectData(data)
+		self.model.setFilter('id IN (%s)' % ",".join(map(str, data)))
 
 	def showCDSMarker(self):
 		self.showMarker('CDS')
@@ -934,7 +975,7 @@ class SSRMainWindow(QMainWindow):
 		data = self.db.get_column(sql)
 		if not data:
 			return QMessageBox.warning(self, "Warning", "No %ss located in UTR region" % table.upper())
-		self.model.injectData(data)
+		self.model.setFilter('id IN (%s)' % ",".join(map(str, data)))
 
 	def showIntronMarker(self):
 		self.showMarker('INTRON')
@@ -966,11 +1007,31 @@ class SSRMainWindow(QMainWindow):
 			self.performStatistics()
 
 	def showStatistics(self):
-		seq_statis = json.loads(self.db.get_option('seq_statis'))
-		ssr_statis = json.loads(self.db.get_option('ssr_statis'))
-		issr_statis = json.loads(self.db.get_option('issr_statis'))
-		cssr_statis = json.loads(self.db.get_option('cssr_statis'))
-		vntr_statis = json.loads(self.db.get_option('vntr_statis'))
+		seq_statis = None
+		ssr_statis = None
+		issr_statis = None
+		cssr_statis = None
+		vntr_statis = None
+
+		opt = self.db.get_option('seq_statis')
+		if opt is not None:
+			seq_statis = json.loads(opt)
+
+		opt = self.db.get_option('ssr_statis')
+		if opt is not None:
+			ssr_statis = json.loads(opt)
+
+		opt = self.db.get_option('issr_statis')
+		if opt is not None:
+			issr_statis = json.loads(opt)
+
+		opt = self.db.get_option('cssr_statis')
+		if opt is not None:
+			cssr_statis = json.loads(opt)
+
+		opt = self.db.get_option('vntr_statis')
+		if opt is not None:
+			vntr_statis = json.loads(opt)
 
 		self.statis_result = template_render('report.html', 
 			seq = seq_statis, 
@@ -1146,7 +1207,7 @@ class SSRTableView(QTableView):
 		'''
 		table = self.model().table
 		flank = int(self.parent.settings.value('ssr/flank', 50))
-		_id = self.model().dataset[self.current_row]
+		_id = self.model().getCellId(self.current_row)
 		
 		if table == 'primer':
 			content = PrimerDetail(table, _id, flank).generateHtml()
@@ -1163,10 +1224,15 @@ class TableModel(QAbstractTableModel):
 		super(TableModel, self).__init__(parent)
 		self.headers = []
 		self.total = 0
-		self.selected = set()
+		self.selected = {}
 		self.read_row = 0
 		self.db = Database()
+
+		#["Select", "Where", "Order"]
 		self.query = ['', '', '']
+
+		#table name
+		self.table = None
 
 		self.cache_row_index = -1
 		self.cache_row = None
@@ -1180,7 +1246,7 @@ class TableModel(QAbstractTableModel):
 	def selectRow(self, row):
 		if row not in self.selected:
 			self.beginResetModel()
-			self.selected.add(row)
+			self.selected[row] = self.getCellId(row)
 			self.endResetModel()
 			self.sel_row.emit(len(self.selected))
 
@@ -1193,13 +1259,18 @@ class TableModel(QAbstractTableModel):
 
 	def selectAll(self):
 		self.beginResetModel()
-		self.selected = set(range(self.total))
+		if self.db.get_one(self.query[0] % 'COUNT(1)') == self.total:
+			self.selected = {i:None for i in xrange(self.total)}
+		else:
+			ids = self.db.get_column(self.sql % 'id')
+			self.selected = {i:j for i,j in enumerate(ids)}
+
 		self.endResetModel()
 		self.sel_row.emit(len(self.selected))
 
 	def deselectAll(self):
 		self.beginResetModel()
-		self.selected = set()
+		self.selected = {}
 		self.endResetModel()
 		self.sel_row.emit(0)
 
@@ -1241,24 +1312,24 @@ class TableModel(QAbstractTableModel):
 		self.sql = " ".join(self.query)
 		self.beginResetModel()
 		self.read_row = 0
-		self.selected = set()
+		self.selected = {}
+		self.cache_row_index = -1
+		self.cache_row = None
 		self.total = self.db.get_one(self.sql % "COUNT(1)")
 		self.endResetModel()
 		self.row_col.emit((self.table, self.total, len(self.headers)))
+		self.sel_row.emit(len(self.selected))
 
 	def clear(self):
 		self.total = 0
 		self.headers = []
-		self.selected = set()
+		self.selected = {}
 
 	def getSelectedRows(self):
-		if len(self.selected) == self.total:
-			return self.total
-		else:
-			#ids = [self.dataset[idx] for idx in self.selected]
-			#ids.sort()
-			#return ids
-			return self.selected
+		return self.selected
+
+	def getCellId(self, row):
+		return self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', row))
 
 	def value(self, index):
 		#ID = self.dataset[index.row()]
@@ -1356,7 +1427,7 @@ class TableModel(QAbstractTableModel):
 
 		if role == Qt.CheckStateRole:
 			if value == Qt.Checked:
-				self.selected.add(index.row())
+				self.selected[index.row()] = self.getCellId(index.row())
 			else:
 				if index.row() in self.selected:
 					self.selected.remove(index.row())
