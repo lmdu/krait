@@ -9,7 +9,7 @@ matplotlib.use('Agg')
 matplotlib.rc('font', size=8)
 
 import matplotlib.pyplot as plt
-plt.style.use('seaborn-paper')
+#plt.style.use('seaborn-paper')
 
 from numpy import sin, cos, pi
 from config import *
