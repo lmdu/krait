@@ -145,9 +145,3 @@ class StandardMotif:
 
 		return motifs
 
-
-if __name__ == '__main__':
-	s = StandardMotif(level=4)
-	motifs = s.mapping()
-	for motif in sorted(motifs.keys(), key=lambda x: (len(x), motif_to_number(x))):
-		print "\t".join(motif_sorted(motifs[motif]))
