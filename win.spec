@@ -3,14 +3,14 @@
 block_cipher = None
 
 
-a = Analysis(['main.py'],
-             pathex=['D:\\coding\\krait'],
+a = Analysis(['src/main.py'],
+             pathex=[''],
              binaries=[],
-             datas=[],
+             datas=[('src/cache','cache'),('src/primer3_config', 'perimer3_config'), ('src/template', 'template'), ('src/config.ini', '.'), ('src/logo.ico', '.')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
-             excludes=[],
+             excludes=['gtk', 'PyQt4', 'PyQt5', 'Tkinter', 'wx'],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher)
@@ -23,7 +23,7 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          console=False , icon='logo.ico')
+          console=False , icon='src/logo.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,

@@ -224,7 +224,7 @@ class SSRMainWindow(QMainWindow):
 
 		#toolbar actions
 		#search perfect ssrs tool button
-		self.SSRSearchAct = QAction(QIcon("icons/ssr.png"), self.tr("SSRs"), self)
+		self.SSRSearchAct = QAction(QIcon(":/icons/ssr.png"), self.tr("SSRs"), self)
 		self.SSRSearchAct.setToolTip(self.tr("Search for Perfect SSRs"))
 		self.SSRSearchAct.triggered.connect(self.searchOrShowSSR)
 		self.SSRForceAct = QAction(self.tr("Search for SSRs"), self)
@@ -239,7 +239,7 @@ class SSRMainWindow(QMainWindow):
 		self.SSRSetAct.triggered.connect(self.setPreference)
 		
 		#search compound ssrs tool button
-		self.CSSRSearchAct = QAction(QIcon("icons/cssr.png"), self.tr("cSSRs"), self)
+		self.CSSRSearchAct = QAction(QIcon(":/icons/cssr.png"), self.tr("cSSRs"), self)
 		self.CSSRSearchAct.setToolTip(self.tr("Search for Compound SSRs"))
 		self.CSSRSearchAct.triggered.connect(self.searchOrShowCSSR)
 		self.CSSRForceAct = QAction(self.tr("Search for cSSRs"), self)
@@ -256,7 +256,7 @@ class SSRMainWindow(QMainWindow):
 		self.CSSRSetAct.triggered.connect(self.setPreference)
 
 		#search VNTRs
-		self.VNTRSearchAct = QAction(QIcon("icons/vntr.png"), self.tr("VNTRs"), self)
+		self.VNTRSearchAct = QAction(QIcon(":/icons/vntr.png"), self.tr("VNTRs"), self)
 		self.VNTRSearchAct.setToolTip(self.tr("Search for Minisatellites or Macrosatellites"))
 		self.VNTRSearchAct.triggered.connect(self.searchOrShowVNTR)
 		self.VNTRForceAct = QAction(self.tr("Search for VNTRs"), self)
@@ -271,7 +271,7 @@ class SSRMainWindow(QMainWindow):
 		self.VNTRSetAct.triggered.connect(self.setPreference)
 
 		#search imperfect microsatellites
-		self.ISSRSearchAct = QAction(QIcon("icons/issr.png"), self.tr("iSSRs"), self)
+		self.ISSRSearchAct = QAction(QIcon(":/icons/issr.png"), self.tr("iSSRs"), self)
 		self.ISSRSearchAct.setToolTip(self.tr("Search for Imperfect SSRs"))
 		self.ISSRSearchAct.triggered.connect(self.searchOrShowISSR)
 		self.ISSRForceAct = QAction(self.tr("Search for iSSRs"), self)
@@ -286,7 +286,7 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRSetAct.triggered.connect(self.setPreference)
 
 		#locate ssrs
-		self.locateAct = QAction(QIcon("icons/locate.png"), self.tr("Locate"), self)
+		self.locateAct = QAction(QIcon(":/icons/locate.png"), self.tr("Locate"), self)
 		self.locateAct.setToolTip(self.tr("Locate SSRs in genes"))
 		self.locateAct.triggered.connect(self.locateTandem)
 		self.locateToolAct = QAction(self.tr("Locate SSRs in genes"), self)
@@ -319,7 +319,7 @@ class SSRMainWindow(QMainWindow):
 
 
 		#design primer
-		self.primerDesignAct = QAction(QIcon("icons/primer.png"), self.tr("Primer"), self)
+		self.primerDesignAct = QAction(QIcon(":/icons/primer.png"), self.tr("Primer"), self)
 		self.primerDesignAct.setToolTip(self.tr("Design primers"))
 		self.primerDesignAct.triggered.connect(self.designOrShowPrimer)
 		self.primerForceAct = QAction(self.tr("Design Primers"), self)
@@ -332,7 +332,7 @@ class SSRMainWindow(QMainWindow):
 		self.primerSetAct.triggered.connect(self.setPrimerSettings)
 
 		#statistics report
-		self.statisticsAct = QAction(QIcon("icons/report.png"), self.tr("Statistics"), self)
+		self.statisticsAct = QAction(QIcon(":/icons/report.png"), self.tr("Statistics"), self)
 		self.statisticsAct.triggered.connect(self.doOrShowStatistics)
 		self.statisticsForceAct = QAction(self.tr("Statistical Analysis"), self)
 		self.statisticsForceAct.triggered.connect(self.performStatistics)

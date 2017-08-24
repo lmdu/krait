@@ -1,0 +1,13 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/">
+   <file>icons/logo.png</file>
+   <file>icons/cssr.png</file>
+   <file>icons/filter.png</file>
+   <file>icons/issr.png</file>
+   <file>icons/locate.png</file>
+   <file>icons/primer.png</file>
+   <file>icons/report.png</file>
+   <file>icons/ssr.png</file>
+   <file>icons/vntr.png</file>
+</qresource>
+</RCC>

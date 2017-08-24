@@ -4,9 +4,9 @@ block_cipher = None
 
 
 a = Analysis(['src/main.py'],
-             pathex=[''],
+             pathex=['/Users/apple/Desktop/krait-master'],
              binaries=[],
-             datas=[('src/cache','cache'),('src/icons','icons'),('src/primer3_config', 'perimer3_config'), ('src/template', 'template'), ('src/config.ini', '.'), ('src/logo.ico', '.'),('src/style.qss', '.')],
+             datas=[('src/cache','cache'),('src/primer3_config', 'perimer3_config'), ('src/template', 'template'), ('src/config.ini', '.'), ('src/logo.icns', '.')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -19,15 +19,19 @@ pyz = PYZ(a.pure, a.zipped_data,
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='Krait',
+          name='krait',
           debug=False,
           strip=False,
           upx=True,
-          console=False , icon='src/logo.ico')
+          console=False , icon='src/logo.icns')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
                a.datas,
                strip=False,
                upx=True,
-               name='Krait')
+               name='krait')
+app = BUNDLE(coll,
+             name='krait.app',
+             icon='src/logo.icns',
+             bundle_identifier=None)

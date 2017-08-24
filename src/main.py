@@ -6,6 +6,9 @@ import ctypes
 #do not generate pyc file
 sys.dont_write_bytecode = True
 
+import krait_rc
+import config
+
 from PySide.QtCore import *
 from PySide.QtGui import *
 
@@ -20,18 +23,16 @@ if os.name == 'nt':
 	ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 #set style sheet like css
-with open('style.qss') as qss:
-	app.setStyleSheet(qss.read())
+app.setStyleSheet(config.STYLE_QSS)
 
-if __name__ == '__main__':
-	pixmap = QPixmap("icons/logo.png")
-	splash = QSplashScreen(pixmap)
-	splash.show()
-	app.processEvents()
-	from widgets import SSRMainWindow
-	#create main windows
-	win = SSRMainWindow()
-	win.show()
-	splash.finish(win)
-	#start the main loop
-	sys.exit(app.exec_())
+pixmap = QPixmap(":/icons/logo.png")
+splash = QSplashScreen(pixmap)
+splash.show()
+app.processEvents()
+from widgets import SSRMainWindow
+#create main windows
+win = SSRMainWindow()
+win.show()
+splash.finish(win)
+#start the main loop
+sys.exit(app.exec_())

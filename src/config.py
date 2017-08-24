@@ -130,3 +130,57 @@ CREATE TABLE IF NOT EXISTS `option`(
 
 """
 
+STYLE_QSS = """
+*{
+	font-size:12px;
+	font-family: "Microsoft YaHei";
+}
+
+/* main windows */
+SSRMainWindow{
+	background:#fff;
+}
+
+QTableView{
+	border: 0;
+	selection-background-color: #F6F6F6;
+	selection-color: #000000;
+}
+
+QTextBrowser{
+	border: 0;
+}
+
+/* tool bar */
+QToolBar{
+	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #f2f2f2);
+	border-bottom:1px solid #a6a6a6;
+	spacing: 8px;
+}
+SSRFilterInput{
+	border:1px solid #a9a9a9;
+	padding:4px 18px 4px 4px;
+	border-radius: 2px;
+	margin-left:50px;
+	margin-right:5px;
+	background: #fff url(:/icons/filter.png);
+	background-position: right center;
+	background-repeat: none;
+	width:100%;
+}
+
+/* status bar */
+QStatusBar{
+	background:qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #ededed);
+	border-top:1px solid #ccc;
+	font-size:12px;
+}
+QProgressBar{
+	text-align: right;
+	max-width: 120px;
+	min-width: 120xp;
+	max-height: 10px;
+	min-height: 15px;
+}
+"""
+
