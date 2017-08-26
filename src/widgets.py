@@ -1345,7 +1345,7 @@ class TableModel(QAbstractTableModel):
 
 	def rowColor(self, index):
 		#ID = self.dataset[index.row()]
-		ID = self.db.get_one("SELECT id FROM %s LIMIT %s,1" % (self.table, index.row()))
+		ID = self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', index.row()))
 		sql = "SELECT feature FROM location WHERE target=%s AND category='%s' LIMIT 1" % (ID, self.table)
 		feature = self.db.get_one(sql)
 		if not feature:

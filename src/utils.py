@@ -204,8 +204,10 @@ def get_gff_coordinate(gff_file):
 	exons = []
 	relations = {}
 	for r in gff_gtf_parser(gff_file, 'GFF'):
-		if 'ID' in r.attrs and 'PARENT' in r.attrs:
+		try:
 			relations[r.attrs['ID']] = r.attrs['PARENT']
+		except KeyError:
+			relations[r.attrs['ID']] = r.attrs['ID']
 
 		if r.feature == 'GENE':
 			yield ('GENE', r.attrs['ID'], r.attrs['NAME'])
