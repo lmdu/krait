@@ -3,9 +3,9 @@
 import os
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = '0.8.6'
+VERSION = '0.8.7'
 
-BUILD = '20170822'
+BUILD = '20170826'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
