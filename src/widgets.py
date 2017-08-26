@@ -1253,7 +1253,7 @@ class TableModel(QAbstractTableModel):
 	def deselectRow(self, row):
 		if row in self.selected:
 			self.beginResetModel()
-			self.selected.remove(row)
+			del self.selected[row]
 			self.endResetModel()
 			self.sel_row.emit(len(self.selected))
 
@@ -1430,7 +1430,7 @@ class TableModel(QAbstractTableModel):
 				self.selected[index.row()] = self.getCellId(index.row())
 			else:
 				if index.row() in self.selected:
-					self.selected.remove(index.row())
+					del self.selected[index.row()]
 			
 			self.dataChanged.emit(index, index)
 			self.sel_row.emit(len(self.selected))
