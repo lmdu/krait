@@ -6,6 +6,7 @@ Krait is a robust and ultrafast tool with a user-friendly graphic interface for 
 <p align="center">
 <img src="demo.gif" width="70%">
 </p>
+
 # Features
 * Identification of perfect SSRs, imperfect SSRs (iSSRs), compound SSRs (cSSRs) and VNTRs from extremely large genome
 * Locating the SSRs in gene coding region
