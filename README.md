@@ -3,6 +3,8 @@
 <img src="src/icons/logo.png" align="left" hspace="10" vspace="6" width="90" height="90">
 Krait is a robust and ultrafast tool with a user-friendly graphic interface for genome-wide investigation of microsatellites, which attempts to overcome the limitations of the currently available tools. Krait is written in Python and can be run as a standalone desktop application on Windows, Linux or Mac systems without dependencies. The microsatellite search engine is written in C and compiled as Python modules for import into Krait
 
+![Demo](demo.gif)
+
 # Features
 * Identification of perfect SSRs, imperfect SSRs (iSSRs), compound SSRs (cSSRs) and VNTRs from extremely large genome
 * Locating the SSRs in gene coding region
