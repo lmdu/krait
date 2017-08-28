@@ -1,16 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import appdirs
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = '0.8.7'
+VERSION = '0.8.8'
 
-BUILD = '20170826'
+BUILD = '20170828'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
+APPDATA_PATH = appdirs.AppDirs('Krait')
+
+#config files
+CONFIG_FILE = os.path.join(APPDATA_PATH.user_data_dir, 'config.ini')
+
 #cache path for plots or temp data
-CACHE_PATH = os.path.join(ROOT_PATH, 'cache/')
+CACHE_PATH = "%s/" % APPDATA_PATH.user_data_dir
 
 #primer3 config folder
 PRIMER3_CONFIG = os.path.join(ROOT_PATH, 'primer3_config/')
@@ -19,7 +25,7 @@ PRIMER3_CONFIG = os.path.join(ROOT_PATH, 'primer3_config/')
 MAX_ROWS = 20
 
 #create jinja template reander
-TEMPLATE_DIR = os.path.join(ROOT_PATH, 'template')
+TEMPLATE_DIR = os.path.join(ROOT_PATH, 'template/')
 
 #create tables in database
 CREATE_TABLES_SQL = """

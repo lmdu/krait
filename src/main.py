@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import ctypes
 #do not generate pyc file
 sys.dont_write_bytecode = True
 
@@ -19,6 +18,7 @@ app.setOrganizationDomain('http://www.cdu.edu.cn')
 app.setApplicationName('Krait')
 
 if os.name == 'nt':
+	import ctypes
 	myappid = 'CDU.Krait.ssr.0.8.3'
 	ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 

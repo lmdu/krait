@@ -128,7 +128,10 @@ class SSRMainWindow(QMainWindow):
 			pass
 
 	def readSettings(self):
-		self.settings = QSettings("config.ini", QSettings.IniFormat)
+		self.settings = QSettings(CONFIG_FILE, QSettings.IniFormat)
+		if len(self.settings.allKeys()) == 0:
+			dialog = PreferenceDialog(self, self.settings)
+			dialog.saveSettings()
 		self.resize(self.settings.value("size", QSize(900, 600)))
 
 	def writeSettings(self):
@@ -541,7 +544,7 @@ class SSRMainWindow(QMainWindow):
 		
 
 	def openProject(self):
-		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Database (*.db)")
+		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Krait Database (*.kdb)")
 		if not dbfile:
 			return
 
@@ -564,7 +567,7 @@ class SSRMainWindow(QMainWindow):
 
 	def saveProject(self):
 		if self.opened_project is None:
-			dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
+			dbfile, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
 			if not dbfile:
 				return
 			self.opened_project = dbfile
@@ -574,7 +577,7 @@ class SSRMainWindow(QMainWindow):
 		self.db.save(self.opened_project)
 
 	def saveProjectAs(self):
-		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Database (*.db)")
+		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
 		if not dbfile:
 			return
 
@@ -652,7 +655,6 @@ class SSRMainWindow(QMainWindow):
 			return QMessageBox.warning(self, 'Warning', "Please select rows in table to export.")
 
 		table = self.model.tableName()
-		headers = self.model.columnNames()
 
 		exp_file, _ = QFileDialog.getSaveFileName(self, filter="GFF3 (*.gff)")
 		if not exp_file: return
@@ -661,7 +663,7 @@ class SSRMainWindow(QMainWindow):
 			sql = "SELECT * FROM %s" % table
 		else:
 			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected.values())))
-		
+
 		rows = self.db.query(sql)
 
 		write_to_gff(exp_file, table.upper(), rows)
@@ -681,7 +683,7 @@ class SSRMainWindow(QMainWindow):
 		exp_file, _ = QFileDialog.getSaveFileName(self, filter="Fasta (*.fa);;Fasta (*.fasta)")
 		if not exp_file: return
 
-		flank = int(self.settings.value('ssr/flank'))
+		flank = int(self.settings.value('ssr/flank', 100))
 		worker = ExportFastaWorker(table, selected, flank, exp_file)
 		self.executeTask(worker, lambda: QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file))
 
@@ -769,14 +771,14 @@ class SSRMainWindow(QMainWindow):
 		self.removeSSR()
 		
 		rules = [
-			int(self.settings.value('ssr/mono')),
-			int(self.settings.value('ssr/di')),
-			int(self.settings.value('ssr/tri')), 
-			int(self.settings.value('ssr/tetra')),
-			int(self.settings.value('ssr/penta')),
-			int(self.settings.value('ssr/hexa'))
+			int(self.settings.value('ssr/mono', 12)),
+			int(self.settings.value('ssr/di', 7)),
+			int(self.settings.value('ssr/tri', 5)), 
+			int(self.settings.value('ssr/tetra', 4)),
+			int(self.settings.value('ssr/penta', 4)),
+			int(self.settings.value('ssr/hexa', 4))
 		]
-		level = int(self.settings.value('ssr/level'))
+		level = int(self.settings.value('ssr/level', 3))
 		worker = SSRWorker(fastas, rules, level)
 		self.executeTask(worker, self.showSSR)
 		#proc = SSRTask(fastas, rules, level)
@@ -804,7 +806,7 @@ class SSRMainWindow(QMainWindow):
 
 		self.removeCSSR()
 
-		dmax = int(self.settings.value('ssr/dmax'))
+		dmax = int(self.settings.value('ssr/dmax', 10))
 		worker = CSSRWorker(dmax)
 		self.executeTask(worker, self.showCSSR)
 
@@ -831,9 +833,9 @@ class SSRMainWindow(QMainWindow):
 
 		self.removeVNTR()
 
-		min_motif = int(self.settings.value('ssr/vmin'))
-		max_motif = int(self.settings.value('ssr/vmax'))
-		min_repeat = int(self.settings.value('ssr/vrep'))
+		min_motif = int(self.settings.value('ssr/vmin', 7))
+		max_motif = int(self.settings.value('ssr/vmax', 30))
+		min_repeat = int(self.settings.value('ssr/vrep', 2))
 		worker = VNTRWorker(fastas, min_motif, max_motif, min_repeat)
 		self.executeTask(worker, self.showVNTR)
 
@@ -860,13 +862,13 @@ class SSRMainWindow(QMainWindow):
 
 		self.removeISSR()
 
-		seed_repeat = int(self.settings.value('ssr/srep'))
-		seed_length = int(self.settings.value('ssr/slen'))
-		max_eidts = int(self.settings.value('ssr/error'))
-		mis_penalty = int(self.settings.value('ssr/mismatch'))
-		gap_penalty = int(self.settings.value('ssr/gap'))
-		score = int(self.settings.value('ssr/score'))
-		level = int(self.settings.value('ssr/level'))
+		seed_repeat = int(self.settings.value('ssr/srep', 3))
+		seed_length = int(self.settings.value('ssr/slen', 8))
+		max_eidts = int(self.settings.value('ssr/error', 2))
+		mis_penalty = int(self.settings.value('ssr/mismatch', 1))
+		gap_penalty = int(self.settings.value('ssr/gap', 2))
+		score = int(self.settings.value('ssr/score', 12))
+		level = int(self.settings.value('ssr/level', 3))
 		worker = ISSRWorker(fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score, level)
 		self.executeTask(worker, self.showISSR)
 
@@ -1276,7 +1278,7 @@ class TableModel(QAbstractTableModel):
 
 	def setTable(self, table):
 		self.table = table
-		self.headers = self.db.get_fields(self.table)
+		self.headers = self.db.get_fields(self.table) or []
 		self.query = ["SELECT %s FROM {0}".format(self.table), '', '']
 
 	def tableName(self):

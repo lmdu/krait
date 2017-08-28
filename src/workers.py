@@ -404,7 +404,7 @@ class PrimerWorker(Worker):
 		'''
 		design primers for select row or all rows
 		@para table str, the table names in database
-		@para ids list, the selected row id
+		@para ids dict, the selected row id
 		@para flank int, the length of flanking sequence used to design primer
 		@para primer3_settings str, the path of primer3 settings file
 		'''
@@ -434,7 +434,7 @@ class PrimerWorker(Worker):
 				"%s AS t,fasta AS f,seq AS s WHERE f.id=s.fid AND "
 				"t.sequence=s.name AND t.id IN (%s)"
 			)
-			sql = sql % (self.table, ",".join(map(str, self.ids)))
+			sql = sql % (self.table, ",".join(map(str, self.ids.values())))
 
 		current = 0
 		seqs = None
