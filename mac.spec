@@ -6,7 +6,7 @@ block_cipher = None
 a = Analysis(['src/main.py'],
              pathex=[''],
              binaries=[],
-             datas=[('src/primer3_config', 'primer3_config'), ('src/template', 'template'), ('src/logo.icns', '.'), ('example', 'example')],
+             datas=[('src/primer3_config', 'primer3_config'), ('src/template', 'template'), ('example', 'example')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -23,7 +23,7 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          console=False , icon='src/logo.icns')
+          console=False , icon='src/icons/logo.icns')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -33,5 +33,5 @@ coll = COLLECT(exe,
                name='Krait')
 app = BUNDLE(coll,
              name='Krait.app',
-             icon='src/logo.icns',
+             icon='src/icons/logo.icns',
              bundle_identifier=None)

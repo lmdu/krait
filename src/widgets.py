@@ -27,7 +27,7 @@ class SSRMainWindow(QMainWindow):
 
 		self.setWindowTitle("Krait v%s" % VERSION)
 		#self.setWindowIcon(QIcon('icons/logo.png'))
-		self.setWindowIcon(QIcon('logo.ico'))
+		self.setWindowIcon(QIcon(':/icons/logo.ico'))
 
 		#stacked widget
 		self.main_widget = QStackedWidget(self)

@@ -1,3 +1,0 @@
-LIBRARY kseq.pyd
-EXPORTS
-initkseq

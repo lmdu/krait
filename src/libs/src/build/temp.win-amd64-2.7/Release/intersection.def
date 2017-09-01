@@ -1,3 +1,0 @@
-LIBRARY intersection.pyd
-EXPORTS
-initintersection
