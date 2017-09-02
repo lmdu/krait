@@ -3,7 +3,7 @@
 	<img src="https://img.shields.io/github/downloads/lmdu/krait/total.svg">
 	<img src="https://img.shields.io/github/release/lmdu/krait.svg">
 	<img src="https://img.shields.io/github/license/lmdu/krait.svg">
-	<img src="https://img.shields.io/badge/platform-win | linxu | mac-orange.svg">
+	<img src="https://img.shields.io/badge/platform-win | linux | mac-orange.svg">
 </p>
 <h1 align="center">Krait: Microsatellite investigation and primer design</h1>
 
