@@ -1,6 +1,7 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource prefix="/">
-   <file>icons/logo.png</file>
+   <file>fonts/roboto.ttf</file>
+   <file>fonts/robotomono.ttf</file>
    <file>icons/logo.ico</file>
    <file>icons/cssr.png</file>
    <file>icons/filter.png</file>

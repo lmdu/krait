@@ -345,17 +345,17 @@ class StatisWorker(Worker):
 			#generate cssr complexity distribution
 			x = [row[0] for row in cssr_statis.complexity[1:]]
 			y = [row[1] for row in cssr_statis.complexity[1:]]
-			plot.line(x, y, 'cSSR complexity', 'cSSR Counts', 'cssr_complexity')
+			plot.line(x, y, 'cSSR complexity', 'cSSR Counts', 'cssr_complexity', self.dpi)
 
 			#genrate cssr length distribution
 			x = [row[0] for row in cssr_statis.cssrlen[1:]]
 			y = [row[1] for row in cssr_statis.cssrlen[1:]]
-			plot.line(x, y, 'cSSR length (bp)', 'cSSR Counts', 'cssr_length')
+			plot.line(x, y, 'cSSR length (bp)', 'cSSR Counts', 'cssr_length', self.dpi)
 
 			#genrate cssr gap distribution
 			x = [row[0] for row in cssr_statis.gap[1:]]
 			y = [row[1] for row in cssr_statis.gap[1:]]
-			plot.line(x, y, 'Gap length (bp)', 'cSSR Counts', 'cssr_gap')
+			plot.line(x, y, 'Gap length (bp)', 'cSSR Counts', 'cssr_gap', self.dpi)
 
 			#generate ssr distribution in diff regions pie plot
 			if cssr_statis.region:

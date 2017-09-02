@@ -1096,7 +1096,7 @@ class SSRMainWindow(QMainWindow):
 		#system_info = "%s%s %s" % (platform.system(), platform.release(), platform.architecture()[0])
 		#python_info = sys.version.split()[0]
 		about_message =	"""
-			<p><b>Krait for microsatellite investigation</b></p>
+			<p><b>Krait - Microsatellite Identification and Primer Design</b></p>
 			<p>Version v{version} Build {build}<p>
 			<p>Krait is a robust and ultrafast tool and provides a user-friendly GUI for no computationally
 			skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs with any length
@@ -1112,7 +1112,7 @@ class SSRMainWindow(QMainWindow):
 		QMessageBox.about(self, "About Krait", about_message)
 
 	def openDocumentation(self):
-		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/niblet"))
+		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait"))
 
 	def reportIssue(self):
 		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait/issues"))

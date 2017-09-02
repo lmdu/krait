@@ -4,9 +4,9 @@ import os
 import appdirs
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = '0.8.8'
+VERSION = '0.8.9'
 
-BUILD = '20170828'
+BUILD = '20170901'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -138,8 +138,8 @@ CREATE TABLE IF NOT EXISTS `option`(
 
 STYLE_QSS = """
 *{
-	font-size:12px;
-	font-family: "Microsoft YaHei";
+	font-size: 12px;
+	font-family: "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 /* main windows */
@@ -184,8 +184,8 @@ QStatusBar{
 QProgressBar{
 	text-align: right;
 	max-width: 120px;
-	min-width: 120xp;
-	max-height: 10px;
+	min-width: 120px;
+	max-height: 15px;
 	min-height: 15px;
 }
 """

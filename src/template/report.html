@@ -2,10 +2,13 @@
 <html>
 <head>
 <title>Statistical report</title>
-<style type="text/css">
+<style>
+@font-face{
+	font-family: "Roboto";
+	src: url("qrc:/fonts/roboto.ttf") format('truetype');
+}
 html{
 	line-height:1.15;
-	-ms-text-size-adjust:100%;
 	-webkit-text-size-adjust:100%;
 }
 img {
@@ -16,7 +19,7 @@ img {
 }
 body {
 	margin: 0;
-	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-family: "Roboto";
 	font-size: 15px;
 	line-height: 20px;
 	color: #3b3b3b;
@@ -149,7 +152,9 @@ h2{font-size: 18px;}
 {%- endmacro %}
 
 {% macro figure(title, name) -%}
-<div class="center"><img src="{{ name }}.png"></div>
+<div class="center">
+	<img src="{{ name }}.png">
+</div>
 <div class="center">{{ title }}</div>
 {% endmacro%}
 
