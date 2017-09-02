@@ -1,4 +1,4 @@
-<p align="center"><img width="100" src="src/icons/logo.png"></p>
+<p align="center"><img width="100" src="src/icons/krait_logo.png"></p>
 <p align="center">
 	<img src="https://img.shields.io/github/downloads/lmdu/krait/total.svg">
 	<img src="https://img.shields.io/github/release/lmdu/krait.svg">
