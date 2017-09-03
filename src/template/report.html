@@ -134,7 +134,7 @@ h2{font-size: 18px;}
 </div>
 
 {% macro table(title, rows, name) -%}
-<div class="title">{{ title }} <!--<a class="btn" href="table:{{ name }}">Save full table</a>--></div>
+<div class="title">{{ title }} <a class="btn" href="{{ name }}">Save full table</a></div>
 <div class="table">
 <div class="row header">
 	{% for col in rows[0] %}

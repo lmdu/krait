@@ -6,6 +6,7 @@ import csv
 import apsw
 import time
 import json
+
 import shutil
 import requests
 import platform
@@ -36,8 +37,7 @@ class SSRMainWindow(QMainWindow):
 		self.table = SSRTableView(self)
 		self.createTableModel()
 
-		self.browser = QWebView(self)
-		self.browser.linkClicked.connect(self.saveStatTableFigure)
+		self.browser = BrowserWidget(self)
 
 		self.main_widget.addWidget(self.table)
 		self.main_widget.addWidget(self.browser)
@@ -76,6 +76,7 @@ class SSRMainWindow(QMainWindow):
 
 		self.show()
 
+
 	def swichMainWidget(self, widget):
 		if widget == 'table':
 			self.exportTableAct.setEnabled(True)
@@ -104,28 +105,6 @@ class SSRMainWindow(QMainWindow):
 		self.table.setModel(self.model)
 		self.model.row_col.connect(self.changeRowColCount)
 		self.model.sel_row.connect(self.changeSelectCount)
-
-	def saveStatTableFigure(self, href):
-		href = href.toString()
-		media, name = href.split(':')
-
-		if media == 'table':
-			table, name = name.split('-')
-			stats_str = self.db.get_option('%s_statis' % table)
-			stats_obj = json.loads(stats_str)
-			outfile, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv)")
-			if not outfile: return
-			write_to_csv(outfile, stats_obj[name][0], stats_obj[name][1:])
-
-		elif media == 'figure':
-			src = os.path.join(CACHE_PATH, "%s.png" % name)
-			dst, fmat = QFileDialog.getSaveFileName(self, dir=name, filter="PNG (*.png);;JPG (*.jpg);;TIFF (*.tif)")
-			if not dst: return
-			img = QImage(src)
-			img.save(dst, fmat.split()[0])
-
-		else:
-			pass
 
 	def readSettings(self):
 		self.settings = QSettings(CONFIG_FILE, QSettings.IniFormat)
@@ -1957,6 +1936,42 @@ class DownloadDialog(QDialog):
 		acc = self.acc_input.text().strip()
 		out = self.out_input.text()
 		return acc, out
+
+
+class BrowserWidget(QWebView):
+	def __init__(self, parent):
+		super(BrowserWidget, self).__init__(parent)
+		self.parent = parent
+		self.db = Database()
+		self.pageAction(QWebPage.DownloadImageToDisk).triggered.connect(self.saveImage)
+		self.pageAction(QWebPage.OpenImageInNewWindow).triggered.connect(self.openImage)
+		self.page().setLinkDelegationPolicy(QWebPage.DelegateAllLinks)
+		self.page().linkClicked.connect(self.saveTable)
+
+	def openImage(self):
+		url = self.page().mainFrame().hitTestContent(QCursor.pos()).imageUrl()
+		QDesktopServices.openUrl(url)
+
+	def saveImage(self):
+		pm = self.page().mainFrame().hitTestContent(QCursor.pos()).pixmap()
+		filepath, _ = QFileDialog.getSaveFileName(self, "Save image", 
+			filter="TIFF File (*.tiff);;JPEG File (*.jpg);;PNG File (*.png)"
+		)
+		
+		if not filepath: return
+		pm.save(filepath)
+
+		self.parent.setStatusMessage('Image %s has been successfully saved' % filepath)
+
+	def saveTable(self, url):
+		url = url.toString()
+		table, name = url.split('/')[-1].split('-')
+		stats_str = self.db.get_option('%s_statis' % table)
+		stats_obj = json.loads(stats_str)
+		outfile, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv)")
+		if not outfile: return
+		write_to_csv(outfile, stats_obj[name][0], stats_obj[name][1:])
+		self.parent.setStatusMessage("Table %s has been successfully saved" % outfile)
 
 
 #class SSRTableModel(QSqlTableModel):
