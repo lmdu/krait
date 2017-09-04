@@ -165,12 +165,14 @@ class CSSRWorker(Worker):
 		super(CSSRWorker, self).__init__()
 		self.dmax = dmax
 
+
 	def process(self):
 		ssrs = self.db.query("SELECT * FROM ssr")
 		total = self.db.get_one("SELECT COUNT(1) FROM ssr LIMIT 1")
 		self.db.begin()
-		self.emit_message("Concatenate compound SSRs")
+		self.emit_message("Concatenate compound SSRs...")
 		cssrs = [ssrs.next()]
+		prev_progress = None
 		for ssr in ssrs:
 			d = ssr.start - cssrs[-1].end - 1
 			if ssr.sequence == cssrs[-1].sequence and d <= self.dmax:
@@ -179,7 +181,9 @@ class CSSRWorker(Worker):
 				if len(cssrs) > 1:
 					self.concatenate(cssrs)
 					progress = int(cssrs[-1].id/total*100)
-					#self.emit_progress(progress)
+					if progress != prev_progress:
+						self.emit_progress(progress)
+						prev_progress = progress
 				cssrs = [ssr]
 
 		if len(cssrs) > 1:
