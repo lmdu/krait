@@ -60,6 +60,15 @@ class Worker(QObject):
 		self.update_message.emit(msg)
 		self.finished.emit()
 
+	def process(self):
+		pass
+
+	def run(self):
+		try:
+			self.process()
+		except Exception, e:
+			self.emit_finish('Error: %s' % str(e))
+
 
 class SSRWorker(Worker):
 	"""
@@ -442,6 +451,7 @@ class PrimerWorker(Worker):
 
 		current = 0
 		seqs = None
+		succeeded = 0
 
 		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
 		
@@ -467,6 +477,8 @@ class PrimerWorker(Worker):
 			current += 1
 
 			primer_count = res['PRIMER_PAIR_NUM_RETURNED']
+			if primer_count:
+				succeeded += 1
 			for i in range(primer_count):
 				primer = [None, target['SEQUENCE_ID'], i+1]
 				primer.append(res['PRIMER_PAIR_%s_PRODUCT_SIZE' % i])
@@ -489,7 +501,7 @@ class PrimerWorker(Worker):
 
 		self.db.commit()
 
-		self.emit_finish('Primer design completed')
+		self.emit_finish('Primer design completed, %s succeed %s failed' % (succeeded, total_ids-succeeded))
 
 class ExportFastaWorker(Worker):
 	def __init__(self, table, ids, flank, outfile):
@@ -615,27 +627,20 @@ class EutilWorker(Worker):
 	def process(self):
 		url = self.base % (self.bank, self.acc)
 		self.emit_message("Downloading %s fasta sequence from NCBI..." % self.acc)
-		message = "Download %s fasta completed" % self.acc
-		try:
-			r = requests.get(url, timeout=10, stream=True)
-		except:
-			message = "Can not connect to NCBI server"
-		else:
-			if r.status_code == requests.codes.ok:
-				self.total = 0
-				self.start = time.time()
-				with open(self.outfile, "wb") as fh:
-					try:
-						for chunk in r.iter_content(chunk_size=1024):
-							self.total += len(chunk)
-							fh.write(chunk)
-							self.emit_message(self.progressing())
-					except Exception, e:
-						message = str(e)
-			else:
-				message = "%s error: %s" % (r.status_code, r.reason)
 
-		self.emit_finish(message)
+		r = requests.get(url, timeout=10, stream=True)
+		if r.status_code == requests.codes.ok:
+			self.total = 0
+			self.start = time.time()
+			with open(self.outfile, "wb") as fh:
+				for chunk in r.iter_content(chunk_size=1024):
+					self.total += len(chunk)
+					fh.write(chunk)
+					self.emit_message(self.progressing())
+		else:
+			 emit_finish("%s error: %s" % (r.status_code, r.reason))
+
+		self.emit_finish("Download %s fasta completed" % self.acc)
 
 	def progressing(self):
 		total = human_size(self.total)

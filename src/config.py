@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS `option`(
 
 STYLE_QSS = """
 *{
-	font-size: 12px;
+	font-size: 14px;
 	font-family: "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 

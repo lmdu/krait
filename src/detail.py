@@ -29,14 +29,14 @@ class Detail(object):
 
 		return sequence, lflank, rflank
 
-	def formatBase(self, b, s='.'):
-		if s == '.':
-			return '<div class="base"><div class="{0}">{0}</div><div class="sign" style="color:white">{1}</div></div>'.format(b, s)
+	def formatBase(self, b, target=False):
+		if target:
+			return '<div class="base {0}">{0}</div>'.format(b)
 		else:
-			return '<div class="base"><div class="{0}">{0}</div><div class="sign">{1}</div></div>'.format(b, s)
+			return '<div class="base">%s</div>' % b
 
 	def formatTarget(self, bases):
-		return "".join(self.formatBase(b, '^') for b in bases)
+		return "".join(self.formatBase(b, True) for b in bases)
 
 	def formatFlank(self, bases):
 		return "".join(self.formatBase(b) for b in bases)
@@ -45,7 +45,7 @@ class Detail(object):
 		res = []
 		for i, b in enumerate(flank):
 			if start <= i+1 <= start+length-1:
-				res.append(self.formatBase(b, '*'))
+				res.append(self.formatBase(b, True))
 			else:
 				res.append(self.formatBase(b))
 		return "".join(res)

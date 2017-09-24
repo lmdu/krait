@@ -111,10 +111,11 @@ class SSRMainWindow(QMainWindow):
 		if len(self.settings.allKeys()) == 0:
 			dialog = PreferenceDialog(self, self.settings)
 			dialog.saveSettings()
-		self.resize(self.settings.value("size", QSize(900, 600)))
+		self.resize(self.settings.value("size", QSize(1000, 600)))
 
 	def writeSettings(self):
-		self.settings.setValue("size", self.size())
+		if not self.isMaximized():
+			self.settings.setValue("size", self.size())
 
 	def closeEvent(self, event):
 		self.writeSettings()
@@ -521,7 +522,6 @@ class SSRMainWindow(QMainWindow):
 		self.progressBar.setMinimum(0)
 		self.statusBar.addPermanentWidget(self.progressBar)
 		
-
 	def openProject(self):
 		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Krait Database (*.kdb)")
 		if not dbfile:
@@ -544,7 +544,14 @@ class SSRMainWindow(QMainWindow):
 		elif not self.db.is_empty('vntr'):
 			self.showVNTR()
 
+
+
+		self.setStatusMessage("%s has been successfully opened" % dbfile)
+
 	def saveProject(self):
+		if self.opened_project and not self.db.changes():
+			return
+
 		if self.opened_project is None:
 			dbfile, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
 			if not dbfile:
@@ -552,8 +559,8 @@ class SSRMainWindow(QMainWindow):
 			self.opened_project = dbfile
 
 		os.remove(self.opened_project)
-
 		self.db.save(self.opened_project)
+		self.setStatusMessage("Project has been successfully saved to %s" % self.opened_project)
 
 	def saveProjectAs(self):
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
@@ -561,6 +568,7 @@ class SSRMainWindow(QMainWindow):
 			return
 
 		self.db.save(dbfile)
+		self.setStatusMessage("Project has been successfully saved to %s" % dbfile)
 
 	def closeProject(self):
 		self.db.drop_tables()
@@ -724,7 +732,7 @@ class SSRMainWindow(QMainWindow):
 		self.worker.update_progress.connect(self.setProgress)
 		self.worker.finished.connect(finish_callback)
 		self.work_thread = QThread()
-		self.work_thread.started.connect(self.worker.process)
+		self.work_thread.started.connect(self.worker.run)
 		self.worker.finished.connect(self.work_thread.quit)
 		self.worker.finished.connect(self.worker.deleteLater)
 		self.worker.moveToThread(self.work_thread)
@@ -774,8 +782,7 @@ class SSRMainWindow(QMainWindow):
 		self.swichMainWidget('table')
 
 	def removeSSR(self):
-		self.db.clear('ssr')
-
+		self.model.remove('ssr')
 	
 	#handle compound SSRs search
 	def searchCSSR(self):
@@ -801,8 +808,7 @@ class SSRMainWindow(QMainWindow):
 		self.swichMainWidget('table')
 
 	def removeCSSR(self):
-		self.db.clear('cssr')
-
+		self.model.remove('cssr')
 
 	#handle VNTRs search
 	def searchVNTR(self):
@@ -830,8 +836,7 @@ class SSRMainWindow(QMainWindow):
 		self.swichMainWidget('table')
 
 	def removeVNTR(self):
-		self.db.clear('vntr')
-
+		self.model.remove('vntr')
 	
 	#handle imperfect SSRs search
 	def searchISSR(self):
@@ -863,8 +868,7 @@ class SSRMainWindow(QMainWindow):
 		self.swichMainWidget('table')
 
 	def removeISSR(self):
-		self.db.clear('issr')
-
+		self.model.remove('issr')
 
 	def getPrimerSettings(self):
 		p3_settings = dict(
@@ -873,6 +877,14 @@ class SSRMainWindow(QMainWindow):
 			PRIMER_PICK_INTERNAL_OLIGO = 0,
 			PRIMER_PICK_RIGHT_PRIMER = 1
 		)
+
+		repeat_library = ['',
+			os.path.join(PRIMER3_CONFIG, 'humrep_and_simple.txt'),
+			os.path.join(PRIMER3_CONFIG, 'rodent_ref.txt'),
+			os.path.join(PRIMER3_CONFIG, 'rodrep_and_simple.txt'),
+			os.path.join(PRIMER3_CONFIG, 'drosophila.w.transposons.txt')
+		]
+
 		self.settings.beginGroup("primer")
 		keys = self.settings.childKeys()
 		for key in keys:
@@ -882,6 +894,9 @@ class SSRMainWindow(QMainWindow):
 			else:
 				p3_settings[key] = int(self.settings.value(key))
 		self.settings.endGroup()
+
+		p3_settings['PRIMER_MISPRIMING_LIBRARY'] = repeat_library[p3_settings['PRIMER_MISPRIMING_LIBRARY']]
+
 		return p3_settings
 
 	#design primers for ssrs
@@ -911,7 +926,7 @@ class SSRMainWindow(QMainWindow):
 		self.swichMainWidget('table')
 
 	def removePrimer(self):
-		self.db.clear('primer')
+		self.model.remove('primer')
 
 	def provideAnnotation(self):
 		#dialog = AnnotationDialog(self, self.annot_file)
@@ -930,6 +945,12 @@ class SSRMainWindow(QMainWindow):
 			return QMessageBox.warning(self, "Warning", "Please provide gtf or gff well formated annotation file")
 
 		table = self.model.table
+		if not table:
+			return QMessageBox.warning(self, "Warning", "You have not yet detected SSRs")
+
+		if self.db.is_empty(table):
+			return QMessageBox.warning(self, "warning", "No SSRs in table")
+
 		worker = LocateWorker(table, self.annot_file)
 		self.executeTask(worker, lambda : 1)
 
@@ -938,7 +959,12 @@ class SSRMainWindow(QMainWindow):
 
 	def showMarker(self, marker):
 		table = self.model.table
-		sql = "SELECT target FROM location WHERE category='%s' AND feature='%s'" % (table, marker)
+		if not table: return
+
+		if marker == 'UTR':
+			sql = "SELECT target FROM location WHERE category='%s' AND feature IN ('3UTR', '5UTR')" % table
+		else:
+			sql = "SELECT target FROM location WHERE category='%s' AND feature='%s'" % (table, marker)
 		data = self.db.get_column(sql)
 		if not data:
 			return QMessageBox.warning(self, "Warning", "No %ss located in %s region" % (table.upper(), marker))
@@ -951,12 +977,7 @@ class SSRMainWindow(QMainWindow):
 		self.showMarker('EXON')
 
 	def showUTRMarker(self):
-		table = self.model.table
-		sql = "SELECT target FROM location WHERE category='%s' AND feature IN ('3UTR', '5UTR')" % table
-		data = self.db.get_column(sql)
-		if not data:
-			return QMessageBox.warning(self, "Warning", "No %ss located in UTR region" % table.upper())
-		self.model.setFilter('id IN (%s)' % ",".join(map(str, data)))
+		self.showMarker('UTR')
 
 	def showIntronMarker(self):
 		self.showMarker('INTRON')
@@ -978,6 +999,7 @@ class SSRMainWindow(QMainWindow):
 			return QMessageBox.warning(self, "Warning", "No fasta file inputted")
 
 		worker = StatisWorker()
+		self.progressBar.setMaximum(0)
 		self.executeTask(worker, self.showStatistics)
 
 	def doOrShowStatistics(self):
@@ -1023,6 +1045,8 @@ class SSRMainWindow(QMainWindow):
 		)
 		self.swichMainWidget('browser')
 		self.browser.setHtml(self.statis_result, QUrl.fromLocalFile(CACHE_PATH))
+
+		self.progressBar.setMaximum(100)
 
 	def removeStatistics(self):
 		if self.statis_result:
@@ -1149,7 +1173,7 @@ class SSRTableView(QTableView):
 		deselect_all_action.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_A))
 		deselect_all_action.triggered.connect(self.deselectAll)
 
-		delete_action = QAction("Delete All", self)
+		#delete_action = QAction("Delete All", self)
 
 		detail_action = QAction("View Detail", self)
 		detail_action.triggered.connect(self.viewDetail)
@@ -1158,8 +1182,8 @@ class SSRTableView(QTableView):
 		self.menu.addAction(deselect_action)
 		self.menu.addAction(select_all_action)
 		self.menu.addAction(deselect_all_action)
-		self.menu.addSeparator()
-		self.menu.addAction(delete_action)
+		#self.menu.addSeparator()
+		#self.menu.addAction(delete_action)
 		self.menu.addSeparator()
 		self.menu.addAction(detail_action)
 		self.menu.popup(QCursor.pos())
@@ -1302,9 +1326,23 @@ class TableModel(QAbstractTableModel):
 		self.sel_row.emit(len(self.selected))
 
 	def clear(self):
+
+		self.beginResetModel()
 		self.total = 0
+		self.read_row = 0
+		self.selected = {}
+		self.cache_row_index = -1
+		self.cache_row = None
 		self.headers = []
 		self.selected = {}
+		self.endResetModel()
+		
+	def remove(self, table):
+		if table == self.table:
+			self.clear()
+
+		self.db.clear(table)
+
 
 	def getSelectedRows(self):
 		return self.selected
@@ -1523,7 +1561,7 @@ class GeneralTab(QWidget):
 		super(GeneralTab, self).__init__(parent)
 		self.settings = settings
 
-		repeatsGroup = QGroupBox(self.tr("Minimal repeats for each SSR type"))
+		repeatsGroup = QGroupBox(self.tr("Minimum repeats for each SSR type"))
 		monoLabel = QLabel("Mono-nucleotide")
 		self.monoValue = QSpinBox()
 		diLabel = QLabel("Di-nucleotide")
@@ -1557,7 +1595,7 @@ class GeneralTab(QWidget):
 		repeatsGroup.setLayout(repeatLayout)
 
 		distanceGroup = QGroupBox(self.tr("Compound microsatellite, cSSR"))
-		distanceLabel = QLabel("Max distance (dMAX) allowed between two SSRs")
+		distanceLabel = QLabel("Max distance allowed between two SSRs (dMAX)")
 		self.distanceValue = QSpinBox()
 		self.distanceValue.setSuffix(' bp')
 		distanceLayout = QHBoxLayout()
@@ -1619,24 +1657,24 @@ class GeneralTab(QWidget):
 		level_group = QGroupBox(self.tr("Motif standardization level"))
 		level_label = QLabel(self.tr("Standard level"))
 		self.level_select = QComboBox()
-		self.level_select.currentIndexChanged.connect(self.showStandardLevelDetail)
-		self.level_detail = QLabel()
+		#self.level_select.currentIndexChanged.connect(self.showStandardLevelDetail)
+		#self.level_detail = QLabel()
 		standard_level = [
 			"Level 0  No standard",
 			"Level 1  Similar motifs",
-			"Level 2  Reverse complementary motifs",
-			"Level 3  complementary motifs",
-			"Level 4  Reverse motifs"
+			"Level 2  Reverse complementary motifs + Level 1",
+			"Level 3  complementary motifs + Level 2",
+			"Level 4  Reverse motifs + Level 3 (not recommend)"
 		]
 		self.level_select.addItems(standard_level)
-		level_layout = QGridLayout()
-		level_layout.setColumnStretch(1, 1)
-		level_layout.addWidget(level_label, 0, 0)
-		level_layout.addWidget(self.level_select, 0, 1)
-		level_layout.addWidget(self.level_detail, 1, 1)
+		level_layout = QHBoxLayout()
+		#level_layout.setColumnStretch(1, 1)
+		level_layout.addWidget(level_label)
+		level_layout.addWidget(self.level_select, 1)
+		#level_layout.addWidget(self.level_detail, 1, 1)
 		level_group.setLayout(level_layout)
 
-		flankGroup = QGroupBox(self.tr("Flanking sequence"))
+		flankGroup = QGroupBox(self.tr("Flanking sequence for exporting and primer design"))
 		flankLabel = QLabel("Flanking sequence length")
 		self.flankValue = QSpinBox()
 		self.flankValue.setSuffix(' bp')
@@ -1697,23 +1735,23 @@ class GeneralTab(QWidget):
 		self.settings.setValue('ssr/mismatch', self.mis_penalty.value())
 		self.settings.setValue('ssr/gap', self.gap_penalty.value())
 
-	def showStandardLevelDetail(self, idx):
-		if idx == 0:
-			detail = 'No standard'
+	#def showStandardLevelDetail(self, idx):
+	#	if idx == 0:
+	#		detail = 'No standard'
 
-		elif idx == 1:
-			detail = 'standard similar motifs'
+	#	elif idx == 1:
+	#		detail = 'standard similar motifs'
 
-		elif idx == 2:
-			detail = 'Level 1 + reverse complementary motifs'
+	#	elif idx == 2:
+	#		detail = 'Level 1 + reverse complementary motifs'
 
-		elif idx == 3:
-			detail = 'Level 2 + complementary motifs'
+	#	elif idx == 3:
+	#		detail = 'Level 2 + complementary motifs'
 
-		elif idx == 4:
-			detail = 'Level 3 + reverse motifs (not recommend)'
+	#	elif idx == 4:
+	#		detail = 'Level 3 + reverse motifs (not recommend)'
 		
-		self.level_detail.setText(detail)
+	#	self.level_detail.setText(detail)
 
 
 class PrimerTab(QWidget):
@@ -1721,59 +1759,58 @@ class PrimerTab(QWidget):
 		super(PrimerTab, self).__init__(parent)
 		self.settings = settings
 		
-		product_size_label = PrimerTagLabel('PRIMER_PRODUCT_SIZE_RANGE')
 		self.product_size = QLineEdit()
-		product_size_group = QGroupBox(self.tr('Primer product size'))
-		product_size_layout = QHBoxLayout()
-		product_size_layout.addWidget(product_size_label)
-		product_size_layout.addWidget(self.product_size, 1)
+		self.primer_num_return = QSpinBox()
+		self.repeat_library = QComboBox()
+		self.repeat_library.addItems(['None', 'Human', 'Rodent', 'Rodent and Simple', 'Drosophila'])
+
+		product_size_group = QGroupBox(self.tr('General Settings'))
+		product_size_layout = QGridLayout()
+
+		product_size_layout.addWidget(PrimerTagLabel('PRIMER_PRODUCT_SIZE_RANGE'), 0, 0)
+		product_size_layout.addWidget(self.product_size, 0, 1, 1, 3)
+		product_size_layout.addWidget(PrimerTagLabel('PRIMER_MISPRIMING_LIBRARY'), 1, 0)
+		product_size_layout.addWidget(self.repeat_library, 1, 1)
+		product_size_layout.addWidget(PrimerTagLabel("PRIMER_NUM_RETURN"), 1, 2)
+		product_size_layout.addWidget(self.primer_num_return, 1, 3)
+		
 		product_size_group.setLayout(product_size_layout)
 
-		primer_size_group = QGroupBox(self.tr("Primer size and melting temperature"))
+		primer_size_group = QGroupBox(self.tr("Primer Size and GC content"))
 		primer_size_layout = QGridLayout()
 		self.primer_size_min = QSpinBox()
-		self.primer_size_min.setSuffix(' bp')
 		self.primer_size_opt = QSpinBox()
-		self.primer_size_opt.setSuffix(' bp')
 		self.primer_size_max = QSpinBox()
-		self.primer_size_max.setSuffix(' bp')
-		self.primer_tm_min = QSpinBox()
-		self.primer_tm_min.setSuffix(' %sC' % chr(0260))
-		self.primer_tm_opt = QSpinBox()
-		self.primer_tm_opt.setSuffix(' %sC' % chr(0260))
-		self.primer_tm_max = QSpinBox()
-		self.primer_tm_max.setSuffix(' %sC' % chr(0260))
+		self.primer_gc_min = QSpinBox()
+		self.primer_gc_max = QSpinBox()
+		self.primer_gc_clamp = QSpinBox()
 		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MIN_SIZE"), 0, 0)
 		primer_size_layout.addWidget(self.primer_size_min, 0, 1)
 		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_OPT_SIZE"), 0, 2)
 		primer_size_layout.addWidget(self.primer_size_opt, 0, 3)
 		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MAX_SIZE"), 0, 4)
 		primer_size_layout.addWidget(self.primer_size_max, 0, 5)
-		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MIN_TM"), 1, 0)
-		primer_size_layout.addWidget(self.primer_tm_min, 1, 1)
-		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_OPT_TM"), 1, 2)
-		primer_size_layout.addWidget(self.primer_tm_opt, 1, 3)
-		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MAX_TM"), 1, 4)
-		primer_size_layout.addWidget(self.primer_tm_max, 1, 5)
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MIN_GC"), 1, 0)
+		primer_size_layout.addWidget(self.primer_gc_min, 1, 1)
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_MAX_GC"), 1, 2)
+		primer_size_layout.addWidget(self.primer_gc_max, 1, 3)
+		primer_size_layout.addWidget(PrimerTagLabel("PRIMER_GC_CLAMP"), 1, 4)
+		primer_size_layout.addWidget(self.primer_gc_clamp, 1, 5)
 		primer_size_group.setLayout(primer_size_layout)
 
-		primer_gc_group = QGroupBox(self.tr("Primer GC content"))
-		primer_gc_layout = QGridLayout()
-		self.primer_gc_min = QSpinBox()
-		self.primer_gc_min.setSuffix(' %')
-		self.primer_gc_max = QSpinBox()
-		self.primer_gc_max.setSuffix(' %')
-		self.primer_gc_clamp = QSpinBox()
-		self.primer_gc_end = QSpinBox()
-		primer_gc_layout.addWidget(PrimerTagLabel("PRIMER_MIN_GC"), 0, 0)
-		primer_gc_layout.addWidget(self.primer_gc_min, 0, 1)
-		primer_gc_layout.addWidget(PrimerTagLabel("PRIMER_GC_CLAMP"), 0, 2)
-		primer_gc_layout.addWidget(self.primer_gc_clamp, 0, 3)
-		primer_gc_layout.addWidget(PrimerTagLabel("PRIMER_MAX_GC"), 1, 0)
-		primer_gc_layout.addWidget(self.primer_gc_max, 1, 1)
-		primer_gc_layout.addWidget(PrimerTagLabel("PRIMER_PAIR_MAX_DIFF_TM"), 1, 2)
-		primer_gc_layout.addWidget(self.primer_gc_end, 1, 3)
-		primer_gc_group.setLayout(primer_gc_layout)
+		primer_tm_group = QGroupBox(self.tr("Primer Melting Temperature"))
+		primer_tm_layout = QGridLayout()
+		self.primer_tm_min = QSpinBox()
+		self.primer_tm_opt = QSpinBox()
+		self.primer_tm_max = QSpinBox()
+		self.primer_tm_pair = QSpinBox()
+		primer_tm_layout.addWidget(PrimerTagLabel("PRIMER_MIN_TM"), 0, 0)
+		primer_tm_layout.addWidget(self.primer_tm_min, 0, 1)
+		primer_tm_layout.addWidget(PrimerTagLabel("PRIMER_OPT_TM"), 0, 2)
+		primer_tm_layout.addWidget(self.primer_tm_opt, 0, 3)
+		primer_tm_layout.addWidget(PrimerTagLabel("PRIMER_MAX_TM"), 0, 4)
+		primer_tm_layout.addWidget(self.primer_tm_max, 0, 5)
+		primer_tm_group.setLayout(primer_tm_layout)
 
 		primer_bind_group = QGroupBox(self.tr("Self-binding (primer-dimer and hairpins)"))
 		primer_bind_layout = QGridLayout()
@@ -1799,21 +1836,20 @@ class PrimerTab(QWidget):
 		self.primer_max_end_stability = QSpinBox()
 		self.primer_max_ns_accepted = QSpinBox()
 		self.primer_max_poly_x = QSpinBox()
-		self.primer_num_return = QSpinBox()
 		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_MAX_END_STABILITY"), 0, 0)
 		primer_other_layout.addWidget(self.primer_max_end_stability, 0, 1)
 		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_MAX_POLY_X"), 0, 2)
 		primer_other_layout.addWidget(self.primer_max_poly_x, 0, 3)
 		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_MAX_NS_ACCEPTED"), 1, 0)
 		primer_other_layout.addWidget(self.primer_max_ns_accepted, 1, 1)
-		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_NUM_RETURN"), 1, 2)
-		primer_other_layout.addWidget(self.primer_num_return, 1, 3)
+		primer_other_layout.addWidget(PrimerTagLabel("PRIMER_PAIR_MAX_DIFF_TM"), 1, 2)
+		primer_other_layout.addWidget(self.primer_tm_pair, 1, 3)
 		primer_other_group.setLayout(primer_other_layout)
 
 		mainLayout = QVBoxLayout()
 		mainLayout.addWidget(product_size_group)
 		mainLayout.addWidget(primer_size_group)
-		mainLayout.addWidget(primer_gc_group)
+		mainLayout.addWidget(primer_tm_group)
 		mainLayout.addWidget(primer_bind_group)
 		mainLayout.addWidget(primer_other_group)
 
@@ -1825,13 +1861,13 @@ class PrimerTab(QWidget):
 		self.primer_size_min.setValue(int(self.settings.value('primer/PRIMER_MIN_SIZE', 18)))
 		self.primer_size_opt.setValue(int(self.settings.value('primer/PRIMER_OPT_SIZE', 20)))
 		self.primer_size_max.setValue(int(self.settings.value('primer/PRIMER_MAX_SIZE', 27)))
-		self.primer_tm_min.setValue(int(self.settings.value('primer/PRIMER_MIN_TM', 57)))
+		self.primer_tm_min.setValue(int(self.settings.value('primer/PRIMER_MIN_TM', 58)))
 		self.primer_tm_opt.setValue(int(self.settings.value('primer/PRIMER_OPT_TM', 60)))
-		self.primer_tm_max.setValue(int(self.settings.value('primer/PRIMER_MAX_TM', 63)))
-		self.primer_gc_min.setValue(int(self.settings.value('primer/PRIMER_MIN_GC', 20)))
+		self.primer_tm_max.setValue(int(self.settings.value('primer/PRIMER_MAX_TM', 65)))
+		self.primer_gc_min.setValue(int(self.settings.value('primer/PRIMER_MIN_GC', 30)))
 		self.primer_gc_max.setValue(int(self.settings.value('primer/PRIMER_MAX_GC', 80)))
-		self.primer_gc_clamp.setValue(int(self.settings.value('primer/PRIMER_GC_CLAMP', 0)))
-		self.primer_gc_end.setValue(int(self.settings.value('primer/PRIMER_PAIR_MAX_DIFF_TM', 100)))
+		self.primer_gc_clamp.setValue(int(self.settings.value('primer/PRIMER_GC_CLAMP', 2)))
+		self.primer_tm_pair.setValue(int(self.settings.value('primer/PRIMER_PAIR_MAX_DIFF_TM', 2)))
 		self.primer_max_self_any.setValue(int(self.settings.value('primer/PRIMER_MAX_SELF_ANY_TH', 47)))
 		self.primer_pair_max_compl_any.setValue(int(self.settings.value('primer/PRIMER_PAIR_MAX_COMPL_ANY_TH', 47)))
 		self.primer_max_self_end.setValue(int(self.settings.value('primer/PRIMER_MAX_SELF_END_TH', 47)))
@@ -1840,7 +1876,8 @@ class PrimerTab(QWidget):
 		self.primer_max_end_stability.setValue(int(self.settings.value('primer/PRIMER_MAX_END_STABILITY', 100)))
 		self.primer_max_ns_accepted.setValue(int(self.settings.value('primer/PRIMER_MAX_POLY_X', 5)))
 		self.primer_max_poly_x.setValue(int(self.settings.value('primer/PRIMER_MAX_NS_ACCEPTED', 0)))
-		self.primer_num_return.setValue(int(self.settings.value('primer/PRIMER_NUM_RETURN', 5)))
+		self.primer_num_return.setValue(int(self.settings.value('primer/PRIMER_NUM_RETURN', 1)))
+		self.repeat_library.setCurrentIndex(int(self.settings.value('primer/PRIMER_MISPRIMING_LIBRARY', 0)))
 
 
 	def saveSettings(self):
@@ -1854,7 +1891,7 @@ class PrimerTab(QWidget):
 		self.settings.setValue('primer/PRIMER_MIN_GC', self.primer_gc_min.value())
 		self.settings.setValue('primer/PRIMER_MAX_GC', self.primer_gc_max.value())
 		self.settings.setValue('primer/PRIMER_GC_CLAMP', self.primer_gc_clamp.value())
-		self.settings.setValue('primer/PRIMER_PAIR_MAX_DIFF_TM', self.primer_gc_end.value())
+		self.settings.setValue('primer/PRIMER_PAIR_MAX_DIFF_TM', self.primer_tm_pair.value())
 		self.settings.setValue('primer/PRIMER_MAX_SELF_ANY_TH', self.primer_max_self_any.value())
 		self.settings.setValue('primer/PRIMER_PAIR_MAX_COMPL_ANY_TH', self.primer_pair_max_compl_any.value())
 		self.settings.setValue('primer/PRIMER_MAX_SELF_END_TH', self.primer_max_self_end.value())
@@ -1864,6 +1901,7 @@ class PrimerTab(QWidget):
 		self.settings.setValue('primer/PRIMER_MAX_POLY_X', self.primer_max_ns_accepted.value())
 		self.settings.setValue('primer/PRIMER_MAX_NS_ACCEPTED', self.primer_max_poly_x.value())
 		self.settings.setValue('primer/PRIMER_NUM_RETURN', self.primer_num_return.value())
+		self.settings.setValue('primer/PRIMER_MISPRIMING_LIBRARY', self.repeat_library.currentIndex())
 
 
 class PrimerTagLabel(QLabel):
