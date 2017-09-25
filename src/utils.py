@@ -285,8 +285,6 @@ def get_ssr_sequence(seq_file, seq_name, start, stop, flank):
 	return highlighter.render()
 
 def human_size(size):
-	if not size: return 0
-	 
 	if size < 1000:
 		return '%s B' % round(size, 2)
 

@@ -154,20 +154,14 @@ static int** initial_matrix(int size){
 	int i;
 	int j;
 	int **matrix = (int **)malloc(sizeof(int *)*size);
-	for(i=0; i<=size; i++)
+	for(i=0; i<=size; i++){
 		matrix[i] = (int *)malloc(sizeof(int)*size);
+	}
 
-	for(i=0; i<=size; i++)
+	for(i=0; i<=size; i++){
 		matrix[i][0] = i;
-
-	for(j=0; j<=size; j++)
-		matrix[0][j] = j;
-
-	/*for(i=1;i<size;i++){
-		for(j=1;j<size;j++){
-			matrix[i][j] = -1;
-		}
-	}*/
+		matrix[0][i] = i;
+	}
 
 	return matrix;
 }
@@ -220,11 +214,13 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 		j = x;
 
 		//fill the diagonal
-		if(seq[start-y] == motif[(mlen-i%mlen)%mlen]){
+		if(ref1 == ref2){
 			matrix[x][y] = matrix[x-1][y-1];
 			error = 0;
 		}else{
 			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
+			error++;
+			
 			smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
 			if(smaller != matrix[x][y]){
 				if(smaller == matrix[x][y-1]){
@@ -233,7 +229,6 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 					x--;
 				}
 			}
-			error++;
 		}
 
 		if(error>max_error){
@@ -257,11 +252,13 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 	int x = 1;
 	int y = 1;
 	int smaller;
-	int error = 0;
-	int mlen = strlen(motif);
-	static int res[3];
+	int error = 0; //max consective errors
+	int mlen = strlen(motif); //motif length
+	
+	static int res[3]; //result arrary
+	
 	for(x=1,y=1; (x<=size)&&(y<=size); x++,y++){
-		//fill row, column number fixed
+		//fill column, column number fixed
 		if(i != y){
 			ref1 = seq[start+y];
 			for(i=1; i<x; i++){
@@ -272,7 +269,7 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 				}
 			}
 		}
-		//fill column, row number fixed
+		//fill row, row number fixed
 		if(j != x){
 			ref2 = motif[(x-1)%mlen];
 			for(j=1; j<y; j++){
@@ -288,12 +285,15 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 		j = x;
 
 		//fill the diagonal
-		if(seq[start+y] == motif[(x-1)%mlen]){
+		if(ref1 == ref2){
 			matrix[x][y] = matrix[x-1][y-1];
 			error = 0;
 		}else{
 			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
+			error++;
+
 			smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
+			
 			if(smaller != matrix[x][y]){
 				if(smaller == matrix[x][y-1]){
 					y--;
@@ -301,10 +301,9 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 					x--;
 				}
 			}
-			error++;
 		}
 
-		if(error>max_error){
+		if(error > max_error){
 			res[0] = x;
 			res[1] = y;
 			res[2] = error;
@@ -323,6 +322,7 @@ static int* backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, in
 	int e = *(diagonal+2);
 	int cost;
 	static int res[2];
+	
 	while(e){
 		if(i==0 || j==0){
 			break;

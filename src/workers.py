@@ -632,6 +632,7 @@ class EutilWorker(Worker):
 		if r.status_code == requests.codes.ok:
 			self.total = 0
 			self.start = time.time()
+			time.sleep(0.1)
 			with open(self.outfile, "wb") as fh:
 				for chunk in r.iter_content(chunk_size=1024):
 					self.total += len(chunk)
