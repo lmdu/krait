@@ -29,7 +29,6 @@ extensions = [
 		sources=[os.path.join('primer3','src','primerdesign_py.c')] + libprimer3_paths,
 		include_dirs=[LIBPRIMER3_PATH, KLIB_PATH]
 	),
-	#,
 	#Extension(
 	#	'thermoanalysis',
 	#	sources=[os.path.join('primer3','thermoanalysis.pyx')] + libprimer3_paths,

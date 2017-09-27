@@ -152,7 +152,6 @@ static int min(int a, int b, int c){
 
 static int** initial_matrix(int size){
 	int i;
-	int j;
 	int **matrix = (int **)malloc(sizeof(int *)*size);
 	for(i=0; i<=size; i++){
 		matrix[i] = (int *)malloc(sizeof(int)*size);
@@ -177,170 +176,230 @@ static void release_matrix(int **matrix, int size){
 static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, int size, int max_error){
 	char ref1;
 	char ref2;
-	int i = 1;
-	int j = 1;
-	int x = 1;
-	int y = 1;
-	int smaller;
-	int error = 0;
-	int mlen = strlen(motif);
-	static int res[3];
-	//start += 1;
-	for(x=1,y=1; (x<=size)&&(y<=size); x++, y++){
-		//fill row, column number fixed
-		if(i != y){
-			ref1 = seq[start-y];
-			for(i=1; i<x; i++){
-				if(ref1 == motif[(mlen-i%mlen)%mlen]){
-					matrix[i][y] = matrix[i-1][y-1];
-				}else{
-					matrix[i][y] = min(matrix[i-1][y-1], matrix[i-1][y], matrix[i][y-1]) + 1;
-				}
+	int i = 0;
+	int j = 0;
+	int x = 0;
+	int n = 0;
+	int prev_min = 0; //previous minimum edit distance (ed)
+	int next_min = 0; //current minimum ed
+	int top_min = 0; //column minimum ed
+	int left_min = 0; //row minimum ed
+	int mlen = strlen(motif); //motif length
+	int error = 0; //consective errors
+	static int res[2]; //result arrary
+
+	for(n=1; n<=size; n++){
+		ref1 = seq[start-n];
+		ref2 = motif[(mlen-n%mlen)%mlen];
+		//min edit
+		top_min = matrix[0][n];
+		left_min = matrix[n][0];
+		for(x=1; x<n; x++){
+			if(ref1 == motif[(mlen-x%mlen)%mlen]){
+				matrix[x][n] = matrix[x-1][n-1];
+			}else{
+				matrix[x][n] = min(matrix[x-1][n-1], matrix[x-1][n], matrix[x][n-1]) + 1;
 			}
-		}
-		//fill column, row number fixed
-		if(j != x){
-			ref2 = motif[(mlen-i%mlen)%mlen];
-			for(j=1; j<y; j++){
-				if(ref2 == seq[start-j]){
-					matrix[x][j] = matrix[x-1][j-1];
-				}else{
-					matrix[x][j] = min(matrix[x-1][j-1], matrix[x-1][j], matrix[x][j-1]) + 1;
-				}
+
+			if(matrix[x][n] < top_min){
+				top_min = matrix[x][n];
+			}
+
+			if(ref2 == seq[start-x]){
+				matrix[n][x] = matrix[n-1][x-1];
+			}else{
+				matrix[n][x] = min(matrix[n-1][x-1], matrix[n-1][x], matrix[n][x-1]) + 1;
+			}
+
+			if(matrix[n][x] < left_min){
+				left_min = matrix[n][x];
 			}
 		}
 
-		i = y;
-		j = x;
-
-		//fill the diagonal
 		if(ref1 == ref2){
-			matrix[x][y] = matrix[x-1][y-1];
-			error = 0;
+			matrix[n][n] = matrix[n-1][n-1];
 		}else{
-			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
-			error++;
-			
-			smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
-			if(smaller != matrix[x][y]){
-				if(smaller == matrix[x][y-1]){
-					y--;
-				}else{
-					x--;
-				}
-			}
+			matrix[n][n] = min(matrix[n-1][n-1], matrix[n-1][n], matrix[n][n-1]) + 1;
 		}
 
-		if(error>max_error){
-			res[0] = x;
-			res[1] = y;
-			res[2] = error;
-			return res;
+		next_min = min(matrix[n][n], top_min, left_min);
+
+		if(next_min > prev_min){
+			error++;
+		}else{
+			error = 0;
+		}
+
+		prev_min = next_min;
+
+		if(error > max_error){
+			break;
 		}
 	}
-	res[0] = --x;
-	res[1] = --y;
-	res[2] = error;
+
+	if(n>size){
+		n--;
+	}
+
+	n -= error;
+
+	top_min = matrix[0][n];
+	left_min = matrix[n][0];
+	
+	for(x=1; x<n; x++){
+		if(matrix[x][n] < top_min){
+			top_min = matrix[x][n];
+		}
+
+		if(matrix[n][x] < left_min){
+			left_min = matrix[n][x];
+		}
+	}
+
+	next_min = min(top_min, left_min, matrix[n][n]);
+
+	if(next_min == top_min){
+		j = n;
+		for(x=1; x<n; x++){
+			if(matrix[x][n] == next_min){
+				i = x;
+				break;
+			}	
+		}
+	}else if(next_min == matrix[n][n]){
+		i = n;
+		j = n;
+	}else{
+		i = n;
+		for(x=n-1; x>0; x--){
+			if(matrix[n][x] == next_min){
+				j = x;
+				break;
+			}
+		}
+	}
+
+	res[0] = i;
+	res[1] = j;
 	return res;
 }
 
 static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, int size, int max_error){
 	char ref1;
 	char ref2;
-	int i = 1;
-	int j = 1;
-	int x = 1;
-	int y = 1;
-	int smaller;
-	int error = 0; //max consective errors
+	int i = 0;
+	int j = 0;
+	int x = 0;
+	int n = 0;
+	int prev_min = 0; //previous minimum edit distance (ed)
+	int next_min = 0; //current minimum ed
+	int top_min = 0; //column minimum ed
+	int left_min = 0; //row minimum ed
 	int mlen = strlen(motif); //motif length
-	
-	static int res[3]; //result arrary
-	
-	for(x=1,y=1; (x<=size)&&(y<=size); x++,y++){
-		//fill column, column number fixed
-		if(i != y){
-			ref1 = seq[start+y];
-			for(i=1; i<x; i++){
-				if(ref1 == motif[(i-1)%mlen]){
-					matrix[i][y] = matrix[i-1][y-1];
-				}else{
-					matrix[i][y] = min(matrix[i-1][y-1], matrix[i-1][y], matrix[i][y-1]) + 1;
-				}
+	int error = 0; //consective errors
+	static int res[2]; //result arrary
+
+	for(n=1; n<=size; n++){
+		ref1 = seq[start+n];
+		ref2 = motif[(n-1)%mlen];
+		//min edit
+		top_min = matrix[0][n];
+		left_min = matrix[n][0];
+		for(x=1; x<n; x++){
+			if(ref1 == motif[(x-1)%mlen]){
+				matrix[x][n] = matrix[x-1][n-1];
+			}else{
+				matrix[x][n] = min(matrix[x-1][n-1], matrix[x-1][n], matrix[x][n-1]) + 1;
 			}
-		}
-		//fill row, row number fixed
-		if(j != x){
-			ref2 = motif[(x-1)%mlen];
-			for(j=1; j<y; j++){
-				if(ref2 == seq[start+j]){
-					matrix[x][j] = matrix[x-1][j-1];
-				}else{
-					matrix[x][j] = min(matrix[x-1][j-1], matrix[x-1][j], matrix[x][j-1]) + 1;
-				}
+
+			if(matrix[x][n] < top_min){
+				top_min = matrix[x][n];
+			}
+
+			if(ref2 == seq[start+x]){
+				matrix[n][x] = matrix[n-1][x-1];
+			}else{
+				matrix[n][x] = min(matrix[n-1][x-1], matrix[n-1][x], matrix[n][x-1]) + 1;
+			}
+
+			if(matrix[n][x] < left_min){
+				left_min = matrix[n][x];
 			}
 		}
 
-		i = y;
-		j = x;
-
-		//fill the diagonal
 		if(ref1 == ref2){
-			matrix[x][y] = matrix[x-1][y-1];
-			error = 0;
+			matrix[n][n] = matrix[n-1][n-1];
 		}else{
-			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
-			error++;
-
-			smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
-			
-			if(smaller != matrix[x][y]){
-				if(smaller == matrix[x][y-1]){
-					y--;
-				}else{
-					x--;
-				}
-			}
+			matrix[n][n] = min(matrix[n-1][n-1], matrix[n-1][n], matrix[n][n-1]) + 1;
 		}
+
+		next_min = min(matrix[n][n], top_min, left_min);
+
+		if(next_min > prev_min){
+			error++;
+		}else{
+			error = 0;
+		}
+
+		prev_min = next_min;
 
 		if(error > max_error){
-			res[0] = x;
-			res[1] = y;
-			res[2] = error;
-			return res;
-		}
-	}
-	res[0] = --x;
-	res[1] = --y;
-	res[2] = error;
-	return res;
-}
-
-static int* backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, int *ins, int *del){
-	int i = *diagonal;
-	int j = *(diagonal+1);
-	int e = *(diagonal+2);
-	int cost;
-	static int res[2];
-	
-	while(e){
-		if(i==0 || j==0){
 			break;
 		}
-		cost = min(matrix[i][j], matrix[i-1][j], matrix[i][j-1]);
-		if(cost == matrix[i][j]){
-			i--;
-			j--;
-		}else if(cost == matrix[i][j-1]){
-			j--;
-		}else{
-			i--;
+	}
+
+	if(n>size){
+		n--;
+	}
+
+	n -= error;
+
+	top_min = matrix[0][n];
+	left_min = matrix[n][0];
+	
+	for(x=1; x<n; x++){
+		if(matrix[x][n] < top_min){
+			top_min = matrix[x][n];
 		}
-		e--;
+
+		if(matrix[n][x] < left_min){
+			left_min = matrix[n][x];
+		}
+	}
+	
+	next_min = min(top_min, left_min, matrix[n][n]);
+
+	if(next_min == top_min){
+		j = n;
+		for(x=1; x<n; x++){
+			if(matrix[x][n] == next_min){
+				i = x;
+				break;
+			}	
+		}
+	}else if(next_min == matrix[n][n]){
+		i = n;
+		j = n;
+	}else{
+		i = n;
+		for(x=n-1; x>0; x--){
+			if(matrix[n][x] == next_min){
+				j = x;
+				break;
+			}
+		}
 	}
 
 	res[0] = i;
 	res[1] = j;
+	return res;
+}
+
+static int backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, int *ins, int *del){
+	int i = *diagonal;
+	int j = *(diagonal+1);
+	int cost;
+	int r = j;
 
 	while(i>0 && j>0){
 		cost = min(matrix[i][j], matrix[i-1][j], matrix[i][j-1]);
@@ -353,15 +412,15 @@ static int* backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, in
 			i--;
 			j--;
 		}else if(cost == matrix[i][j-1]){
-			*del += 1;
+			*ins += 1;
 			j--;
 		}else{
-			*ins += 1;
+			*del += 1;
 			i--;
 		}
 	}
 
-	return res;
+	return r;
 }
 
 //search imperfect ssr method
@@ -384,8 +443,8 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	int end;
 	int extend_start;
 	int extend_len;
+	int extend_max_len;
 	int *extend_end;
-	int *extend_ok;
 	int length;
 	int matches;
 	int substitution;
@@ -405,7 +464,7 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 
 	//create edit distance matrix
 	int **matrix = initial_matrix(size);
-	
+
 	seqlen = strlen(seq);
 
 	for (i=0; i<seqlen; i++)
@@ -439,24 +498,29 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 
 				//extend left
 				extend_start = seed_start;
-				extend_len = extend_start;
-				if(extend_len > size){
-					extend_len = size;
+				extend_max_len = extend_start;
+				if(extend_max_len > size){
+					extend_max_len = size;
 				}
-				extend_end = build_left_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
-				extend_ok = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
-				start = extend_start - *(extend_ok+1) + 1;
+
+				extend_end = build_left_matrix(seq, motif, matrix, extend_start, extend_max_len, max_errors);
+				extend_len = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
+				start = extend_start - extend_len + 1;
 
 				//extend right
 				extend_start = seed_end;
-				extend_len = seqlen - extend_start;
-				if(extend_len > size){
-					extend_len = size;
+				extend_max_len = seqlen - extend_start - 1;
+				if(extend_max_len > size){
+					extend_max_len = size;
 				}
-				extend_end = build_right_matrix(seq, motif, matrix, extend_start, extend_len, max_errors);
-				extend_ok = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
-				end = extend_start + *(extend_ok+1) + 1;
+				//printf("%s\n", "right");
+				extend_end = build_right_matrix(seq, motif, matrix, extend_start, extend_max_len, max_errors);
+				//printf("%s\n", "back2");
+				extend_len = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
+				end = extend_start + extend_len + 1;
 				
+				//printf("%s\n", "extend right yes");
+
 				length = end - start + 1;
 				
 				score = matches - substitution*mis_penalty - (insertion+deletion)*gap_penalty;
