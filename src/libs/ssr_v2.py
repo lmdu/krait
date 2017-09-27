@@ -80,14 +80,18 @@ def build_left_matrix(seq, motif, matrix, start, size, max_error):
 		n -= 1
 	n -= error
 	
-	top_min = matrix[0][n]
-	left_min = matrix[n][0]
-	for x in range(1, n):
-		if matrix[x][n] < top_min:
-			top_min = matrix[x][n]
+	top_min = matrix[n][n]
+	left_min = matrix[n][n]
+	for x in range(n-1, 0, -1):
+		if matrix[x][n] > top_min:
+			break
+		top_min = matrix[x][n]
 
-		if matrix[n][x] < left_min:
-			left_min = matrix[n][x]
+	for x in range(n-1, 0, -1):
+		if matrix[n][x] > left_min:
+			break
+		
+		left_min = matrix[n][x]
 
 	next_min = min(top_min, left_min, matrix[n][n])
 
@@ -239,6 +243,7 @@ def backtrace_matrix(matrix, diagonal):
 
 	return (x, y, match, substitution, insertion, deletion)
 
+@profile
 def search_issr(seq, seed_repeats, seed_minlen, max_errors, mis_penalty, gap_penalty, required_score, size):
 	res = []
 	matrix = initial_matrix(size)
@@ -312,10 +317,10 @@ def search_issr(seq, seed_repeats, seed_minlen, max_errors, mis_penalty, gap_pen
 	#return res
 
 if __name__ == '__main__':
-	#fasta = pyfaidx.Fasta('test.fna')
-	#seq = fasta['NC_000913.3']
+	fasta = pyfaidx.Fasta('test.fna')
+	seq = str(fasta['NC_000913.3'])
 	#seq = "AAGAAGAAGATGAAGAGAAGTTTTTTT"
-	seq = "GTTGTTGTTGATTG"
+	#seq = "GTTGTTGTTGATTG"
 	search_issr(seq, 3, 8, 3, 2, 5, 3, 20)
 		
 	
