@@ -185,7 +185,7 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 	int top_min = 0; //column minimum ed
 	int left_min = 0; //row minimum ed
 	int mlen = strlen(motif); //motif length
-	int error = 0; //consective errors
+	int con_error = 0; //consective errors
 	static int res[2]; //result arrary
 
 	for(n=1; n<=size; n++){
@@ -225,50 +225,57 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 		next_min = min(matrix[n][n], top_min, left_min);
 
 		if(next_min > prev_min){
-			error++;
+			con_error++;
 		}else{
-			error = 0;
+			con_error = 0;
 		}
 
 		prev_min = next_min;
 
-		if(error > max_error){
+		if(con_error > max_error){
 			break;
 		}
+
+		//if(cum_error*1.0/(x+6) > 0.5){
+		//	break;
+		//}
+
 	}
 
 	if(n>size){
 		n--;
 	}
 
-	n -= error;
+	n -= con_error;
 
-	top_min = matrix[0][n];
-	left_min = matrix[n][0];
-	
-	for(x=1; x<n; x++){
-		if(matrix[x][n] < top_min){
+	//top min
+	for(x=n-1; x>0; x--){
+		if(matrix[x][n] < matrix[x-1][n]){
 			top_min = matrix[x][n];
 		}
+	}
 
-		if(matrix[n][x] < left_min){
+	//left min
+	for(x=n-1; x>0; x--){
+		if(matrix[n][x] < matrix[n][x-1]){
 			left_min = matrix[n][x];
 		}
 	}
 
 	next_min = min(top_min, left_min, matrix[n][n]);
 
-	if(next_min == top_min){
+	
+	if(next_min == matrix[n][n]){
+		i = n;
 		j = n;
-		for(x=1; x<n; x++){
+	}else if(next_min == top_min){
+		j = n;
+		for(x=n-1; x>0; x--){
 			if(matrix[x][n] == next_min){
 				i = x;
 				break;
 			}	
 		}
-	}else if(next_min == matrix[n][n]){
-		i = n;
-		j = n;
 	}else{
 		i = n;
 		for(x=n-1; x>0; x--){
@@ -296,7 +303,7 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 	int top_min = 0; //column minimum ed
 	int left_min = 0; //row minimum ed
 	int mlen = strlen(motif); //motif length
-	int error = 0; //consective errors
+	int con_error = 0; //consective errors
 	static int res[2]; //result arrary
 
 	for(n=1; n<=size; n++){
@@ -336,50 +343,57 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 		next_min = min(matrix[n][n], top_min, left_min);
 
 		if(next_min > prev_min){
-			error++;
+			con_error++;
+			//cum_error++;
 		}else{
-			error = 0;
+			con_error = 0;
 		}
 
 		prev_min = next_min;
 
-		if(error > max_error){
+		if(con_error > max_error){
 			break;
 		}
+		//if(cum_error*1.0/(x+6) > 0.5){
+		//	break;
+		//}
 	}
 
 	if(n>size){
 		n--;
 	}
 
-	n -= error;
+	n -= con_error;
 
-	top_min = matrix[0][n];
-	left_min = matrix[n][0];
-	
-	for(x=1; x<n; x++){
-		if(matrix[x][n] < top_min){
+	//top min
+	for(x=n-1; x>0; x--){
+		if(matrix[x][n] < matrix[x-1][n]){
 			top_min = matrix[x][n];
+			break;
 		}
+	}
 
-		if(matrix[n][x] < left_min){
+	//left min
+	for(x=n-1; x>0; x--){
+		if(matrix[n][x] < matrix[n][x-1]){
 			left_min = matrix[n][x];
+			break;
 		}
 	}
 	
 	next_min = min(top_min, left_min, matrix[n][n]);
 
-	if(next_min == top_min){
+	if(next_min == matrix[n][n]){
+		i = n;
 		j = n;
-		for(x=1; x<n; x++){
+	}else if(next_min == top_min){
+		j = n;
+		for(x=n-1; x>0; x--){
 			if(matrix[x][n] == next_min){
 				i = x;
 				break;
 			}	
 		}
-	}else if(next_min == matrix[n][n]){
-		i = n;
-		j = n;
 	}else{
 		i = n;
 		for(x=n-1; x>0; x--){
@@ -402,22 +416,28 @@ static int backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, int
 	int r = j;
 
 	while(i>0 && j>0){
-		cost = min(matrix[i][j], matrix[i-1][j], matrix[i][j-1]);
-		if(cost == matrix[i][j]){
-			if(cost == matrix[i-1][j-1]){
+		cost = min(matrix[i-1][j-1], matrix[i-1][j], matrix[i][j-1]);
+		if(cost == matrix[i-1][j-1]){
+			if(cost == matrix[i][j]){
 				*mat += 1;
 			}else{
 				*sub += 1;
 			}
 			i--;
 			j--;
-		}else if(cost == matrix[i][j-1]){
-			*ins += 1;
-			j--;
-		}else{
+		}else if(cost == matrix[i-1][j]){
 			*del += 1;
 			i--;
+		}else{
+			*ins += 1;
+			j--;
 		}
+	}
+
+	if(i>0){
+		*del += 1;
+	}else if(j>0){
+		*ins += 1;
 	}
 
 	return r;
@@ -502,7 +522,6 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				if(extend_max_len > size){
 					extend_max_len = size;
 				}
-
 				extend_end = build_left_matrix(seq, motif, matrix, extend_start, extend_max_len, max_errors);
 				extend_len = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
 				start = extend_start - extend_len + 1;
@@ -513,13 +532,9 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				if(extend_max_len > size){
 					extend_max_len = size;
 				}
-				//printf("%s\n", "right");
 				extend_end = build_right_matrix(seq, motif, matrix, extend_start, extend_max_len, max_errors);
-				//printf("%s\n", "back2");
 				extend_len = backtrace_matrix(matrix, extend_end, &matches, &substitution, &insertion, &deletion);
 				end = extend_start + extend_len + 1;
-				
-				//printf("%s\n", "extend right yes");
 
 				length = end - start + 1;
 				
@@ -527,6 +542,14 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 				
 				if(score>=required_score){
 					tmp = Py_BuildValue("(siiiiiiiii)", motif, j, start, end, length, matches, substitution, insertion, deletion, score);
+					PyList_Append(result, tmp);
+					Py_DECREF(tmp);
+					i = end;
+					j = 0;
+				}else if(seed_length>=required_score){
+					start = seed_start + 1;
+					end = seed_start + seed_length;
+					tmp = Py_BuildValue("(siiiiiiiii)", motif, j, start, end, seed_length, seed_length, 0, 0, 0, seed_length);
 					PyList_Append(result, tmp);
 					Py_DECREF(tmp);
 					i = end;

@@ -23,6 +23,7 @@ def build_left_matrix(seq, motif, matrix, start, size, max_error):
 	i = 0
 	j = 0
 	n = 1
+	x = 1
 	prev_min = 0
 	next_min = 0
 	top_min = 0
@@ -30,7 +31,7 @@ def build_left_matrix(seq, motif, matrix, start, size, max_error):
 	ref1 = None
 	ref2 = None
 	mlen = len(motif)
-	error = 0
+	consecutive_error = 0
 
 	while n<=size:
 		ref1 = seq[start-n]
@@ -65,49 +66,45 @@ def build_left_matrix(seq, motif, matrix, start, size, max_error):
 		next_min = min(matrix[n][n], top_min, left_min)
 
 		if next_min > prev_min:
-			error += 1
+			consecutive_error += 1
 		else:
-			error = 0
+			consecutive_error = 0
 
 		prev_min = next_min
 
-		if error > max_error:
+		if consecutive_error > max_error:
 			break
 		
 		n += 1
 
 	if n > size:
 		n -= 1
-	n -= error
 	
-	top_min = matrix[0][n]
-	left_min = matrix[n][0]
-	for x in range(1, n):
-		if matrix[x][n] < top_min:
-			top_min = matrix[x][n]
+	n -= consecutive_error
+	
+	#top min
+	for top_pos in range(n-1, 0, -1):
+		if matrix[top_pos][n] < matrix[top_pos-1][n]:
+			top_min = matrix[top_pos][n]
+			break
 
-		if matrix[n][x] < left_min:
-			left_min = matrix[n][x]
+	#left min
+	for left_pos in range(n-1, 0, -1):
+		if matrix[n][left_pos] < matrix[n][left_pos-1]:
+			left_min = matrix[n][left_pos]
+			break
 
 	next_min = min(top_min, left_min, matrix[n][n])
 
-	if next_min == top_min:
-		j = n
-		for x in range(1, n):
-			if matrix[x][n] == next_min:
-				i = x
-				break
-
-	elif next_min == matrix[n][n]:
+	if next_min == matrix[n][n]:
 		i = n
+		j = n
+	elif next_min == top_min:
+		i = top_pos
 		j = n
 	else:
 		i = n
-		for x in range(n-1, 0, -1):
-			if matrix[n][x] == next_min:
-				j = x
-				break
-		
+		j = left_pos
 
 	#print_matrix(matrix)
 	
@@ -174,33 +171,29 @@ def build_right_matrix(seq, motif, matrix, start, size, max_error):
 		n -= 1
 	n -= error
 	
-	top_min = matrix[0][n]
-	left_min = matrix[n][0]
-	for x in range(1, n):
-		if matrix[x][n] < top_min:
-			top_min = matrix[x][n]
+	#top min
+	for top_pos in range(n-1, 0, -1):
+		if matrix[top_pos][n] < matrix[top_pos-1][n]:
+			top_min = matrix[top_pos][n]
+			break
 
-		if matrix[n][x] < left_min:
-			left_min = matrix[n][x]
+	#left min
+	for left_pos in range(n-1, 0, -1):
+		if matrix[n][left_pos] < matrix[n][left_pos-1]:
+			left_min = matrix[n][left_pos]
+			break
 
 	next_min = min(top_min, left_min, matrix[n][n])
 
-	if next_min == top_min:
-		j = n
-		for x in range(1, n):
-			if matrix[x][n] == next_min:
-				i = x
-				break
-
-	elif next_min == matrix[n][n]:
+	if next_min == matrix[n][n]:
 		i = n
+		j = n
+	elif next_min == top_min:
+		i = top_pos
 		j = n
 	else:
 		i = n
-		for x in range(n-1, 0, -1):
-			if matrix[n][x] == next_min:
-				j = x
-				break
+		j = left_pos
 		
 
 	#print_matrix(matrix)
@@ -217,21 +210,24 @@ def backtrace_matrix(matrix, diagonal):
 	x = i
 	y = j
 	while i>0 and j>0:
-		cost = min(matrix[i][j], matrix[i-1][j], matrix[i][j-1])
-		if cost == matrix[i][j]:
-			if cost == matrix[i-1][j-1]:
+		cost = min(matrix[i-1][j-1], matrix[i-1][j], matrix[i][j-1])
+		if cost == matrix[i-1][j-1]:
+			if cost == matrix[i][j]:
 				match += 1
 			else:
 				substitution += 1
+
 			i -= 1
 			j -= 1
-		elif cost == matrix[i][j-1]:
-			insertion += 1
-			j -= 1
-		else:
+
+		elif cost == matrix[i-1][j]:
 			deletion += 1
 			i -= 1
-	
+
+		else:
+			insertion += 1
+			j -= 1
+
 	if i>0:
 		deletion += 1
 	elif j>0:
@@ -239,6 +235,7 @@ def backtrace_matrix(matrix, diagonal):
 
 	return (x, y, match, substitution, insertion, deletion)
 
+#@profile
 def search_issr(seq, seed_repeats, seed_minlen, max_errors, mis_penalty, gap_penalty, required_score, size):
 	res = []
 	matrix = initial_matrix(size)
@@ -312,10 +309,10 @@ def search_issr(seq, seed_repeats, seed_minlen, max_errors, mis_penalty, gap_pen
 	#return res
 
 if __name__ == '__main__':
-	#fasta = pyfaidx.Fasta('test.fna')
-	#seq = fasta['NC_000913.3']
+	fasta = pyfaidx.Fasta('test.fna')
+	seq = str(fasta['NC_000913.3'])
 	#seq = "AAGAAGAAGATGAAGAGAAGTTTTTTT"
-	seq = "GTTGTTGTTGATTG"
-	search_issr(seq, 3, 8, 3, 2, 5, 3, 20)
+	#seq = "AAAAAAAAATCATTT"
+	search_issr(seq, 3, 8, 3, 2, 5, 10, 500)
 		
 	

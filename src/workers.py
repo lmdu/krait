@@ -155,7 +155,7 @@ class ISSRWorker(Worker):
 
 					self.emit_message("Search imperfect SSRs from %s" % name)
 
-					issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 2000)
+					issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 500)
 					
 					def values():
 						for issr in issrs:
