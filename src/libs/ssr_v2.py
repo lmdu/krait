@@ -80,6 +80,7 @@ def build_left_matrix(seq, motif, matrix, start, size, max_error):
 	if n > size:
 		n -= 1
 	
+<<<<<<< HEAD
 	n -= consecutive_error
 	
 	#top min
@@ -93,6 +94,20 @@ def build_left_matrix(seq, motif, matrix, start, size, max_error):
 		if matrix[n][left_pos] < matrix[n][left_pos-1]:
 			left_min = matrix[n][left_pos]
 			break
+=======
+	top_min = matrix[n][n]
+	left_min = matrix[n][n]
+	for x in range(n-1, 0, -1):
+		if matrix[x][n] > top_min:
+			break
+		top_min = matrix[x][n]
+
+	for x in range(n-1, 0, -1):
+		if matrix[n][x] > left_min:
+			break
+		
+		left_min = matrix[n][x]
+>>>>>>> ac122c73fb7d1a154efcb30503facb07373c72f5
 
 	next_min = min(top_min, left_min, matrix[n][n])
 
@@ -235,7 +250,11 @@ def backtrace_matrix(matrix, diagonal):
 
 	return (x, y, match, substitution, insertion, deletion)
 
+<<<<<<< HEAD
 #@profile
+=======
+@profile
+>>>>>>> ac122c73fb7d1a154efcb30503facb07373c72f5
 def search_issr(seq, seed_repeats, seed_minlen, max_errors, mis_penalty, gap_penalty, required_score, size):
 	res = []
 	matrix = initial_matrix(size)
@@ -312,7 +331,12 @@ if __name__ == '__main__':
 	fasta = pyfaidx.Fasta('test.fna')
 	seq = str(fasta['NC_000913.3'])
 	#seq = "AAGAAGAAGATGAAGAGAAGTTTTTTT"
+<<<<<<< HEAD
 	#seq = "AAAAAAAAATCATTT"
 	search_issr(seq, 3, 8, 3, 2, 5, 10, 500)
+=======
+	#seq = "GTTGTTGTTGATTG"
+	search_issr(seq, 3, 8, 3, 2, 5, 3, 20)
+>>>>>>> ac122c73fb7d1a154efcb30503facb07373c72f5
 		
 	
