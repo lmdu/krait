@@ -179,115 +179,80 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 	int i = 0;
 	int j = 0;
 	int x = 0;
-	int n = 0;
-	int prev_min = 0; //previous minimum edit distance (ed)
-	int next_min = 0; //current minimum ed
-	int top_min = 0; //column minimum ed
-	int left_min = 0; //row minimum ed
+	int y = 0;
+	int last_x = 0;
+	int last_y = 0;
 	int mlen = strlen(motif); //motif length
-	int con_error = 0; //consective errors
+	int error = 0; //consective errors
+	int smaller;
+	
 	static int res[2]; //result arrary
 
-	for(n=1; n<=size; n++){
-		ref1 = seq[start-n];
-		ref2 = motif[(mlen-n%mlen)%mlen];
-		//min edit
-		top_min = matrix[0][n];
-		left_min = matrix[n][0];
-		for(x=1; x<n; x++){
-			if(ref1 == motif[(mlen-x%mlen)%mlen]){
-				matrix[x][n] = matrix[x-1][n-1];
-			}else{
-				matrix[x][n] = min(matrix[x-1][n-1], matrix[x-1][n], matrix[x][n-1]) + 1;
-			}
-
-			if(matrix[x][n] < top_min){
-				top_min = matrix[x][n];
-			}
-
-			if(ref2 == seq[start-x]){
-				matrix[n][x] = matrix[n-1][x-1];
-			}else{
-				matrix[n][x] = min(matrix[n-1][x-1], matrix[n-1][x], matrix[n][x-1]) + 1;
-			}
-
-			if(matrix[n][x] < left_min){
-				left_min = matrix[n][x];
+	for(x=1,y=1; y<=size; x++,y++){
+		ref1 = seq[start-y];
+		ref2 = motif[(mlen-x%mlen)%mlen];
+		
+		//fill column, column number fixed
+		if(i != y){
+			for(i=1; i<x; i++){
+				if(ref1 == motif[(mlen-i%mlen)%mlen]){
+					matrix[i][y] = matrix[i-1][y-1];
+				}else{
+					matrix[i][y] = min(matrix[i-1][y-1], matrix[i-1][y], matrix[i][y-1]) + 1;
+				}
 			}
 		}
+		//fill row, row number fixed
+		if(j != x){
+			for(j=1; j<y; j++){
+				if(ref2 == seq[start-j]){
+					matrix[x][j] = matrix[x-1][j-1];
+				}else{
+					matrix[x][j] = min(matrix[x-1][j-1], matrix[x-1][j], matrix[x][j-1]) + 1;
+				}
+			}
+		}
+
+		i = y;
+		j = x;
 
 		if(ref1 == ref2){
-			matrix[n][n] = matrix[n-1][n-1];
+			matrix[x][y] = matrix[x-1][y-1];
+			error = 0;
 		}else{
-			matrix[n][n] = min(matrix[n-1][n-1], matrix[n-1][n], matrix[n][n-1]) + 1;
-		}
+			if(error == 0){
+				last_x = x - 1;
+				last_y = y - 1;
+			}
+			
+			error++;
 
-		next_min = min(matrix[n][n], top_min, left_min);
-
-		if(next_min > prev_min){
-			con_error++;
-		}else{
-			con_error = 0;
-		}
-
-		prev_min = next_min;
-
-		if(con_error > max_error){
-			break;
-		}
-
-		//if(cum_error*1.0/(x+6) > 0.5){
-		//	break;
-		//}
-
-	}
-
-	if(n>size){
-		n--;
-	}
-
-	n -= con_error;
-
-	//top min
-	for(x=n-1; x>0; x--){
-		if(matrix[x][n] < matrix[x-1][n]){
-			top_min = matrix[x][n];
-		}
-	}
-
-	//left min
-	for(x=n-1; x>0; x--){
-		if(matrix[n][x] < matrix[n][x-1]){
-			left_min = matrix[n][x];
-		}
-	}
-
-	next_min = min(top_min, left_min, matrix[n][n]);
-
-	
-	if(next_min == matrix[n][n]){
-		i = n;
-		j = n;
-	}else if(next_min == top_min){
-		j = n;
-		for(x=n-1; x>0; x--){
-			if(matrix[x][n] == next_min){
-				i = x;
+			if(error > max_error){
 				break;
-			}	
-		}
-	}else{
-		i = n;
-		for(x=n-1; x>0; x--){
-			if(matrix[n][x] == next_min){
-				j = x;
-				break;
+			}
+			
+			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
+			smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
+
+			if(smaller != matrix[x][y]){
+				if(matrix[x-1][y] != matrix[x][y-1]){
+					if(smaller == matrix[x][y-1]){
+						y -= 1;
+					}else{
+						x -= 1;
+					}
+				}
 			}
 		}
 	}
 
-	res[0] = i;
-	res[1] = j;
+	if(error){
+		res[0] = last_x;
+		res[1] = last_y;
+	}else{
+		res[0] = --x;
+		res[1] = --y;
+	}
 	return res;
 }
 
@@ -297,115 +262,80 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 	int i = 0;
 	int j = 0;
 	int x = 0;
-	int n = 0;
-	int prev_min = 0; //previous minimum edit distance (ed)
-	int next_min = 0; //current minimum ed
-	int top_min = 0; //column minimum ed
-	int left_min = 0; //row minimum ed
+	int y = 0;
+	int last_x = 0;
+	int last_y = 0;
 	int mlen = strlen(motif); //motif length
-	int con_error = 0; //consective errors
+	int error = 0; //consective errors
+	int smaller;
+	
 	static int res[2]; //result arrary
 
-	for(n=1; n<=size; n++){
-		ref1 = seq[start+n];
-		ref2 = motif[(n-1)%mlen];
-		//min edit
-		top_min = matrix[0][n];
-		left_min = matrix[n][0];
-		for(x=1; x<n; x++){
-			if(ref1 == motif[(x-1)%mlen]){
-				matrix[x][n] = matrix[x-1][n-1];
-			}else{
-				matrix[x][n] = min(matrix[x-1][n-1], matrix[x-1][n], matrix[x][n-1]) + 1;
-			}
-
-			if(matrix[x][n] < top_min){
-				top_min = matrix[x][n];
-			}
-
-			if(ref2 == seq[start+x]){
-				matrix[n][x] = matrix[n-1][x-1];
-			}else{
-				matrix[n][x] = min(matrix[n-1][x-1], matrix[n-1][x], matrix[n][x-1]) + 1;
-			}
-
-			if(matrix[n][x] < left_min){
-				left_min = matrix[n][x];
+	for(x=1,y=1; y<=size; x++,y++){
+		ref1 = seq[start+y];
+		ref2 = motif[(x-1)%mlen];
+		
+		//fill column, column number fixed
+		if(i != y){
+			for(i=1; i<x; i++){
+				if(ref1 == motif[(i-1)%mlen]){
+					matrix[i][y] = matrix[i-1][y-1];
+				}else{
+					matrix[i][y] = min(matrix[i-1][y-1], matrix[i-1][y], matrix[i][y-1]) + 1;
+				}
 			}
 		}
+		//fill row, row number fixed
+		if(j != x){
+			for(j=1; j<y; j++){
+				if(ref2 == seq[start+j]){
+					matrix[x][j] = matrix[x-1][j-1];
+				}else{
+					matrix[x][j] = min(matrix[x-1][j-1], matrix[x-1][j], matrix[x][j-1]) + 1;
+				}
+			}
+		}
+
+		i = y;
+		j = x;
 
 		if(ref1 == ref2){
-			matrix[n][n] = matrix[n-1][n-1];
+			matrix[x][y] = matrix[x-1][y-1];
+			error = 0;
 		}else{
-			matrix[n][n] = min(matrix[n-1][n-1], matrix[n-1][n], matrix[n][n-1]) + 1;
-		}
+			if(error == 0){
+				last_x = x - 1;
+				last_y = y - 1;
+			}
+			
+			error++;
 
-		next_min = min(matrix[n][n], top_min, left_min);
-
-		if(next_min > prev_min){
-			con_error++;
-			//cum_error++;
-		}else{
-			con_error = 0;
-		}
-
-		prev_min = next_min;
-
-		if(con_error > max_error){
-			break;
-		}
-		//if(cum_error*1.0/(x+6) > 0.5){
-		//	break;
-		//}
-	}
-
-	if(n>size){
-		n--;
-	}
-
-	n -= con_error;
-
-	//top min
-	for(x=n-1; x>0; x--){
-		if(matrix[x][n] < matrix[x-1][n]){
-			top_min = matrix[x][n];
-			break;
-		}
-	}
-
-	//left min
-	for(x=n-1; x>0; x--){
-		if(matrix[n][x] < matrix[n][x-1]){
-			left_min = matrix[n][x];
-			break;
-		}
-	}
-	
-	next_min = min(top_min, left_min, matrix[n][n]);
-
-	if(next_min == matrix[n][n]){
-		i = n;
-		j = n;
-	}else if(next_min == top_min){
-		j = n;
-		for(x=n-1; x>0; x--){
-			if(matrix[x][n] == next_min){
-				i = x;
+			if(error > max_error){
 				break;
-			}	
-		}
-	}else{
-		i = n;
-		for(x=n-1; x>0; x--){
-			if(matrix[n][x] == next_min){
-				j = x;
-				break;
+			}
+			
+			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
+			smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
+
+			if(smaller != matrix[x][y]){
+				if(matrix[x-1][y] != matrix[x][y-1]){
+					if(smaller == matrix[x][y-1]){
+						y -= 1;
+					}else{
+						x -= 1;
+					}
+				}
 			}
 		}
 	}
 
-	res[0] = i;
-	res[1] = j;
+	if(error){
+		res[0] = last_x;
+		res[1] = last_y;
+	}else{
+		res[0] = --x;
+		res[1] = --y;
+	}
 	return res;
 }
 
@@ -566,7 +496,6 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	release_matrix(matrix, size);
 	return result;
 };
-
 
 static PyMethodDef add_methods[] = {
 	{"search_ssr", search_ssr, METH_VARARGS},
