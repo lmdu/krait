@@ -232,15 +232,15 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 			}
 			
 			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
-			smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
-
-			if(smaller != matrix[x][y]){
-				if(matrix[x-1][y] != matrix[x][y-1]){
-					if(smaller == matrix[x][y-1]){
-						y -= 1;
-					}else{
-						x -= 1;
-					}
+		}
+		
+		smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
+		if(smaller != matrix[x][y]){
+			if(matrix[x-1][y] != matrix[x][y-1]){
+				if(smaller == matrix[x][y-1]){
+					y -= 1;
+				}else{
+					x -= 1;
 				}
 			}
 		}
@@ -315,15 +315,15 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 			}
 			
 			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
-			smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
+		}
 
-			if(smaller != matrix[x][y]){
-				if(matrix[x-1][y] != matrix[x][y-1]){
-					if(smaller == matrix[x][y-1]){
-						y -= 1;
-					}else{
-						x -= 1;
-					}
+		smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
+		if(smaller != matrix[x][y]){
+			if(matrix[x-1][y] != matrix[x][y-1]){
+				if(smaller == matrix[x][y-1]){
+					y -= 1;
+				}else{
+					x -= 1;
 				}
 			}
 		}
