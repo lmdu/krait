@@ -393,12 +393,12 @@ class StatisWorker(Worker):
 			#genrate vntr length distribution
 			x = [row[0] for row in vntr_statis.vntrlen]
 			y = [row[1] for row in vntr_statis.vntrlen]
-			plot.line(x, y, 'VNTR length (bp)', 'cSSR Counts', 'vntr_length', self.dpi)
+			plot.line(x, y, 'VNTR length (bp)', 'VNTR Counts', 'vntr_length', self.dpi)
 
 			#genrate vntr repeat distribution
 			x = [row[0] for row in vntr_statis.repeat]
 			y = [row[1] for row in vntr_statis.repeat]
-			plot.line(x, y, 'VNTR repeats', 'cSSR Counts', 'vntr_repeat', self.dpi)
+			plot.line(x, y, 'VNTR repeats', 'VNTR Counts', 'vntr_repeat', self.dpi)
 
 			#generate ssr distribution in diff regions pie plot
 			if vntr_statis.region:
@@ -409,7 +409,7 @@ class StatisWorker(Worker):
 		else:
 			self.db.set_option('vntr_statis', '[]')
 
-		self.emit_finish("Statistics was completed")
+		self.emit_finish("Statistics was successfully completed")
 
 
 class PrimerWorker(Worker):

@@ -102,7 +102,7 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 			continue;
 		}
 
-		for (j=min; j<=max; j++)
+		for (j=1; j<=max; j++)
 		{
 			start = i;
 			length = j;
@@ -111,7 +111,11 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 				length++;
 			}
 			repeat = length/j;
-			if(repeat>=mrep)
+			if(j<min && length>6){
+				i = start + length;
+				j = 0;
+			}
+			else if(j>=min && repeat>=mrep)
 			{
 				motif = (char *)malloc(j+1);
 				strncpy(motif, seq+start, j);
@@ -121,7 +125,7 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 				PyList_Append(result, tmp);
 				Py_DECREF(tmp);
 				i = start + length;
-				j = min;
+				j = 0;
 			}
 			else
 			{
@@ -188,7 +192,7 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 	
 	static int res[2]; //result arrary
 
-	for(x=1,y=1; y<=size; x++,y++){
+	for(x=1,y=1; x<=size && y<=size; x++,y++){
 		ref1 = seq[start-y];
 		ref2 = motif[(mlen-x%mlen)%mlen];
 		
@@ -271,7 +275,7 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 	
 	static int res[2]; //result arrary
 
-	for(x=1,y=1; y<=size; x++,y++){
+	for(x=1,y=1; x<=size && y<=size; x++,y++){
 		ref1 = seq[start+y];
 		ref2 = motif[(x-1)%mlen];
 		

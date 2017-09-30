@@ -14,18 +14,17 @@ html{
 img {
 	border-style: none;
 	display: block;
-	max-width: 100%;
+	max-width: 65%;
 	height: auto;
+	margin: 0 auto;
 }
 body {
 	margin: 0;
 	font-family: "Roboto";
-	font-size: 15px;
 	line-height: 20px;
 	color: #3b3b3b;
 }
-h1{font-size: 20px;}
-h2{font-size: 18px;}
+
 .wrapper {
 	margin: 0 auto;
 	padding: 10px 0 20px 0;
@@ -91,15 +90,24 @@ h2{font-size: 18px;}
 }
 .title{
 	margin-bottom: 5px;
+	font-weight: bold;
 }
 .center{
 	text-align: center;
+}
+hr{
+	height:3px;
+	border:none;
+	color: #ddd;
+	background-color:#ccc;
+	margin: 50px 0;
 }
 </style>
 </head>
 <body>
 <div class="wrapper">
 <h1 align="center">The summary statistical analysis report</h1>
+<h3 class="title">The summary information of detected sequences</h3>
 <div class="table">
 	<div class="row header blue">
 		<div class="cell">Item</div>
@@ -108,33 +116,38 @@ h2{font-size: 18px;}
 	</div>
 	<div class="row">
 		<div class="cell">Total number of sequences</div>
-		<div class="cell">Fasta</div>
+		<div class="cell">Counts</div>
 		<div class="cell">{{ seq.seqcount }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Total length of sequences</div>
-		<div class="cell">A+T+C+G+N</div>
-		<div class="cell">{{ seq.size }} bp</div>
+		<div class="cell">A+T+C+G+N (bp)</div>
+		<div class="cell">{{ seq.size }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Total valid length of sequences</div>
-		<div class="cell">A+T+C+G</div>
-		<div class="cell">{{ seq.validsize }} bp</div>
+		<div class="cell">A+T+C+G (bp)</div>
+		<div class="cell">{{ seq.validsize }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Unkown bases (Ns) in sequences</div>
-		<div class="cell">{{ seq.ns[0] }} bp</div>
-		<div class="cell">{{ seq.ns[1] }}%</div>
+		<div class="cell">Bp</div>
+		<div class="cell">{{ seq.ns[0] }}</div>
+	</div>
+	<div class="row">
+		<div class="cell">Percentage of unkown bases</div>
+		<div class="cell">Percentage (%)</div>
+		<div class="cell">{{ seq.ns[1] }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">GC content</div>
-		<div class="cell">(G+C)/(A+T+C+G) not include Ns</div>
-		<div class="cell">{{ seq.gc }}%</div>
+		<div class="cell">(G+C)/(A+T+C+G) not include Ns (%)</div>
+		<div class="cell">{{ seq.gc }}</div>
 	</div>
 </div>
 
 {% macro table(title, rows, name) -%}
-<div class="title">{{ title }} <a class="btn" href="{{ name }}">Save full table</a></div>
+<h3 class="title">{{ title }} <a class="btn" href="{{ name }}">Save full table</a></h3>
 <div class="table">
 <div class="row header">
 	{% for col in rows[0] %}
@@ -156,11 +169,13 @@ h2{font-size: 18px;}
 	<img src="{{ name }}.png">
 </div>
 <div class="center">{{ title }}</div>
-{% endmacro%}
+{% endmacro %}
 
 <!-- perfect SSRs statistics -->
 {% if ssr %}
-<h2 align="center">The summary of perfect SSRs</h2>
+<hr>
+<h2 align="center">Perfect Microsatellites</h2>
+<h3 class="title">The summary information of perfect SSRs</h3>
 <div class="table">
 	<div class="row header green">
 		<div class="cell">Item</div>
@@ -169,17 +184,17 @@ h2{font-size: 18px;}
 	</div>
 	<div class="row">
 		<div class="cell">Total number of perfect SSRs</div>
-		<div class="cell">counts</div>
+		<div class="cell">Counts</div>
 		<div class="cell">{{ ssr.count }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Total length of perfect SSRs</div>
-		<div class="cell">bp</div>
+		<div class="cell">Bp</div>
 		<div class="cell">{{ ssr.length }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">The average length of SSRs</div>
-		<div class="cell">total ssr length/total ssr counts</div>
+		<div class="cell">total ssr length/total ssr counts (bp)</div>
 		<div class="cell">{{ (ssr.length/ssr.count)|round(2,'ceil') }}</div>
 	</div>
 	<div class="row">
@@ -189,23 +204,23 @@ h2{font-size: 18px;}
 	</div>
 	<div class="row">
 		<div class="cell">The percetage of sequence occupied by SSRs</div>
-		<div class="cell">ssr total length/total sequence size</div>
+		<div class="cell">ssr total length/total sequence size (%)</div>
 		<div class="cell">{{ (ssr.length/seq.size*100)|round(2,'ceil') }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Relative abundace</div>
-		<div class="cell">total SSRs/total valid length</div>
-		<div class="cell">{{ ssr.frequency }} loci/{{ seq.unit }}</div>
+		<div class="cell">total SSRs/total valid length (loci/{{ seq.unit }})</div>
+		<div class="cell">{{ ssr.frequency }} </div>
 	</div>
 	<div class="row">
 		<div class="cell">Relative density</div>
-		<div class="cell">total SSR length/total valid length</div>
-		<div class="cell">{{ ssr.density }} bp/{{ seq.unit }}</div>
+		<div class="cell">total SSR length/total valid length ( bp/{{ seq.unit }})</div>
+		<div class="cell">{{ ssr.density }}</div>
 	</div>
 </div>
 
 
-<p>{{ table('The perfect SSR types summary', ssr.type, 'ssr-type') }}</p>
+<p>{{ table('The summary of perfect SSR types', ssr.type, 'ssr-type') }}</p>
 <p>{{ figure('The distribution of perfect SSRs types', 'ssr_type') }}</p>
 {% if ssr.region %}
 <p>{{ figure('The distribution of perfect SSRs in different region', 'ssr_region') }}</p>
@@ -214,17 +229,22 @@ h2{font-size: 18px;}
 <p>{{ figure('The most abundant motif categories in each SSR type', 'ssr_motif') }}</p>
 <p>{{ figure('The distribution of ssr repeats', 'ssr_repeat') }}</p>
 <p>{{ figure('The distribution of ssr length', 'ssr_length') }}</p>
-
-
 {% endif %}
 
 <!-- compound SSRs statistics -->
 {% if cssr %}
-<h2 align="center">The summary of compound SSRs</h2>
+<hr>
+<h2 align="center">Compound Microsatellites (CM)</h2>
+<h3 class="title">The summary information of compound SSRs</h3>
 <div class="table">
+	<div class="row header green">
+		<div class="cell">Item</div>
+		<div class="cell">Description</div>
+		<div class="cell">Number</div>
+	</div>
 	<div class="row">
 		<div class="cell">Total number of compound SSRs</div>
-		<div class="cell">counts</div>
+		<div class="cell">Counts</div>
 		<div class="cell">{{ cssr.cm_count }}</div>
 	</div>
 	<div class="row">
@@ -234,18 +254,18 @@ h2{font-size: 18px;}
 	</div>
 	<div class="row">
 		<div class="cell">Percentage of cSSRs</div>
-		<div class="cell">cSSR%</div>
-		<div class="cell">{{ cssr.cssr_count/ssr.count|round(2, 'ceil') }}%</div>
+		<div class="cell">total cSSR counts/total SSR counts (%)</div>
+		<div class="cell">{{ cssr.cssr_count/ssr.count|round(2, 'ceil') }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Relative abundace</div>
-		<div class="cell">total SSRs/toal valid length</div>
-		<div class="cell">{{ cssr.frequency }} loci/{{ seq.unit }}</div>
+		<div class="cell">total CM counts/toal valid length (loci/{{ seq.unit }})</div>
+		<div class="cell">{{ cssr.frequency }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Relative density</div>
-		<div class="cell">total SSR length/toal valid length</div>
-		<div class="cell">{{ cssr.density }} bp/{{ seq.unit }}</div>
+		<div class="cell">total CM length/toal valid length (bp/{{ seq.unit }})</div>
+		<div class="cell">{{ cssr.density }}</div>
 	</div>
 </div>
 
@@ -260,23 +280,35 @@ h2{font-size: 18px;}
 {% endif %}
 
 <!-- imperfect SSRs statistics -->
-{% if cssr %}
-<h2 align="center">The summary of imperfect SSRs</h2>
+{% if issr %}
+<hr>
+<h2 align="center">Imperfect Microsatellites</h2>
+<h3 class="title">The summary information of iSSRs</h3>
 <div class="table">
+	<div class="row header green">
+		<div class="cell">Item</div>
+		<div class="cell">Description</div>
+		<div class="cell">Number</div>
+	</div>
 	<div class="row">
-		<div class="cell">Total number of imperfect SSRs</div>
-		<div class="cell">counts</div>
+		<div class="cell">Total number of iSSRs</div>
+		<div class="cell">Counts</div>
 		<div class="cell">{{ issr.count }}</div>
 	</div>
 	<div class="row">
+		<div class="cell">Total length of iSSRs</div>
+		<div class="cell">Bp</div>
+		<div class="cell">{{ issr.length }}</div>
+	</div>
+	<div class="row">
 		<div class="cell">Relative abundace</div>
-		<div class="cell">total SSRs/toal valid length</div>
-		<div class="cell">{{ issr.frequency }} loci/{{ seq.unit }}</div>
+		<div class="cell">total iSSR counts/toal valid length (loci/{{ seq.unit }})</div>
+		<div class="cell">{{ issr.frequency }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Relative density</div>
-		<div class="cell">total SSR length/toal valid length</div>
-		<div class="cell">{{ issr.density }} bp/{{ seq.unit }}</div>
+		<div class="cell">total iSSR length/toal valid length (bp/{{ seq.unit }})</div>
+		<div class="cell">{{ issr.density }}</div>
 	</div>
 </div>
 
@@ -287,7 +319,7 @@ h2{font-size: 18px;}
 <p>{{ figure('The distribution of imperfect SSRs in different region', 'issr_region') }}</p>
 {% endif %}
 
-<p>{{ table('The summary of imperfect SSR motif category', issr.category, 'issr-category') }}</p>
+<p>{{ table('The most abundant imperfect SSR motif category', issr.category|sortfilter(1), 'issr-category') }}</p>
 <p>{{ figure('The distribution of imperfect SSR score', 'issr_score') }}</p>
 <p>{{ figure('The distribution of imperfect SSR length', 'issr_length') }}</p>
 
@@ -295,22 +327,34 @@ h2{font-size: 18px;}
 
 <!-- VNTRs statistics -->
 {% if vntr %}
-<h2 align="center">The summary of VNTRs</h2>
+<hr>
+<h2 align="center">Variable Number Tandem Repeats (VNTRs)</h2>
+<h3 class="title">The summary information of VNTRs</h3>
 <div class="table">
+	<div class="row header green">
+		<div class="cell">Item</div>
+		<div class="cell">Description</div>
+		<div class="cell">Number</div>
+	</div>
 	<div class="row">
 		<div class="cell">Total number of VNTRs</div>
-		<div class="cell">counts</div>
+		<div class="cell">Counts</div>
 		<div class="cell">{{ vntr.count }}</div>
 	</div>
 	<div class="row">
+		<div class="cell">Total length of VNTRs</div>
+		<div class="cell">Bp</div>
+		<div class="cell">{{ vntr.length }}</div>
+	</div>
+	<div class="row">
 		<div class="cell">Relative abundace</div>
-		<div class="cell">total SSRs/toal valid length</div>
-		<div class="cell">{{ vntr.frequency }} loci/{{ seq.unit }}</div>
+		<div class="cell">total VNTR counts/toal valid length (loci/{{ seq.unit }})</div>
+		<div class="cell">{{ vntr.frequency }}</div>
 	</div>
 	<div class="row">
 		<div class="cell">Relative density</div>
-		<div class="cell">total SSR length/toal valid length</div>
-		<div class="cell">{{ vntr.density }} bp/{{ seq.unit }}</div>
+		<div class="cell">total VNTR length/toal valid length (bp/{{ seq.unit }})</div>
+		<div class="cell">{{ vntr.density }}</div>
 	</div>
 </div>
 {% if vntr.region %}

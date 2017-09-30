@@ -5,17 +5,20 @@
 	font-family: "RobotoMono";
 	src: url("qrc:/fonts/robotomono.ttf") format('truetype');
 }
-body{font-size:16px;}
+body{
+	font-family: "RobotoMono";
+}
 
 #tandem{
-	font-family: "RobotoMono";
 	margin-top: 10px;
+}
+.alignment{
+	margin-top: 15px;
 }
 #loci{margin-top: 5px;}
 .base{
 	display: inline-block;
 	text-align: center;
-	font-size: 18px;
 	margin: 1px;
 }
 .A{color:#5050ff;}
@@ -25,7 +28,10 @@ body{font-size:16px;}
 </style>
 </head>
 <body>
-	<div id="name">>{{ table }}-{{ ssr.id }} {{ ssr.sequence }}:{{ ssr.start }}-{{ ssr.end }}</div>
+	<div id="name">
+		<p>Motif: {{ ssr.motif }} Location: {{ ssr.sequence }}:{{ ssr.start }}-{{ ssr.end }}</p>
+		<p>Sequence: </p>
+	</div>
 	<div id="tandem">{{ tandem }}</div>
 </body>
 </html>

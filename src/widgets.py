@@ -684,6 +684,8 @@ class SSRMainWindow(QMainWindow):
 		printer.setOutputFileName(pdfname)
 		self.browser.print_(printer)
 
+		self.setStatusMessage("Statistical report was successfully save to %s" % pdfname)
+
 
 	def doCopy(self):
 		focus = QApplication.focusWidget()
@@ -1175,7 +1177,7 @@ class SSRTableView(QTableView):
 
 		#delete_action = QAction("Delete All", self)
 
-		detail_action = QAction("View Detail", self)
+		detail_action = QAction("View Sequence", self)
 		detail_action.triggered.connect(self.viewDetail)
 		
 		self.menu.addAction(select_action)
@@ -1212,14 +1214,19 @@ class SSRTableView(QTableView):
 		'''
 		table = self.model().table
 		flank = int(self.parent.settings.value('ssr/flank', 50))
+		seed_repeat = int(self.parent.settings.value('ssr/srep', 3))
+		seed_minlen = int(self.parent.settings.value('ssr/slen', 8))
+		max_error = int(self.parent.settings.value('ssr/error', 3))
 		_id = self.model().getCellId(self.current_row)
 		
 		if table == 'primer':
 			content = PrimerDetail(table, _id, flank).generateHtml()
+		elif table == 'issr':
+			content = ISSRSeqDetail(table, _id, flank, seed_repeat, seed_minlen, max_error).generateHtml()
 		else:
 			content = SequenceDetail(table, _id, flank).generateHtml()
 
-		SSRDetailDialog(self.parent, "%s detail" % table.upper(), content)
+		SSRDetailDialog(self.parent, "%s Sequence" % table.upper(), content)
 
 
 class TableModel(QAbstractTableModel):
@@ -1635,7 +1642,7 @@ class GeneralTab(QWidget):
 		self.max_error = QSpinBox()
 		mis_penalty_label = QLabel("Mismatch penalty")
 		self.mis_penalty = QSpinBox()
-		gap_penalty_label = QLabel("Gap penalty")
+		gap_penalty_label = QLabel("Indel penalty")
 		self.gap_penalty = QSpinBox()
 		min_score_label = QLabel("Min required score")
 		self.min_score = QSpinBox()
@@ -1708,8 +1715,8 @@ class GeneralTab(QWidget):
 		self.min_tandem_repeat.setValue(int(self.settings.value('ssr/vrep', 2)))
 		self.seed_min_repeat.setValue(int(self.settings.value('ssr/srep', 3)))
 		self.seed_min_length.setValue(int(self.settings.value('ssr/slen', 8)))
-		self.max_error.setValue(int(self.settings.value('ssr/error', 2)))
-		self.min_score.setValue(int(self.settings.value('ssr/score', 12)))
+		self.max_error.setValue(int(self.settings.value('ssr/error', 3)))
+		self.min_score.setValue(int(self.settings.value('ssr/score', 10)))
 		self.mis_penalty.setValue(int(self.settings.value('ssr/mismatch', 1)))
 		self.gap_penalty.setValue(int(self.settings.value('ssr/gap', 2)))
 		self.level_select.setCurrentIndex(int(self.settings.value('ssr/level', 3)))
@@ -1931,7 +1938,7 @@ class SSRDetailDialog(QDialog):
 		mainLayout = QVBoxLayout()
 		mainLayout.addWidget(self.viewer)
 		mainLayout.addWidget(buttonBox)
-		self.resize(600, 400)
+		self.resize(700, 500)
 
 		self.setLayout(mainLayout)
 		self.exec_()

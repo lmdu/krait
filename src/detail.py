@@ -73,6 +73,45 @@ class SequenceDetail(Detail):
 
 		return template_render("sequence.html", tandem=tandem, ssr=ssr, table=self.table)
 
+class ISSRSeqDetail(Detail):
+	def __init__(self, table, _id, flank, srep, slen, error):
+		super(ISSRSeqDetail, self).__init__()
+		self.table = table
+		self.id = _id
+		self.flank = flank
+		self.srep = srep
+		self.slen = slen
+		self.error = error
+
+	def format_align(self, origin, copy):
+		alignment = []
+		for i in range(len(origin)):
+			if origin[i] == copy[i]:
+				align = '|'
+			else:
+				align = ''
+			alignment.append('<div class="base"><span class="{0}">{0}</span><br><span>{1}<span><br><span>{2}<span></div>'.format(origin[i], align, copy[i]))
+		
+		return "".join(alignment)
+
+	def generateHtml(self):
+		sql = (
+			"SELECT f.path FROM fasta AS f, seq AS s, {0} AS t "
+			"WHERE f.id=s.fid AND t.sequence=s.name AND t.id={1}"
+		)
+		fasta_file = self.db.get_one(sql.format(self.table, self.id))
+		self.fasta = fasta.GzipFasta(fasta_file)
+
+		sql = "SELECT * FROM %s WHERE id=%s" % (self.table, self.id)
+		ssr = self.db.get_row(sql)
+		seq, left, right = self.getSequence(ssr.sequence, ssr.start, ssr.end)
+
+		origin, copy = issr.generate_alignment(seq, self.srep, self.slen, self.error, 500)
+
+		tandem = "%s%s%s" % (self.formatFlank(left), self.formatTarget(seq), self.formatFlank(right))
+		alignment = self.format_align(origin, copy)
+		result = '<p class="tandem">%s</p><p>Alignment:</p><p class="alignment">%s</p>' % (tandem, alignment)
+		return template_render("sequence.html", tandem=result, ssr=ssr, table=self.table)
 
 class PrimerDetail(Detail):
 	def __init__(self, table, _id, flank):

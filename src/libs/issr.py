@@ -81,9 +81,9 @@ def build_left_matrix(seq, motif, matrix, start, size, max_error):
 		x += 1
 		y += 1
 
-	print x, y
+	#print x, y
 
-	print_matrix(matrix)
+	#print_matrix(matrix)
 			
 	if error:
 		res = (last_x, last_y)
@@ -300,7 +300,7 @@ def left_alignment(seq, motif, start, matrix, diagonal):
 			copy.append('-')
 			j -= 1
 
-	print i, j
+	#print i, j
 
 	if i>0:
 		pass
@@ -351,6 +351,8 @@ def right_alignment(seq, motif, start, matrix, diagonal):
 def generate_alignment(seq, seed_repeats, seed_minlen, max_errors, size):
 	matrix = initial_matrix(size)
 	seqlen = len(seq)
+	origin = []
+	copy = []
 	i = 0
 	while i < seqlen:
 		if seq[i] == 'N':
@@ -379,10 +381,14 @@ def generate_alignment(seq, seed_repeats, seed_minlen, max_errors, size):
 					extend_len = size
 				extend_end = build_left_matrix(seq, motif, matrix, extend_start, extend_len, max_errors)
 				
-				origin, copy = left_alignment(seq, motif, extend_start, matrix, extend_end)
-				print "".join(origin)
-				print "".join(copy)
-				
+				o, c = left_alignment(seq, motif, extend_start, matrix, extend_end)
+				origin.extend(o)
+				copy.extend(c)
+
+				#seed alignment
+				for k in range(seed_start, seed_end+1):
+					origin.append(seq[k])
+					copy.append(seq[k])
 				
 				#extend right
 				extend_start = seed_end
@@ -390,12 +396,11 @@ def generate_alignment(seq, seed_repeats, seed_minlen, max_errors, size):
 				if extend_len > size:
 					extend_len = size
 				extend_end = build_right_matrix(seq, motif, matrix, extend_start, extend_len, max_errors)
-				origin, copy = right_alignment(seq, motif, extend_start, matrix, extend_end)
-				print "".join(origin)
-				print "".join(copy)
-
+				o, c = right_alignment(seq, motif, extend_start, matrix, extend_end)
+				origin.extend(o)
+				copy.extend(c)
 				
-				return
+				return origin, copy
 				
 			else:
 				i = seed_start
@@ -409,7 +414,9 @@ if __name__ == '__main__':
 	seq = "AAGATAAGAAGAAGATGAAGAGAAGTTTTTTT"
 	#seq = "AAAAAAAAATCATTT"
 	#seq = "TCATCATCAAAATCGCCAT"
-	generate_alignment(seq, 3, 8, 3, 50)
+	o, c = generate_alignment(seq, 3, 8, 3, 50)
+	print "".join(o)
+	print "".join(c)
 	#seq = "GTTGTTGTTGATTG"
 	#search_issr(seq, 3, 8, 3, 2, 5, 3, 20)
 

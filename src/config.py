@@ -4,9 +4,9 @@ import os
 import appdirs
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = '0.8.10'
+VERSION = '0.9.0'
 
-BUILD = '20170903'
+BUILD = '20170930'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -178,7 +178,6 @@ SSRFilterInput{
 QStatusBar{
 	background:qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #ededed);
 	border-top:1px solid #ccc;
-	font-size:12px;
 }
 QProgressBar{
 	text-align: right;
