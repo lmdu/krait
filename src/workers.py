@@ -639,7 +639,7 @@ class EutilWorker(Worker):
 					fh.write(chunk)
 					self.emit_message(self.progressing())
 		else:
-			 emit_finish("%s error: %s" % (r.status_code, r.reason))
+			self.emit_finish("%s error: %s" % (r.status_code, r.reason))
 
 		self.emit_finish("Download %s fasta completed" % self.acc)
 
