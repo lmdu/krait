@@ -110,7 +110,7 @@ class ISSRSeqDetail(Detail):
 
 		tandem = "%s%s%s" % (self.formatFlank(left), self.formatTarget(seq), self.formatFlank(right))
 		alignment = self.format_align(origin, copy)
-		result = '<p class="tandem">%s</p><p>Alignment:</p><p class="alignment">%s</p>' % (tandem, alignment)
+		result = '<p class="tandem">%s</p><p><strong>Alignment:</strong></p><p class="alignment">%s</p>' % (tandem, alignment)
 		return template_render("sequence.html", tandem=result, ssr=ssr, table=self.table)
 
 class PrimerDetail(Detail):
