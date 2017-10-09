@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import gzip
+import mmap
 import kseq
 import collections
 
@@ -45,7 +46,10 @@ class GzipFasta:
 		if self.fasta_file.endswith('.gz'):
 			return gzip.open(self.fasta_file, 'rb')
 		else:
-			return open(self.fasta_file, 'rb')
+			#return open(self.fasta_file, 'rb')
+			f = open(self.fasta_file, 'rb')
+			mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+			return mm
 	
 	def _read_index(self):
 		self._index = collections.OrderedDict()
