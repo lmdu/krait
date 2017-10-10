@@ -625,7 +625,7 @@ class SSRMainWindow(QMainWindow):
 		if len(selected) == self.db.get_one("SELECT COUNT(1) FROM %s" % table):
 			sql = "SELECT * FROM %s" % table
 		else:
-			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected.values())))
+			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected)))
 
 		rows = self.db.query(sql)
 
@@ -649,7 +649,7 @@ class SSRMainWindow(QMainWindow):
 		if len(selected) == self.db.get_one("SELECT COUNT(1) FROM %s" % table):
 			sql = "SELECT * FROM %s" % table
 		else:
-			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected.values())))
+			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected)))
 
 		rows = self.db.query(sql)
 
@@ -1235,9 +1235,17 @@ class TableModel(QAbstractTableModel):
 	def __init__(self, parent=None):
 		super(TableModel, self).__init__(parent)
 		self.headers = []
-		self.total = 0
-		self.selected = {}
-		self.read_row = 0
+
+		#store ids of selected row
+		self.selected = []
+
+		#store ids of displayed row
+		self.displayed = []
+
+		self.total_row_counts = 0
+		self.readed_row_counts = 0
+		
+		#connect to database
 		self.db = Database()
 
 		#["Select", "Where", "Order"]
@@ -1246,43 +1254,41 @@ class TableModel(QAbstractTableModel):
 		#table name
 		self.table = None
 
-		self.cache_row_index = -1
-		self.cache_row = None
+		#cache row (index, data)
+		self.cached_row = [-1, None]
 
 	def getRowCounts(self):
-		return self.total
+		return self.total_row_counts
 
 	def getAllItems(self):
-		return self.total
+		return self.total_row_counts
 
 	def selectRow(self, row):
 		if row not in self.selected:
 			self.beginResetModel()
-			self.selected[row] = self.getCellId(row)
+			self.selected.append(row)
 			self.endResetModel()
 			self.sel_row.emit(len(self.selected))
 
 	def deselectRow(self, row):
 		if row in self.selected:
 			self.beginResetModel()
-			del self.selected[row]
+			self.selected.reomve(row)
 			self.endResetModel()
 			self.sel_row.emit(len(self.selected))
 
 	def selectAll(self):
 		self.beginResetModel()
-		if self.db.get_one(self.query[0] % 'COUNT(1)') == self.total:
-			self.selected = {i:None for i in xrange(self.total)}
+		if self.db.get_one(self.query[0] % 'COUNT(1)') == self.total_row_counts:
+			self.selected = range(self.total_row_counts)
 		else:
-			ids = self.db.get_column(self.sql % 'id')
-			self.selected = {i:j for i,j in enumerate(ids)}
-
+			self.selected = range(len(self.displayed))
 		self.endResetModel()
 		self.sel_row.emit(len(self.selected))
 
 	def deselectAll(self):
 		self.beginResetModel()
-		self.selected = {}
+		self.selected = []
 		self.endResetModel()
 		self.sel_row.emit(0)
 
@@ -1322,27 +1328,30 @@ class TableModel(QAbstractTableModel):
 
 	def select(self):
 		self.sql = " ".join(self.query)
+		self.selected = []
+		self.cached_row = [-1, None]
+		self.total_row_counts = self.db.get_one(self.query[0] % "COUNT(1)" + " " + self.query[1] + " LIMIT 1")
+
 		self.beginResetModel()
-		self.read_row = 0
-		self.selected = {}
-		self.cache_row_index = -1
-		self.cache_row = None
-		self.total = self.db.get_one(self.sql % "COUNT(1)")
+		self.displayed = self.db.get_column(self.sql % 'id' + " LIMIT 100")
+		self.readed_row_counts = len(self.displayed)
 		self.endResetModel()
-		self.row_col.emit((self.table, self.total, len(self.headers)))
+		
+		self.row_col.emit((self.table, self.total_row_counts, len(self.headers)))
 		self.sel_row.emit(len(self.selected))
 
 	def clear(self):
-
 		self.beginResetModel()
-		self.total = 0
-		self.read_row = 0
-		self.selected = {}
-		self.cache_row_index = -1
-		self.cache_row = None
+		self.total_row_counts = 0
+		self.readed_row_counts = 0
+		self.selected = []
+		self.cached_row = [-1, None]
 		self.headers = []
-		self.selected = {}
+		self.displayed = []
 		self.endResetModel()
+
+		self.row_col.emit((self.table, self.total_row_counts, len(self.headers)))
+		self.sel_row.emit(len(self.selected))
 		
 	def remove(self, table):
 		if table == self.table:
@@ -1352,26 +1361,32 @@ class TableModel(QAbstractTableModel):
 
 
 	def getSelectedRows(self):
-		return self.selected
+		if len(self.selected) == len(self.displayed):
+			return self.displayed
+		else:
+			return [self.displayed[i] for i in self.selected]
 
 	def getCellId(self, row):
-		return self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', row))
+		return self.displayed[row]
+		#return self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', row))
 
 	def value(self, index):
-		#ID = self.dataset[index.row()]
-		#col = self.headers[index.column()-1]
-		col = index.column() - 1
 		row = index.row()
-		if row == self.cache_row_index:
-			return self.cache_row[col]
+		col = index.column() - 1
+		
+		if row == self.cached_row[0]:
+			return self.cached_row[1][col]
+		
+		ID = self.displayed[row]
+		self.cached_row[0] = row
+		sql = self.query[0] % '*' + " WHERE id=%s LIMIT 1" % ID
+		self.cached_row[1] = self.db.get_row(sql)
 
-		self.cache_row_index = row
-		self.cache_row = self.db.get_row("%s LIMIT %s,1" % (self.sql % '*', row))
-		return self.cache_row[col]
+		return self.cached_row[1][col]
 
 	def rowColor(self, index):
 		#ID = self.dataset[index.row()]
-		ID = self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', index.row()))
+		ID = self.displayed[index.row()]
 		sql = "SELECT feature FROM location WHERE target=%s AND category='%s' LIMIT 1" % (ID, self.table)
 		feature = self.db.get_one(sql)
 		if not feature:
@@ -1391,7 +1406,7 @@ class TableModel(QAbstractTableModel):
 		if parent.isValid():
 			return 0
 
-		return self.read_row
+		return self.readed_row_counts
 
 	def columnCount(self, parent=QModelIndex()):
 		if parent.isValid():
@@ -1453,10 +1468,10 @@ class TableModel(QAbstractTableModel):
 
 		if role == Qt.CheckStateRole:
 			if value == Qt.Checked:
-				self.selected[index.row()] = self.getCellId(index.row())
+				self.selected.append(index.row())
 			else:
 				if index.row() in self.selected:
-					del self.selected[index.row()]
+					self.selected.remove(index.row())
 			
 			self.dataChanged.emit(index, index)
 			self.sel_row.emit(len(self.selected))
@@ -1476,15 +1491,18 @@ class TableModel(QAbstractTableModel):
 		return flag
 
 	def canFetchMore(self, parent):
-		return not parent.isValid() and (self.read_row < self.total)
+		return not parent.isValid() and (self.readed_row_counts < self.total_row_counts)
 
 	def fetchMore(self, parent):
 		if parent.isValid():
 			return
-		remainder = self.total - self.read_row
+		remainder = self.total_row_counts - self.readed_row_counts
 		fetch_row = min(100, remainder)
-		self.beginInsertRows(QModelIndex(), self.read_row, self.read_row+fetch_row-1)
-		self.read_row += fetch_row
+		sql = self.sql % 'id' + " LIMIT %s,%s" % (self.readed_row_counts-1, fetch_row)
+		IDs = self.db.get_column(sql)
+		self.beginInsertRows(QModelIndex(), self.readed_row_counts, self.readed_row_counts+fetch_row-1)
+		self.displayed.extend(IDs)
+		self.readed_row_counts += fetch_row
 		self.endInsertRows()
 
 class AnnotationDialog(QDialog):

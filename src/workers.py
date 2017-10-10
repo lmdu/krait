@@ -447,7 +447,7 @@ class PrimerWorker(Worker):
 				"%s AS t,fasta AS f,seq AS s WHERE f.id=s.fid AND "
 				"t.sequence=s.name AND t.id IN (%s)"
 			)
-			sql = sql % (self.table, ",".join(map(str, self.ids.values())))
+			sql = sql % (self.table, ",".join(map(str, self.ids)))
 
 		current = 0
 		seqs = None
@@ -526,7 +526,7 @@ class ExportFastaWorker(Worker):
 				"SELECT t.*, f.path FROM %s AS t,fasta AS f,seq AS s "
 				"WHERE f.id=s.fid AND t.sequence=s.name AND t.id IN (%s)"
 			)
-			sql = sql % (self.table, ",".join(map(str, self.ids.values())))
+			sql = sql % (self.table, ",".join(map(str, self.ids)))
 
 		current = 0
 		seqs = None
@@ -627,7 +627,6 @@ class EutilWorker(Worker):
 	def process(self):
 		url = self.base % (self.bank, self.acc)
 		self.emit_message("Downloading %s fasta sequence from NCBI..." % self.acc)
-
 		r = requests.get(url, timeout=10, stream=True)
 		if r.status_code == requests.codes.ok:
 			self.total = 0
@@ -638,10 +637,10 @@ class EutilWorker(Worker):
 					self.total += len(chunk)
 					fh.write(chunk)
 					self.emit_message(self.progressing())
+
+			self.emit_finish("Download %s fasta completed" % self.acc)	
 		else:
 			self.emit_finish("%s error: %s" % (r.status_code, r.reason))
-
-		self.emit_finish("Download %s fasta completed" % self.acc)
 
 	def progressing(self):
 		total = human_size(self.total)
