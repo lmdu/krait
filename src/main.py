@@ -16,6 +16,12 @@ app.setOrganizationName('Chengdu University')
 app.setOrganizationDomain('http://www.cdu.edu.cn')
 app.setApplicationName('Krait')
 
+#support windows 7, 10 taskbar icon
+import ctypes
+if os.name == 'nt':
+	myappid = 'CDU.Krait.ssr.1.0'
+	ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
 splash_img = QPixmap(":/icons/splash.png")
 splash = QSplashScreen(splash_img)
 splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.SplashScreen | Qt.FramelessWindowHint)
@@ -55,12 +61,6 @@ show_splash_msg("Loading main widgets...")
 
 #set style sheet like css
 app.setStyleSheet(config.STYLE_QSS)
-
-#support windows 7, 10 taskbar icon
-if os.name == 'nt':
-	import ctypes
-	myappid = 'CDU.Krait.ssr.%s' % config.VERSION
-	ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 #create main windows
 from widgets import SSRMainWindow
