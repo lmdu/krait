@@ -18,10 +18,7 @@ class GzipFasta:
 		return self
 
 	def __exit__(self, exc_type, exc_value, exc_tb):
-		if exc_tb is None:
-			kseq.close_fasta()
-		else:
-			raise Exception("Close fasta error")
+		kseq.close_fasta()
 
 	def __iter__(self):
 		return self

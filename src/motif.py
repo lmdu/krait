@@ -62,7 +62,7 @@ def complete_motif(motif):
 	@return list
 	'''
 	codes = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'}
-	new_motif = "".join([ codes[base] for base in motif])
+	new_motif = "".join([ codes.get(base, base) for base in motif])
 	return similar_motif(new_motif)
 
 
@@ -79,7 +79,7 @@ def reverse_motif(motif):
 
 def motif_to_number(motif):
 	sort_rule = {'A':'1', 'T':'2', 'C':'3', 'G':'4'}
-	return int("".join(sort_rule[a] for a in motif.upper()))
+	return int("".join(sort_rule.get(a, '5') for a in motif.upper()))
 
 def motif_sorted(motifs):
 	return sorted(motifs, key=motif_to_number)
