@@ -16,6 +16,7 @@
 * [Features](#features)
 * [Download](#download)
 * [Documentation](#documentation)
+* [Citation](#citation)
 
 # Introduction
 Krait is a robust and ultrafast tool with a user-friendly graphic interface for genome-wide investigation of microsatellites, which attempts to overcome the limitations of the currently available tools. Krait is written in Python and can be run as a standalone desktop application on Windows, Linux or Mac systems without dependencies. The microsatellite search engine is written in C and compiled as Python modules for import into Krait
@@ -34,3 +35,6 @@ Krait is a robust and ultrafast tool with a user-friendly graphic interface for 
 
 # Documentation
 [https://github.com/lmdu/krait/blob/master/doc/Manual.pdf](https://github.com/lmdu/krait/blob/master/doc/Manual.pdf)
+
+# Citation
+Du L, Zhang C, Liu Q, Zhang X, Yue B (2017) Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design, Bioinformatics, [10.1093/bioinformatics/btx665](https://doi.org/10.1093/bioinformatics/btx665)
