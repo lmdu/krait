@@ -612,50 +612,31 @@ class SSRMainWindow(QMainWindow):
 		self.executeTask(worker, lambda: self.progressBar.setMaximum(100))
 
 	def exportTableRows(self):
-		selected = self.model.getSelectedRows()
-		if not selected:
+		#selected = self.model.getSelectedRows()
+		if not self.model.selected:
 			return QMessageBox.warning(self, 'Warning', "Please select rows in table to export.")
 
-		table = self.model.tableName()
-		headers = self.model.columnNames()
+		exp_file, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv);;Tabular text (*.txt)")
+		if not exp_file:
+			return
 
-		exp_file, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv);;GFF (*.gff);;GTF (*.gtf);;Tabular text (*.txt)")
-		if not exp_file: return
+		worker = ExportTableWorker(self.model, exp_file)
+		self.executeTask(worker, lambda: 1)
 
-		if len(selected) == self.db.get_one("SELECT COUNT(1) FROM %s" % table):
-			sql = "SELECT * FROM %s" % table
-		else:
-			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected)))
-
-		rows = self.db.query(sql)
-
-		if exp_file.endswith('.csv'):
-			write_to_csv(exp_file, headers, rows)
-		else:
-			write_to_tab(exp_file, headers, rows)
-
-		QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file)
 
 	def exportTableGFF(self):
-		selected = self.model.getSelectedRows()
-		if not selected:
+		if not self.model.selected:
 			return QMessageBox.warning(self, 'Warning', "Please select rows in table to export.")
 
-		table = self.model.tableName()
-
 		exp_file, _ = QFileDialog.getSaveFileName(self, filter="GFF3 (*.gff)")
-		if not exp_file: return
+		if not exp_file:
+			return
 
-		if len(selected) == self.db.get_one("SELECT COUNT(1) FROM %s" % table):
-			sql = "SELECT * FROM %s" % table
-		else:
-			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected)))
-
-		rows = self.db.query(sql)
-
-		write_to_gff(exp_file, table.upper(), rows)
+		worker = ExportTableWorker(self.model, exp_file)
+		self.executeTask(worker, 
+			lambda: QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file)
+		)
 		
-		QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file)
 
 	def exportTableFastas(self):
 		selected = self.model.getSelectedRows()
@@ -1361,8 +1342,9 @@ class TableModel(QAbstractTableModel):
 
 
 	def getSelectedRows(self):
-		if len(self.selected) == len(self.displayed):
-			return self.displayed
+		if len(self.selected) == self.total_row_counts:
+			sql = self.query[0] % "id" + " " + self.query[1]
+			return self.db.get_column(sql)
 		else:
 			return [self.displayed[i] for i in self.selected]
 
