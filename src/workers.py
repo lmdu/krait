@@ -25,7 +25,6 @@ class Worker(QObject):
 
 	def __init__(self):
 		super(Worker, self).__init__()
-		self.emit_progress(0)
 
 	@property
 	def db(self):
@@ -66,6 +65,7 @@ class Worker(QObject):
 		pass
 
 	def run(self):
+		self.emit_progress(0)
 		try:
 			self.process()
 		except Exception, e:
@@ -415,63 +415,59 @@ class StatisWorker(Worker):
 
 
 class PrimerWorker(Worker):
-	def __init__(self, table, ids, flank, primer3_settings):
+	def __init__(self, model, flank, primer3_settings):
 		'''
 		design primers for select row or all rows
-		@para table str, the table names in database
-		@para ids dict, the selected row id
+		@para model, table model
 		@para flank int, the length of flanking sequence used to design primer
 		@para primer3_settings str, the path of primer3 settings file
 		'''
 		super(PrimerWorker, self).__init__()
-		self.table = table
-		self.ids = ids
+		self.model = model
 		self.flank = flank
 		self.primer3_settings = primer3_settings
 
 	def process(self):
+		self.emit_message("Designing primers...")
+		table = self.model.tableName()
+		selected = self.model.getSelectedRows()
+
 		primerdesign.loadThermoParams(PRIMER3_CONFIG)
 		primerdesign.setGlobals(self.primer3_settings, None, None)
 		#total ssr counts in a table
-		total_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % self.table)
-		total_ids = len(self.ids)
+		total_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % table)
+		total_select = len(selected)
 
-		if total_ssrs == total_ids:
-			sql = (
-				"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
-				"%s AS t,fasta AS f,seq AS s WHERE f.id=s.fid AND "
-				"t.sequence=s.name"
-			)
-			sql = sql % self.table
+		if total_ssrs == total_select:
+			sql = "SELECT * FROM %s" % table
 		else:
-			sql = (
-				"SELECT f.path,t.id,t.sequence,t.start,t.end,t.length FROM "
-				"%s AS t,fasta AS f,seq AS s WHERE f.id=s.fid AND "
-				"t.sequence=s.name AND t.id IN (%s)"
-			)
-			sql = sql % (self.table, ",".join(map(str, self.ids)))
+			sql = "SELECT * FROM %s WHERE id IN (%s) ORDER BY id" % (table, ",".join(map(str, selected)))
 
 		current = 0
 		seqs = None
 		succeeded = 0
+		progress = 0
+		prev_progress = 0
 
 		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
 		
 		self.db.begin()
 		for item in self.db.query(sql):
-			if seqs is None or item[2] not in seqs:
-				seqs = fasta.GzipFasta(item[0])
+			if seqs is None or item.sequence not in seqs:
+				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='%s' LIMIT 1" % item.sequence
+				seqfile = self.db.get_one(sql)
+				seqs = fasta.GzipFasta(seqfile)
 			
-			start = item[3] - self.flank
+			start = item.start - self.flank
 			if start < 1:
 				start = 1
-			end = item[4] + self.flank
+			end = item.end + self.flank
 			
 			target = dict(
-				SEQUENCE_ID = "%s-%s" % (self.table, item[1]),
-				SEQUENCE_TEMPLATE = seqs.get_seq_by_loci(item[2], start, end),
-				SEQUENCE_TARGET = [item[3]-start, item[5]],
-				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item[3]-start, item[5]]
+				SEQUENCE_ID = "%s-%s" % (table, item.id),
+				SEQUENCE_TEMPLATE = seqs.get_seq_by_loci(item.sequence, start, end),
+				SEQUENCE_TARGET = [item.start-start, item.length],
+				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item.start-start, item.length]
 			)
 
 			primerdesign.setSeqArgs(target)
@@ -479,8 +475,10 @@ class PrimerWorker(Worker):
 			current += 1
 
 			primer_count = res['PRIMER_PAIR_NUM_RETURNED']
+			
 			if primer_count:
 				succeeded += 1
+			
 			for i in range(primer_count):
 				primer = [None, target['SEQUENCE_ID'], i+1]
 				primer.append(res['PRIMER_PAIR_%s_PRODUCT_SIZE' % i])
@@ -498,12 +496,16 @@ class PrimerWorker(Worker):
 				meta.extend(res['PRIMER_LEFT_%s' % i])
 				meta.extend(res['PRIMER_RIGHT_%s' % i])
 				self.db.get_cursor().execute("INSERT INTO primer_meta VALUES (?,?,?,?,?)", meta)
-		
-			self.emit_progress(int(current/total_ids*100))
+			
+			progress = int(current/total_select*100)
+			print progress, current, total_select
+			if progress > prev_progress:
+				self.emit_progress(progress)
+				prev_progress = progress
 
 		self.db.commit()
 
-		self.emit_finish('Primer design completed, %s succeed %s failed' % (succeeded, total_ids-succeeded))
+		self.emit_finish('Primer design completed, %s succeed %s failed' % (succeeded, total_select-succeeded))
 
 
 class ExportTableWorker(Worker):
@@ -514,6 +516,8 @@ class ExportTableWorker(Worker):
 
 	def process(self):
 		#get selected ids from table model
+		self.emit_message("Exporting to %s" % self.outfile)
+
 		table = self.model.tableName()
 		headers = self.model.columnNames()
 		selected = self.model.getSelectedRows()
@@ -553,53 +557,51 @@ class ExportTableWorker(Worker):
 
 
 class ExportFastaWorker(Worker):
-	def __init__(self, table, ids, flank, outfile):
+	def __init__(self, model, flank, outfile):
 		super(ExportFastaWorker, self).__init__()
-		self.table = table
-		self.ids = ids
+		self.model = model
 		self.flank = flank
 		self.outfile = outfile
 
 	def process(self):
-		total_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % self.table)
-		total_ids = len(self.ids)
+		self.emit_message("Exporting fasta sequence to %s" % self.outfile)
+		table = self.model.tableName()
+		selected = self.model.getSelectedRows()
+		total_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % table)
+		total_select = len(selected)
 
-		if total_ssrs == total_ids:
-			sql = (
-				"SELECT t.*, f.path FROM %s AS t,fasta AS f,seq AS s "
-				"WHERE f.id=s.fid AND t.sequence=s.name"
-			)
-			sql = sql % self.table
+		if total_ssrs == total_select:
+			sql = "SELECT * FROM %s" % table
 		else:
-			sql = (
-				"SELECT t.*, f.path FROM %s AS t,fasta AS f,seq AS s "
-				"WHERE f.id=s.fid AND t.sequence=s.name AND t.id IN (%s)"
-			)
-			sql = sql % (self.table, ",".join(map(str, self.ids)))
+			sql = "SELECT * FROM %s WHERE id IN (%s) ORDER BY id" % (table, ",".join(map(str, selected)))
 
 		current = 0
+		progress = 0
+		prev_progress = 0
 		seqs = None
 
-		fp = open(self.outfile, 'w')
+		with open(self.outfile, 'w') as fp:
+			for item in self.db.query(sql):
+				if seqs is None or item.sequence not in seqs:
+					sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='%s' LIMIT 1" % item.sequence
+					seqfile = self.db.get_one(sql)
+					seqs = fasta.GzipFasta(seqfile)
+				
+				start = item.start - self.flank
+				if start < 1:
+					start = 1
+				end = item.end + self.flank
+				ssr = seqs.get_seq_by_loci(item.sequence, start, end)
+				name = ">%s%s %s:%s-%s|motif:%s" % (table.upper(), item.id, item.sequence, item.start, item.end, item.motif)
+				fp.write("%s\n%s" % (name, format_fasta_sequence(ssr, 70)))
+				
+				current += 1
+				progress = int(current/total_select*100)
+				if progress > prev_progress:
+					self.emit_progress(progress)
+					prev_progress = progress
 
-		for item in self.db.query(sql):
-			if seqs is None or item.sequence not in seqs:
-				seqs = fasta.GzipFasta(item.path)
-			
-			start = item.start - self.flank
-			if start < 1:
-				start = 1
-			end = item.end + self.flank
-			ssr = seqs.get_seq_by_loci(item.sequence, start, end)
-			name = ">%s%s %s:%s-%s|motif:%s" % (self.table.upper(), item.id, item.sequence, item.start, item.end, item.motif)
-			fp.write("%s\n%s" % (name, format_fasta_sequence(ssr, 70)))
-			
-			current += 1
-			self.emit_progress(int(current/total_ids*100))
-
-		fp.close()
-
-		self.emit_finish("Export fasta completed.")
+		self.emit_finish("Successfully exported to fasta %s" % self.outfile)
 
 class LocateWorker(Worker):
 	"""

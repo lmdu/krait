@@ -68,6 +68,9 @@ class SSRMainWindow(QMainWindow):
 		#statistical results
 		self.statis_result = None
 
+		#changed rows in database
+		self.changed_rows = 0
+
 		#read settings
 		self.readSettings()
 
@@ -119,7 +122,7 @@ class SSRMainWindow(QMainWindow):
 
 	def closeEvent(self, event):
 		self.writeSettings()
-		if not self.db.changes():
+		if self.changed_rows == self.db.changes():
 			event.accept()
 			return
 
@@ -560,6 +563,7 @@ class SSRMainWindow(QMainWindow):
 
 		os.remove(self.opened_project)
 		self.db.save(self.opened_project)
+		self.changed_rows = self.db.changes()
 		self.setStatusMessage("Project has been successfully saved to %s" % self.opened_project)
 
 	def saveProjectAs(self):
@@ -571,9 +575,21 @@ class SSRMainWindow(QMainWindow):
 		self.setStatusMessage("Project has been successfully saved to %s" % dbfile)
 
 	def closeProject(self):
+		if self.changed_rows != self.db.changes():
+			ret = QMessageBox.question(self, "Closing", 
+				"Would you like to save results before exiting",
+				QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+			)
+
+			if ret == QMessageBox.Cancel:
+				return
+
+			if ret == QMessageBox.Yes:
+				self.saveProject()
+			
 		self.db.drop_tables()
 		self.createTableModel()
-	
+
 	def importFasta(self):
 		'''
 		Import a fasta file from a directory
@@ -621,7 +637,9 @@ class SSRMainWindow(QMainWindow):
 			return
 
 		worker = ExportTableWorker(self.model, exp_file)
-		self.executeTask(worker, lambda: 1)
+		self.executeTask(worker,
+			lambda: QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file)
+		)
 
 
 	def exportTableGFF(self):
@@ -639,21 +657,22 @@ class SSRMainWindow(QMainWindow):
 		
 
 	def exportTableFastas(self):
-		selected = self.model.getSelectedRows()
-		if not selected:
+		if not self.model.selected:
 			return QMessageBox.warning(self, 'Warning', "Please select rows in table to export.")
-
-		table = self.model.tableName()
 
 		#if table not in ('ssr', 'issr', 'cssr', 'vntr'):
 		#	return QMessageBox.warning(self, 'Warning', "Your selected rows are not SSRs")
 
 		exp_file, _ = QFileDialog.getSaveFileName(self, filter="Fasta (*.fa);;Fasta (*.fasta)")
-		if not exp_file: return
+		if not exp_file:
+			return
 
 		flank = int(self.settings.value('ssr/flank', 100))
-		worker = ExportFastaWorker(table, selected, flank, exp_file)
-		self.executeTask(worker, lambda: QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file))
+		
+		worker = ExportFastaWorker(self.model, flank, exp_file)
+		self.executeTask(worker,
+			lambda: QMessageBox.information(self, "Information", "Successfully exported to %s" % exp_file)
+		)
 
 	def exportStatisResult(self):
 		pdfname, _ = QFileDialog.getSaveFileName(self, filter="PDF (*.pdf)")
@@ -884,14 +903,12 @@ class SSRMainWindow(QMainWindow):
 
 	#design primers for ssrs
 	def designPrimer(self):
-		rows = self.model.getSelectedRows()
-		if not rows:
-			return QMessageBox.warning(self, "Warning", "Please select SSR, iSSRs, cSSRs or VNTRs")	
+		if not self.model.selected:
+			return QMessageBox.warning(self, "Warning", "Please select tandem repeat makers")
 		
-		table = self.model.table
 		flank = int(self.settings.value('ssr/flank'))
 		primer3_settings = self.getPrimerSettings()
-		worker = PrimerWorker(table, rows, flank, primer3_settings)
+		worker = PrimerWorker(self.model, flank, primer3_settings)
 
 		self.removePrimer()
 
@@ -1093,6 +1110,7 @@ class SSRMainWindow(QMainWindow):
 			<a href="http://primer3.sourceforge.net/">primer3</a> for primer design. 
 			Intersection from <a href="https://github.com/bxlab/bx-python">bx-python</a> for locating SSRs
 			</p>
+			<p>Contact: adullb@qq.com</p>
 		""".format(version=VERSION, build=BUILD)
 
 		QMessageBox.about(self, "About Krait", about_message)
