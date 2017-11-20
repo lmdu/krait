@@ -7,6 +7,7 @@ import json
 import jinja2
 import requests
 import functools
+
 from PySide.QtCore import *
 
 import plot

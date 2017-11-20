@@ -13,19 +13,25 @@ class GzipFasta:
 		self.buff = {'name': None, 'seq': None}
 		self._read_index()
 
-	def __enter__(self):
-		kseq.open_fasta(self.fasta_file)
-		return self
+	#def __enter__(self):
+	#	kseq.open_fasta(self.fasta_file)
+	#	return self
 
-	def __exit__(self, exc_type, exc_value, exc_tb):
-		kseq.close_fasta()
+	#def __exit__(self, exc_type, exc_value, exc_tb):
+	#	kseq.close_fasta()
 
 	def __iter__(self):
+		'''
+		open fasta file and enter loop
+		'''
+		kseq.open_fasta(self.fasta_file)
 		return self
 
 	def next(self):
 		seq = kseq.iter_seq()
 		if seq is None:
+			#end loop and close fasta
+			kseq.close_fasta()
 			raise StopIteration
 		else:
 			return seq
@@ -56,17 +62,25 @@ class GzipFasta:
 		with open(self.index_file) as fh:
 			for line in fh:
 				cols = line.strip().split('\t')
-				self._index[cols[0]] = (int(cols[1]), int(cols[2]))
+				self._index[cols[0]] = (int(cols[1]), int(cols[2]), int(cols[3]))
 
 	def _build_index(self):
 		chroms = kseq.build_index(self.fasta_file)
 		with open(self.index_file, 'w') as fw:
 			for chrom in chroms:
-				fw.write("%s\t%s\t%s\n" % chrom)
+				fw.write("\t".join(chrom)+"\n")
 
 	@property
 	def keys(self):
 		return self._index.keys()
+
+	def get_seq_length(self, name):
+		'''
+		get the sequence length by the name
+		@para name str, the sequence name
+		@return int, length
+		'''
+		return self._index[name][3]
 
 	def get_seq_by_name(self, name):
 		'''
@@ -74,7 +88,7 @@ class GzipFasta:
 		@para name str, the fasta sequence name
 		@return str, the dna sequence
 		'''
-		start, length = self._index[name]
+		start, length = self._index[name][:2]
 		fp = self._read_fasta()
 		fp.seek(start)
 		content = fp.read(length)

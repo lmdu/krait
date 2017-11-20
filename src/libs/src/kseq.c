@@ -72,6 +72,7 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 	}
 	int position = 0;
 	int start = 0;
+	int seqlen = 0;
 	int c;
 	kseq_t *seq;
 	kstream_t *ks;
@@ -86,7 +87,7 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 		position++;
 		if(c == 62){
 			if(start){
-				tmp = Py_BuildValue("(sii)", seq->name.s, start, position-start-1);
+				tmp = Py_BuildValue("(siii)", seq->name.s, start, position-start-1, seqlen);
 				PyList_Append(result, tmp);
 				Py_DECREF(tmp);
 			}
@@ -97,9 +98,14 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 				position++;
 			}
 			start = position;
+			seqlen = 0;
+		}else{
+			if(c != 10 && c != 13){
+				seqlen++;
+			}
 		}
 	}
-	tmp = Py_BuildValue("(sii)", seq->name.s, start, position-start);
+	tmp = Py_BuildValue("(siii)", seq->name.s, start, position-start, seqlen);
 	PyList_Append(result, tmp);
 	Py_DECREF(tmp);
 	return result;
