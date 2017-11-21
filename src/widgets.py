@@ -77,6 +77,9 @@ class SSRMainWindow(QMainWindow):
 		#read home page
 		self.homepage()
 
+		#Enable dragging and dropping onto the main window
+		self.setAcceptDrops(True)
+
 		self.show()
 
 
@@ -137,6 +140,43 @@ class SSRMainWindow(QMainWindow):
 			event.ignore()
 		elif ret == QMessageBox.No:
 			event.accept()
+
+	def dragEnterEvent(self, event):
+		if event.mimeData().hasUrls():
+			event.accept()
+		else:
+			event.ignore()
+
+	def dragMoveEvent(self, event):
+		if event.mimeData().hasUrls():
+			event.accept()
+		else:
+			event.ignore()
+
+	def dropEvent(self, event):
+		if not event.mimeData().hasUrls():
+			return
+
+		urls = event.mimeData().urls()
+		if len(urls) > 1:
+			return
+
+		drag_file = urls[0].toLocalFile()
+
+		if drag_file.endswith('.kdb'):
+			self.openProject(drag_file)
+			return
+
+		for suffix in ['.fa', '.fna', '.fas', '.fasta', '.fa.gz', '.fna.gz', '.fas.gz', '.fasta.gz']:
+			if drag_file.endswith(suffix):
+				self.importFasta(drag_file)
+				return
+		warn_msg = (
+			"Please drag a project file with .kdb suffix to open project, or "
+			"Drag a fasta formatted sequence file with .fa, .fna, .fas, .fasta, "
+			".fa.gz, .fna.gz, .fas.gz, .fasta.gz suffix to search repeats"
+		)
+		QMessageBox.warning(self, "Input file format not right", warn_msg)		
 
 	def createActions(self):
 		#open a project action
@@ -525,8 +565,10 @@ class SSRMainWindow(QMainWindow):
 		self.progressBar.setMinimum(0)
 		self.statusBar.addPermanentWidget(self.progressBar)
 		
-	def openProject(self):
-		dbfile, _ = QFileDialog.getOpenFileName(self, filter="Krait Database (*.kdb)")
+	def openProject(self, dbfile=None):
+		if dbfile is None:
+			dbfile, _ = QFileDialog.getOpenFileName(self, filter="Krait Database (*.kdb)")
+		
 		if not dbfile:
 			return
 
@@ -547,8 +589,6 @@ class SSRMainWindow(QMainWindow):
 		elif not self.db.is_empty('vntr'):
 			self.showVNTR()
 
-
-
 		self.setStatusMessage("%s has been successfully opened" % dbfile)
 
 	def saveProject(self):
@@ -561,7 +601,7 @@ class SSRMainWindow(QMainWindow):
 				return
 			self.opened_project = dbfile
 
-		os.remove(self.opened_project)
+		#os.remove(self.opened_project)
 		self.db.save(self.opened_project)
 		self.changed_rows = self.db.changes()
 		self.setStatusMessage("Project has been successfully saved to %s" % self.opened_project)
@@ -572,6 +612,8 @@ class SSRMainWindow(QMainWindow):
 			return
 
 		self.db.save(dbfile)
+		self.opened_project = dbfile
+		self.changed_rows = self.db.changes()
 		self.setStatusMessage("Project has been successfully saved to %s" % dbfile)
 
 	def closeProject(self):
@@ -590,15 +632,16 @@ class SSRMainWindow(QMainWindow):
 		self.db.drop_tables()
 		self.createTableModel()
 
-	def importFasta(self):
+	def importFasta(self, fasta=None):
 		'''
 		Import a fasta file from a directory
 		'''
-		fasta, _ = QFileDialog.getOpenFileName(self, 
-			filter="Fasta (*.fa *.fna *.fas *.fasta *.fna.gz *.fa.gz *.fasta.gz);;All files (*.*)")
-		if not fasta: return
+		if fasta is None:
+			fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta *.fna.gz *.fa.gz *.fasta.gz);;All files (*.*)")
+		
+		if not fasta:
+			return
 		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, fasta))
-		#self.fasta_table.insert(Data(fid=None, path=fasta))
 		self.setStatusMessage("Import fasta %s" % fasta)
 
 	def importFastas(self):

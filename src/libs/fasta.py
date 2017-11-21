@@ -56,31 +56,37 @@ class GzipFasta:
 	
 	def _read_index(self):
 		self._index = collections.OrderedDict()
-		if not os.path.exists(self.index_file) or self.rebuild:
+		if self.rebuild or not os.path.exists(self.index_file) or not os.path.getsize(self.index_file):
 			self._build_index()
 
 		with open(self.index_file) as fh:
 			for line in fh:
 				cols = line.strip().split('\t')
-				self._index[cols[0]] = (int(cols[1]), int(cols[2]), int(cols[3]))
+				self._index[cols[0]] = map(int, cols[1:])
 
 	def _build_index(self):
 		chroms = kseq.build_index(self.fasta_file)
 		with open(self.index_file, 'w') as fw:
 			for chrom in chroms:
-				fw.write("\t".join(chrom)+"\n")
+				fw.write("%s\t%s\t%s\t%s\t%s\t%s\n" % chrom)
 
 	@property
 	def keys(self):
 		return self._index.keys()
 
-	def get_seq_length(self, name):
+	def get_gc(self, name):
+		return self._index[name][3]
+
+	def get_ns(self, name):
+		return self._index[name][4]
+
+	def get_len(self, name):
 		'''
 		get the sequence length by the name
 		@para name str, the sequence name
 		@return int, length
 		'''
-		return self._index[name][3]
+		return self._index[name][2]
 
 	def get_seq_by_name(self, name):
 		'''

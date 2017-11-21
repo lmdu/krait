@@ -38,16 +38,18 @@ class Worker(QObject):
 		build index for fasta file and write fasta sequence to database
 		@para fasta_id int, the fasta file id in database
 		@para fasta_path str, the file path of fasta
-		@return tuple, (Fasta object, sequence counts)
+		@return Fasta object
 		'''
 		seqs = fasta.GzipFasta(fasta_path)
 		sql = "SELECT 1 FROM seq WHERE name='%s' LIMIT 1" % seqs.keys[0]
 		if not self.db.get_one(sql):
-			rows = [(None, name, fasta_id) for name in seqs.keys]
-			sql = "INSERT INTO seq VALUES (?,?,?)"
-			self.db.insert(sql, rows)
+			rows = []
+			for name in seqs.keys:
+				row = (None, name, fasta_id, seqs.get_len(name), seqs.get_gc(name), seqs.get_ns(name))
+				rows.append(row)
+			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
 
-		return seqs, len(seqs.keys)
+		return seqs
 
 	def emit_progress(self, percent):
 		self.update_progress.emit(percent)
@@ -67,10 +69,10 @@ class Worker(QObject):
 
 	def run(self):
 		self.emit_progress(0)
-		try:
-			self.process()
-		except Exception, e:
-			self.emit_finish('Error: %s' % str(e))
+		#try:
+		self.process()
+		#except Exception, e:
+		#	self.emit_finish('Error: %s' % str(e))
 
 
 class SSRWorker(Worker):
@@ -94,28 +96,28 @@ class SSRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 
-			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
+			seqs = self.build_fasta_index(fasta_id, fasta_file)
+			seq_counts = len(seqs)
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
 			#start search perfect microsatellites
-			with seqs:
-				for name, seq in seqs:
-					current_seqs += 1
-					seq_progress = current_seqs/seq_counts
+			for name, seq in seqs:
+				current_seqs += 1
+				seq_progress = current_seqs/seq_counts
 
-					self.emit_message("Search perfect SSRs from %s" % name)
-					ssrs = tandem.search_ssr(seq, self.min_repeats)
-					
-					def values():
-						for ssr in ssrs:
-							row = [None, name, self.motifs.standard(ssr[0])]
-							row.extend(ssr)
-							yield row
+				self.emit_message("Search perfect SSRs from %s" % name)
+				ssrs = tandem.search_ssr(seq, self.min_repeats)
+				
+				def values():
+					for ssr in ssrs:
+						row = [None, name, self.motifs.standard(ssr[0])]
+						row.extend(ssr)
+						yield row
 
-					self.db.insert(sql, values())
-					self.emit_progress(int(seq_progress*fasta_progress*100))
+				self.db.insert(sql, values())
+				self.emit_progress(int(seq_progress*fasta_progress*100))
 
 		self.emit_finish('Perfect SSRs search completed')
 
@@ -145,29 +147,29 @@ class ISSRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 
-			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
+			seqs = self.build_fasta_index(fasta_id, fasta_file)
+			seq_counts = len(seqs)
 			#insert ssr to database
 			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
 			#start search perfect microsatellites
-			with seqs:
-				for name, seq in seqs:
-					current_seqs += 1
-					seq_progress = current_seqs/seq_counts
+			for name, seq in seqs:
+				current_seqs += 1
+				seq_progress = current_seqs/seq_counts
 
-					self.emit_message("Search imperfect SSRs from %s" % name)
+				self.emit_message("Search imperfect SSRs from %s" % name)
 
-					issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 500)
-					
-					def values():
-						for issr in issrs:
-							row = [None, name, self.motifs.standard(issr[0])]
-							row.extend(issr)
-							yield row
+				issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 500)
+				
+				def values():
+					for issr in issrs:
+						row = [None, name, self.motifs.standard(issr[0])]
+						row.extend(issr)
+						yield row
 
-					self.db.insert(sql, values())
-					self.emit_progress(int(seq_progress*fasta_progress*100))
+				self.db.insert(sql, values())
+				self.emit_progress(int(seq_progress*fasta_progress*100))
 	
 		self.emit_finish('Imperfect SSRs search completed')
 
@@ -176,7 +178,6 @@ class CSSRWorker(Worker):
 	def __init__(self, dmax):
 		super(CSSRWorker, self).__init__()
 		self.dmax = dmax
-
 
 	def process(self):
 		ssrs = self.db.query("SELECT * FROM ssr")
@@ -238,28 +239,28 @@ class VNTRWorker(Worker):
 			
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
-			seqs, seq_counts = self.build_fasta_index(fasta_id, fasta_file)
+			seqs = self.build_fasta_index(fasta_id, fasta_file)
+			seq_counts = len(seqs)
 			#insert ssr to database
 			sql = "INSERT INTO vntr VALUES (?,?,?,?,?,?,?,?)"
 
 			current_seqs = 0
 			#start search perfect microsatellites
-			with seqs:
-				for name, seq in seqs:
-					current_seqs += 1
-					seq_progress = current_seqs/seq_counts
+			for name, seq in seqs:
+				current_seqs += 1
+				seq_progress = current_seqs/seq_counts
 
-					self.emit_message("Search VNTRs from %s" % name)
-					vntrs = tandem.search_vntr(seq, self.min_motif, self.max_motif, self.repeats)
-					
-					def values():
-						for vntr in vntrs:
-							row = [None, name]
-							row.extend(vntr)
-							yield row
+				self.emit_message("Search VNTRs from %s" % name)
+				vntrs = tandem.search_vntr(seq, self.min_motif, self.max_motif, self.repeats)
+				
+				def values():
+					for vntr in vntrs:
+						row = [None, name]
+						row.extend(vntr)
+						yield row
 
-					self.db.insert(sql, values())
-					self.emit_progress(int(seq_progress*fasta_progress*100)) 
+				self.db.insert(sql, values())
+				self.emit_progress(int(seq_progress*fasta_progress*100))
 				
 		self.emit_finish('VNTRs search completed')
 
@@ -457,6 +458,9 @@ class PrimerWorker(Worker):
 			if seqs is None or item.sequence not in seqs:
 				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='%s' LIMIT 1" % item.sequence
 				seqfile = self.db.get_one(sql)
+				print item.sequence
+				print seqfile
+				print 'yesno'
 				seqs = fasta.GzipFasta(seqfile)
 			
 			start = item.start - self.flank

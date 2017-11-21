@@ -73,6 +73,8 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 	int position = 0;
 	int start = 0;
 	int seqlen = 0;
+	int gc = 0;
+	int ns = 0;
 	int c;
 	kseq_t *seq;
 	kstream_t *ks;
@@ -87,7 +89,7 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 		position++;
 		if(c == 62){
 			if(start){
-				tmp = Py_BuildValue("(siii)", seq->name.s, start, position-start-1, seqlen);
+				tmp = Py_BuildValue("(siiiii)", seq->name.s, start, position-start-1, seqlen, gc, ns);
 				PyList_Append(result, tmp);
 				Py_DECREF(tmp);
 			}
@@ -99,13 +101,21 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 			}
 			start = position;
 			seqlen = 0;
+			gc = 0;
+			ns = 0;
 		}else{
 			if(c != 10 && c != 13){
 				seqlen++;
+				c = toupper(c);
+				if(c == 71 || c == 67){
+					gc++;
+				}else if(c == 78){
+					ns++;
+				}
 			}
 		}
 	}
-	tmp = Py_BuildValue("(siii)", seq->name.s, start, position-start, seqlen);
+	tmp = Py_BuildValue("(siiiii)", seq->name.s, start, position-start, seqlen, gc, ns);
 	PyList_Append(result, tmp);
 	Py_DECREF(tmp);
 	return result;
@@ -126,6 +136,7 @@ static PyObject *extract_seq(PyObject *self, PyObject *args){
 	gzseek(fp, start, SEEK_SET);
 	while((l=kseq_read(seq))>=0){
 		retval = Py_BuildValue("s", seq->seq.s);
+		break;
 	}
 	gzclose(fp);
 	return retval;
