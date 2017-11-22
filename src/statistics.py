@@ -11,7 +11,9 @@ from config import *
 
 class Statistics(object):
 	_db = None
+	_total_gc = 0
 	_total_bases = 0
+	_total_unknown = 0
 	_total_sequences = 0
 	_bases = {}
 	unit = None
@@ -26,58 +28,30 @@ class Statistics(object):
 			self._db = Database()
 		return self._db
 
-	def count_bases(self):
-		for fasta_file in self.db.get_column("SELECT path FROM fasta"):
-			fastas = fasta.GzipFasta(fasta_file)
-			for name in fastas.keys:
-				sequence = fastas[name]
-				self._total_bases += len(sequence)
-				self._total_sequences += 1
-				for b in ['A','T','G','C']:
-					self._bases[b] = self._bases.get(b, 0) + sequence.count(b)
-
-		for b in self.bases:
-			self.db.set_option('statis_base_%s' % b, self._bases[b])
-
-		self.db.set_option('statis_base_total', self._total_bases)
-		self.db.set_option('statis_seqs_count', self._total_sequences)
-
-	def get_bases(self):
-		for b in ['A', 'T', 'G', 'C']:
-			self._bases[b] = self.db.get_option('statis_base_%s' % b)
-
-	@property
-	def bases(self):
-		if not self._bases:
-			self.get_bases()
-		
-		return self._bases
-
 	@property
 	def seqcount(self):
 		if not self._total_sequences:
-			seq_counts = self.db.get_option('statis_seqs_count')
-			if seq_counts:
-				self._total_sequences = seq_counts
-			else:
-				self.count_bases()
+			self._total_sequences = self.db.get_one("SELECT COUNT(1) FROM seq LIMIT 1")
 
 		return self._total_sequences
 
 	@property
 	def size(self):
 		if not self._total_bases:
-			self._total_bases = self.db.get_option('statis_base_total')
+			self._total_bases = self.db.get_one("SELECT SUM(size) FROM seq LIMIT 1")
 
 		return self._total_bases
 
 	@property
 	def validsize(self):
-		return sum(self.bases.values())
+		return self.size - self.ns
 
 	@property
 	def ns(self):
-		return self.size - self.validsize
+		if not self._total_unknown:
+			self._total_unknown = self.db.get_one("SELECT SUM(ns) FROM seq LIMIT 1")
+
+		return self._total_unknown
 
 	@property
 	def transize(self):
@@ -98,8 +72,10 @@ class Statistics(object):
 		'''
 		get the GC content of the fastas
 		'''
-		gc = self.bases['G'] + self.bases['C']
-		return round(gc/self.validsize*100, 2)
+		if not self._total_gc:
+			self._total_gc = self.db.get_one("SELECT SUM(gc) FROM seq LIMIT 1")
+
+		return round(self._total_gc/self.validsize*100, 2)
 
 	def ra(self, counts):
 		'''
@@ -132,14 +108,14 @@ class Statistics(object):
 		return rows
 
 	def results(self):
-		r = Data()
-		r.seqcount = self.seqcount
-		r.size = self.size
-		r.validsize = self.validsize
-		r.ns = self.ns, round(self.ns/self.size*100, 2)
-		r.gc = self.gc
-		r.unit = self.unit
-		return r
+		return Data(
+			seqcount = self.seqcount,
+			size = self.size,
+			validsize = self.validsize,
+			ns = (self.ns, round(self.ns/self.size*100, 2)),
+			gc = self.gc,
+			unit = self.unit,
+		)
 
 
 class SSRStatistics(Statistics):
@@ -213,17 +189,17 @@ class SSRStatistics(Statistics):
 		return rows
 
 	def results(self):
-		r = Data()
-		r.count = self.count
-		r.length = self.length
-		r.frequency = self.frequency
-		r.density = self.density
-		r.type = self.motifTypeStatis()
-		r.category = self.motifCategoryStatis()
-		r.repeat = self.motifRepeatStatis()
-		r.ssrlen = self.SSRLengthStatis()
-		r.region = self.region('ssr')
-		return r
+		return Data(
+			count = self.count,
+			length = self.length,
+			frequency = self.frequency,
+			density = self.density,
+			type = self.motifTypeStatis(),
+			category = self.motifCategoryStatis(),
+			repeat = self.motifRepeatStatis(),
+			ssrlen = self.SSRLengthStatis(),
+			region = self.region('ssr')
+		)
 
 class CSSRStatistics(Statistics):
 	_cssr_counts = 0
@@ -283,17 +259,17 @@ class CSSRStatistics(Statistics):
 		return rows
 
 	def results(self):
-		r = Data()
-		r.cssr_count = self.cssr_count
-		r.cm_count = self.cm_count
-		r.length = self.length
-		r.frequency = self.frequency
-		r.density = self.density
-		r.complexity = self.CSSRComplexityStatis()
-		r.cssrlen = self.CSSRLengthStatis()
-		r.gap = self.CSSRGapStatis()
-		r.region = self.region('cssr')
-		return r
+		return Data(
+			cssr_count = self.cssr_count,
+			cm_count = self.cm_count,
+			length = self.length,
+			frequency = self.frequency,
+			density = self.density,
+			complexity = self.CSSRComplexityStatis(),
+			cssrlen = self.CSSRLengthStatis(),
+			gap = self.CSSRGapStatis(),
+			region = self.region('cssr')
+		)
 
 class ISSRStatistics(Statistics):
 	_issr_counts = 0
@@ -362,17 +338,17 @@ class ISSRStatistics(Statistics):
 		return rows
 
 	def results(self):
-		r = Data()
-		r.count = self.count
-		r.length = self.length
-		r.frequency = self.frequency
-		r.density = self.density
-		r.type = self.motifTypeStatis()
-		r.category = self.motifCategoryStatis()
-		r.score = self.ISSRScoreStatis()
-		r.issrlen = self.ISSRLengthStatis()
-		r.region = self.region('issr')
-		return r
+		return Data(
+			count = self.count,
+			length = self.length,
+			frequency = self.frequency,
+			density = self.density,
+			type = self.motifTypeStatis(),
+			category = self.motifCategoryStatis(),
+			score = self.ISSRScoreStatis(),
+			issrlen = self.ISSRLengthStatis(),
+			region = self.region('issr')
+		)
 
 class VNTRStatistics(Statistics):
 	_vntr_counts = 0
@@ -416,15 +392,14 @@ class VNTRStatistics(Statistics):
 		return rows
 
 	def results(self):
-		r = Data()
-		r.count = self.count
-		r.length = self.length
-		r.frequency = self.frequency
-		r.density = self.density
-		r.type = self.motifTypeStatis()
-		r.repeat = self.motifRepeatStatis()
-		r.vntrlen = self.VNTRLengthStatis()
-		r.region = self.region('vntr')
-		return r
-
+		return Data(
+			count = self.count,
+			length = self.length,
+			frequency = self.frequency,
+			density = self.density,
+			type = self.motifTypeStatis(),
+			repeat = self.motifRepeatStatis(),
+			vntrlen = self.VNTRLengthStatis(),
+			region = self.region('vntr')
+		)
 

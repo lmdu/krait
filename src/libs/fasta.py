@@ -8,7 +8,7 @@ import collections
 class GzipFasta:
 	def __init__(self, fasta_file, rebuild=False):
 		self.fasta_file = fasta_file
-		self.index_file = "%s.idx" % fasta_file
+		self.index_file = "%s.fidx" % fasta_file
 		self.rebuild = rebuild
 		self.buff = {'name': None, 'seq': None}
 		self._read_index()
@@ -87,6 +87,9 @@ class GzipFasta:
 		@return int, length
 		'''
 		return self._index[name][2]
+
+	def get_total_length(self):
+		return sum(self.get_len(name) for name in self._index)
 
 	def get_seq_by_name(self, name):
 		'''

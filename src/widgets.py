@@ -1086,6 +1086,7 @@ class SSRMainWindow(QMainWindow):
 			cssr = cssr_statis, 
 			vntr = vntr_statis
 		)
+
 		self.swichMainWidget('browser')
 		self.browser.setHtml(self.statis_result, QUrl.fromLocalFile(CACHE_PATH))
 

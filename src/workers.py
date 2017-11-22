@@ -53,11 +53,11 @@ class Worker(QObject):
 
 	def emit_progress(self, percent):
 		self.update_progress.emit(percent)
-		time.sleep(0)
+		time.sleep(0.001)
 
 	def emit_message(self, msg):
 		self.update_message.emit(msg)
-		time.sleep(0)
+		time.sleep(0.001)
 
 	def emit_finish(self, msg):
 		self.update_progress.emit(100)
@@ -97,15 +97,15 @@ class SSRWorker(Worker):
 			self.emit_message("Building fasta index for %s" % fasta_file)
 
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			seq_counts = len(seqs)
+			total_bases = seqs.get_total_length()
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
 
-			current_seqs = 0
+			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_seqs += 1
-				seq_progress = current_seqs/seq_counts
+				current_bases += seqs.get_len(name)
+				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search perfect SSRs from %s" % name)
 				ssrs = tandem.search_ssr(seq, self.min_repeats)
@@ -148,15 +148,15 @@ class ISSRWorker(Worker):
 			self.emit_message("Building fasta index for %s" % fasta_file)
 
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			seq_counts = len(seqs)
+			total_bases = seqs.get_total_length()
 			#insert ssr to database
 			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
-			current_seqs = 0
+			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_seqs += 1
-				seq_progress = current_seqs/seq_counts
+				current_bases += seqs.get_len(name)
+				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search imperfect SSRs from %s" % name)
 
@@ -240,15 +240,15 @@ class VNTRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			seq_counts = len(seqs)
+			total_bases = seqs.get_total_length()
 			#insert ssr to database
 			sql = "INSERT INTO vntr VALUES (?,?,?,?,?,?,?,?)"
 
-			current_seqs = 0
+			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_seqs += 1
-				seq_progress = current_seqs/seq_counts
+				current_bases += seqs.get_len(name)
+				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search VNTRs from %s" % name)
 				vntrs = tandem.search_vntr(seq, self.min_motif, self.max_motif, self.repeats)
@@ -274,11 +274,7 @@ class StatisWorker(Worker):
 	def process(self):
 		self.emit_message("Doing sequence statistics...")
 
-		try:
-			seq_statis = Statistics(self.unit, self.letter).results()
-		except Exception, e:
-			self.emit_finish(str(e))
-			return
+		seq_statis = Statistics(self.unit, self.letter).results()
 
 		self.db.set_option('seq_statis', json.dumps(seq_statis))
 
@@ -458,9 +454,6 @@ class PrimerWorker(Worker):
 			if seqs is None or item.sequence not in seqs:
 				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='%s' LIMIT 1" % item.sequence
 				seqfile = self.db.get_one(sql)
-				print item.sequence
-				print seqfile
-				print 'yesno'
 				seqs = fasta.GzipFasta(seqfile)
 			
 			start = item.start - self.flank
@@ -503,7 +496,6 @@ class PrimerWorker(Worker):
 				self.db.get_cursor().execute("INSERT INTO primer_meta VALUES (?,?,?,?,?)", meta)
 			
 			progress = int(current/total_select*100)
-			print progress, current, total_select
 			if progress > prev_progress:
 				self.emit_progress(progress)
 				prev_progress = progress
