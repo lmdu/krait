@@ -69,10 +69,10 @@ class Worker(QObject):
 
 	def run(self):
 		self.emit_progress(0)
-		#try:
-		self.process()
-		#except Exception, e:
-		#	self.emit_finish('Error: %s' % str(e))
+		try:
+			self.process()
+		except Exception, e:
+			self.emit_finish('Error: %s' % str(e))
 
 
 class SSRWorker(Worker):
