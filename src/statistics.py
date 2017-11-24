@@ -189,7 +189,7 @@ class SSRStatistics(Statistics):
 		return rows
 
 	def results(self):
-		return Data(
+		return  Data(
 			count = self.count,
 			length = self.length,
 			frequency = self.frequency,

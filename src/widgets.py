@@ -718,14 +718,20 @@ class SSRMainWindow(QMainWindow):
 		)
 
 	def exportStatisResult(self):
-		pdfname, _ = QFileDialog.getSaveFileName(self, filter="PDF (*.pdf)")
+		pdfname, _ = QFileDialog.getSaveFileName(self, filter="PDF Report (*.pdf);; HTML Report (*.html)")
 		if not file: return
-		printer = QPrinter(QPrinter.HighResolution)
-		printer.setPageSize(QPrinter.A4)
-		printer.setColorMode(QPrinter.Color)
-		printer.setOutputFormat(QPrinter.PdfFormat)
-		printer.setOutputFileName(pdfname)
-		self.browser.print_(printer)
+
+		if pdfname.endswith('.pdf'):
+			printer = QPrinter(QPrinter.HighResolution)
+			printer.setPageSize(QPrinter.A4)
+			printer.setColorMode(QPrinter.Color)
+			printer.setOutputFormat(QPrinter.PdfFormat)
+			printer.setOutputFileName(pdfname)
+			self.browser.print_(printer)
+		elif pdfname.endswith('.html'):
+			content = self.browser.page().mainFrame().toHtml()
+			with open(pdfname, 'wb') as outfh:
+				outfh.write(content)
 
 		self.setStatusMessage("Statistical report was successfully save to %s" % pdfname)
 
