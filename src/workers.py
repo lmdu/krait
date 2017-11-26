@@ -69,10 +69,10 @@ class Worker(QObject):
 
 	def run(self):
 		self.emit_progress(0)
-		try:
-			self.process()
-		except Exception, e:
-			self.emit_finish('Error: %s' % str(e))
+		#try:
+		self.process()
+		#except Exception, e:
+		#	self.emit_finish('Error: %s' % str(e))
 
 
 class SSRWorker(Worker):
@@ -284,39 +284,39 @@ class StatisWorker(Worker):
 			self.db.set_option('ssr_statis', json.dumps(ssr_statis))
 
 			#generate ssr type distribution pie plot
-			x = [row[1] for row in ssr_statis.type[1:]]
-			l = [row[0] for row in ssr_statis.type[1:]]
-			plot.pie(x, l, "ssr_type", self.dpi)
+			#x = [row[1] for row in ssr_statis.type[1:]]
+			#l = [row[0] for row in ssr_statis.type[1:]]
+			#plot.pie(x, l, "ssr_type", self.dpi)
 
 			#generate most abundant ssr motif distribution bar plot
-			motifs = [[], [], [], [], [], []]
-			for row in ssr_statis.category[1:]:
-				motifs[len(row[0])-1].append((row[0], row[1]))
+			#motifs = [[], [], [], [], [], []]
+			#for row in ssr_statis.category[1:]:
+			#	motifs[len(row[0])-1].append((row[0], row[1]))
 
-			x = []
-			l1 = []
-			for m in motifs:
-				m = sorted(m, key=lambda x: (x[0], -x[1]))
-				for a, b in m[:10]:
-					x.append(b)
-					l1.append(a)
+			#x = []
+			#l1 = []
+			#for m in motifs:
+			#	m = sorted(m, key=lambda x: (x[0], -x[1]))
+			#	for a, b in m[:10]:
+			#		x.append(b)
+			#		l1.append(a)
 
-			plot.bar(l1, x, "SSR motif category", "SSR counts", "ssr_motif", self.dpi)
+			#plot.bar(l1, x, "SSR motif category", "SSR counts", "ssr_motif", self.dpi)
 
 			#generate ssr repeat distribution box plot
-			x = ssr_statis.repeat
-			plot.box(x, l, "SSR repeats", "ssr_repeat", self.dpi)
+			#x = ssr_statis.repeat
+			#plot.box(x, l, "SSR repeats", "ssr_repeat", self.dpi)
 
 			#generate ssr length distribution box plot
-			x = ssr_statis.ssrlen
-			plot.box(x, l, "SSR length (bp)", "ssr_length", self.dpi)
+			#x = ssr_statis.ssrlen
+			#plot.box(x, l, "SSR length (bp)", "ssr_length", self.dpi)
 
 
 			#generate ssr distribution in diff regions pie plot
-			if ssr_statis.region:
-				x = [row[1] for row in ssr_statis.region]
-				l = [row[0] for row in ssr_statis.region]
-				plot.pie(x, l, "ssr_region", self.dpi)
+			#if ssr_statis.region:
+			#	x = [row[1] for row in ssr_statis.region]
+			#	l = [row[0] for row in ssr_statis.region]
+			#	plot.pie(x, l, "ssr_region", self.dpi)
 
 		else:
 			self.db.set_option('ssr_statis', '[]')
@@ -328,23 +328,23 @@ class StatisWorker(Worker):
 			self.db.set_option('issr_statis', json.dumps(issr_statis))
 
 			#generate issr type distribution pie plot
-			x = [row[1] for row in issr_statis.type[1:]]
-			l = [row[0] for row in issr_statis.type[1:]]
-			plot.pie(x, l, "issr_type", self.dpi)
+			#x = [row[1] for row in issr_statis.type[1:]]
+			#l = [row[0] for row in issr_statis.type[1:]]
+			#plot.pie(x, l, "issr_type", self.dpi)
 
 			#generate ssr repeat distribution box plot
-			x = issr_statis.score
-			plot.box(x, l, "iSSR score", "issr_score", self.dpi)
+			#x = issr_statis.score
+			#plot.box(x, l, "iSSR score", "issr_score", self.dpi)
 
 			#generate ssr length distribution box plot
-			x = issr_statis.issrlen
-			plot.box(x, l, "iSSR length (bp)", "issr_length", self.dpi)
+			#x = issr_statis.issrlen
+			#plot.box(x, l, "iSSR length (bp)", "issr_length", self.dpi)
 
 			#generate ssr distribution in diff regions pie plot
-			if issr_statis.region:
-				x = [row[1] for row in issr_statis.region]
-				l = [row[0] for row in issr_statis.region]
-				plot.pie(x, l, "issr_region", self.dpi)
+			#if issr_statis.region:
+			#	x = [row[1] for row in issr_statis.region]
+			#	l = [row[0] for row in issr_statis.region]
+			#	plot.pie(x, l, "issr_region", self.dpi)
 
 		else:
 			self.db.set_option('issr_statis', '[]')
@@ -356,25 +356,25 @@ class StatisWorker(Worker):
 			self.db.set_option('cssr_statis', json.dumps(cssr_statis))
 
 			#generate cssr complexity distribution
-			x = [row[0] for row in cssr_statis.complexity[1:]]
-			y = [row[1] for row in cssr_statis.complexity[1:]]
-			plot.line(x, y, 'cSSR complexity', 'cSSR Counts', 'cssr_complexity', self.dpi)
+			#x = [row[0] for row in cssr_statis.complexity[1:]]
+			#y = [row[1] for row in cssr_statis.complexity[1:]]
+			#plot.line(x, y, 'cSSR complexity', 'cSSR Counts', 'cssr_complexity', self.dpi)
 
 			#genrate cssr length distribution
-			x = [row[0] for row in cssr_statis.cssrlen[1:]]
-			y = [row[1] for row in cssr_statis.cssrlen[1:]]
-			plot.line(x, y, 'cSSR length (bp)', 'cSSR Counts', 'cssr_length', self.dpi)
+			#x = [row[0] for row in cssr_statis.cssrlen[1:]]
+			#y = [row[1] for row in cssr_statis.cssrlen[1:]]
+			#plot.line(x, y, 'cSSR length (bp)', 'cSSR Counts', 'cssr_length', self.dpi)
 
 			#genrate cssr gap distribution
-			x = [row[0] for row in cssr_statis.gap[1:]]
-			y = [row[1] for row in cssr_statis.gap[1:]]
-			plot.line(x, y, 'Gap length (bp)', 'cSSR Counts', 'cssr_gap', self.dpi)
+			#x = [row[0] for row in cssr_statis.gap[1:]]
+			#y = [row[1] for row in cssr_statis.gap[1:]]
+			#plot.line(x, y, 'Gap length (bp)', 'cSSR Counts', 'cssr_gap', self.dpi)
 
 			#generate ssr distribution in diff regions pie plot
-			if cssr_statis.region:
-				x = [row[1] for row in cssr_statis.region]
-				l = [row[0] for row in cssr_statis.region]
-				plot.pie(x, l, "cssr_region", self.dpi)
+			#if cssr_statis.region:
+			#	x = [row[1] for row in cssr_statis.region]
+			#	l = [row[0] for row in cssr_statis.region]
+			#	plot.pie(x, l, "cssr_region", self.dpi)
 
 		else:
 			self.db.set_option('cssr_statis', '[]')
@@ -386,25 +386,25 @@ class StatisWorker(Worker):
 			self.db.set_option('vntr_statis', json.dumps(vntr_statis))
 
 			#generate vntr type distribution
-			x = [row[0] for row in vntr_statis.type]
-			y = [row[1] for row in vntr_statis.type]
-			plot.line(x, y, 'VNTR motif length (bp)', 'VNTR Counts', 'vntr_type', self.dpi)
+			#x = [row[0] for row in vntr_statis.type]
+			#y = [row[1] for row in vntr_statis.type]
+			#plot.line(x, y, 'VNTR motif length (bp)', 'VNTR Counts', 'vntr_type', self.dpi)
 
 			#genrate vntr length distribution
-			x = [row[0] for row in vntr_statis.vntrlen]
-			y = [row[1] for row in vntr_statis.vntrlen]
-			plot.line(x, y, 'VNTR length (bp)', 'VNTR Counts', 'vntr_length', self.dpi)
+			#x = [row[0] for row in vntr_statis.vntrlen]
+			#y = [row[1] for row in vntr_statis.vntrlen]
+			#plot.line(x, y, 'VNTR length (bp)', 'VNTR Counts', 'vntr_length', self.dpi)
 
 			#genrate vntr repeat distribution
-			x = [row[0] for row in vntr_statis.repeat]
-			y = [row[1] for row in vntr_statis.repeat]
-			plot.line(x, y, 'VNTR repeats', 'VNTR Counts', 'vntr_repeat', self.dpi)
+			#x = [row[0] for row in vntr_statis.repeat]
+			#y = [row[1] for row in vntr_statis.repeat]
+			#plot.line(x, y, 'VNTR repeats', 'VNTR Counts', 'vntr_repeat', self.dpi)
 
 			#generate ssr distribution in diff regions pie plot
-			if vntr_statis.region:
-				x = [row[1] for row in vntr_statis.region]
-				l = [row[0] for row in vntr_statis.region]
-				plot.pie(x, l, "vntr_region", self.dpi)
+			#if vntr_statis.region:
+			#	x = [row[1] for row in vntr_statis.region]
+			#	l = [row[0] for row in vntr_statis.region]
+			#	plot.pie(x, l, "vntr_region", self.dpi)
 
 		else:
 			self.db.set_option('vntr_statis', '[]')

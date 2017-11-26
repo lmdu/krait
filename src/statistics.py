@@ -3,6 +3,7 @@
 from __future__ import division
 import os
 import json
+import collections
 
 from libs import *
 from db import *
@@ -21,6 +22,10 @@ class Statistics(object):
 	def __init__(self, unit='Mb', letter='ATGC'):
 		self.unit = unit
 		self.letter = letter
+
+	def group(self, index):
+		types = {1: 'Mono', 2: 'Di', 3: 'Tri', 4: 'Tetra', 5: 'Penta', 6: 'Hexa'}
+		return types[index]
 
 	@property
 	def db(self):
@@ -89,10 +94,6 @@ class Statistics(object):
 		'''
 		return round(lengths/self.transize, 2)
 
-	def type(self, index):
-		types = {1: 'Mono', 2: 'Di', 3: 'Tri', 4: 'Tetra', 5: 'Penta', 6: 'Hexa'}
-		return types[index]
-
 	def region(self, cat):
 		total_counts = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % cat)
 		sql = "SELECT feature,COUNT(1) AS count FROM location WHERE category='%s' GROUP BY feature"
@@ -106,6 +107,27 @@ class Statistics(object):
 			rows.append(('Intergenic', total_counts-feat_counts))
 		
 		return rows
+
+	def rownames(self, rows, count=None, digit=None):
+		if digit:
+			_format = lambda x: str(x)
+		else:
+			_format = lambda x: '"%s"' % x
+
+		if count is None:
+			return ",".join([_format(row[0]) for row in rows])
+		else:
+			if len(rows) < count:
+				count = len(rows)
+			return ",".join([_format(rows[j][0]) for j in range(count)])
+
+	def columnval(self, rows, i=0, count=None):
+		if count is None:
+			return ",".join([str(row[i]) for row in rows])
+		else:
+			if len(rows) < count:
+				count = len(rows)
+			return ",".join([str(rows[j][i]) for j in range(count)])
 
 	def results(self):
 		return Data(
@@ -124,6 +146,13 @@ class SSRStatistics(Statistics):
 	
 	def __init__(self):
 		super(SSRStatistics, self).__init__()
+		self.type = self.motifTypeStatis()
+		self.category = self.motifCategoryStatis()
+		self.repeat = self.motifRepeatStatis()
+		self.ssrlen = self.SSRLengthStatis()
+		self.location = self.region('ssr')
+		self.plot = self.plotting()
+
 
 	@property
 	def count(self):
@@ -158,7 +187,7 @@ class SSRStatistics(Statistics):
 			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
-			rows.append((self.type(row.type), row.count, row.length, percent, average, frequency, density))
+			rows.append((self.group(row.type), row.count, row.length, percent, average, frequency, density))
 		return rows
 
 	def motifCategoryStatis(self):
@@ -173,20 +202,84 @@ class SSRStatistics(Statistics):
 		return rows
 
 	def motifRepeatStatis(self):
-		rows = []
+		rows = {}
 		for i in range(1,7):
 			sql = "SELECT repeat FROM ssr WHERE type=%s" % i
 			r = self.db.get_column(sql)
-			if r: rows.append(r)
+			if not r:
+				continue
+
+			rows[i] = collections.Counter(r)
+			
 		return rows
 		
 	def SSRLengthStatis(self):
-		rows = []
+		rows = {}
 		for i in range(1,7):
 			sql = "SELECT length FROM ssr WHERE type=%s" % i
 			r = self.db.get_column(sql)
-			if r: rows.append(r)
+			if not r:
+				continue
+			
+			rows[i] = collections.Counter(r)
+			
 		return rows
+
+	def plotting(self):
+		pie1 = Data(
+			labels = self.rownames(self.type[1:]),
+			data = self.columnval(self.type[1:], 1)
+		)
+
+		pie2 = Data(
+			labels = pie1.labels,
+			data = self.columnval(self.type[1:], 2)
+		)
+		pie3 = Data(
+			labels = self.rownames(self.location),
+			data = self.columnval(self.location, 1)
+		)
+		
+		rows = sorted(self.category[1:], key=lambda x:x[5], reverse=True)[:50]
+		bar1 = Data(
+			labels = self.rownames(rows),
+			data = self.columnval(rows, 5)
+		)
+
+		labels1 = set()
+		for k in self.repeat:
+			labels1 |= set(self.repeat[k])
+		labels1 = sorted(labels1)[:40]
+		data1 = []
+		for k in sorted(self.repeat.keys()):
+			data1.append((self.group(k), ",".join([str(self.repeat[k][j]) for j in labels1])))
+		
+		line1 = Data(
+			labels = ",".join(map(str,labels1)),
+			data = data1
+		)
+
+		labels2 = set()
+		for k in self.ssrlen:
+			labels2 |= set(self.ssrlen[k])
+		labels2 = sorted(labels2)[:40]
+		data2 = []
+		for k in sorted(self.ssrlen.keys()):
+			data2.append((self.group(k), ",".join([str(self.ssrlen[k][j]) for j in labels2])))
+		
+		line2 = Data(
+			labels = ",".join(map(str,labels2)),
+			data = data2
+		)
+
+		return Data(
+			pie1 = pie1,
+			pie2 = pie2,
+			pie3 = pie3,
+			bar1 = bar1,
+			line1 = line1,
+			line2 = line2
+		)
 
 	def results(self):
 		return  Data(
@@ -194,11 +287,12 @@ class SSRStatistics(Statistics):
 			length = self.length,
 			frequency = self.frequency,
 			density = self.density,
-			type = self.motifTypeStatis(),
-			category = self.motifCategoryStatis(),
-			repeat = self.motifRepeatStatis(),
-			ssrlen = self.SSRLengthStatis(),
-			region = self.region('ssr')
+			type = self.type,
+			category = self.category,
+			repeat = self.repeat,
+			ssrlen = self.ssrlen,
+			location = self.location,
+			plot = self.plot
 		)
 
 class CSSRStatistics(Statistics):
@@ -207,6 +301,11 @@ class CSSRStatistics(Statistics):
 	_cssr_length = 0
 	def __init__(self):
 		super(CSSRStatistics, self).__init__()
+		self.complexity = self.CSSRComplexityStatis()
+		self.cssrlen = self.CSSRLengthStatis()
+		self.gap = self.CSSRGapStatis()
+		self.location = self.region('cssr')
+		self.plot = self.plotting()
 
 	@property
 	def cssr_count(self):
@@ -239,24 +338,40 @@ class CSSRStatistics(Statistics):
 
 	def CSSRComplexityStatis(self):
 		sql = "SELECT complexity,COUNT(1) FROM cssr GROUP BY complexity ORDER BY complexity"
-		rows = [('Complexity', 'Counts')]
+		rows = []
 		for row in self.db.query(sql):
 			rows.append(row.values)
 		return rows
 
 	def CSSRLengthStatis(self):
 		sql = "SELECT length,COUNT(1) FROM cssr GROUP BY length ORDER BY length"
-		rows = [('Length', 'Counts')]
+		rows = []
 		for row in self.db.query(sql):
 			rows.append(row.values)
 		return rows
 
 	def CSSRGapStatis(self):
 		sql = "SELECT gap,COUNT(1) FROM cssr GROUP BY gap ORDER BY gap"
-		rows = [('Gap length', 'Counts')]
+		rows = []
 		for row in self.db.query(sql):
 			rows.append(row.values)
 		return rows
+
+	def plotting(self):
+		return Data(
+			line1 = Data(
+				labels = self.rownames(self.complexity, 40, True),
+				data = self.columnval(self.complexity, 1, 40)
+			),
+			line2 = Data(
+				labels = self.rownames(self.cssrlen, 40, True),
+				data = self.columnval(self.cssrlen, 1, 40)
+			),
+			line3 = Data(
+				labels = self.rownames(self.gap, 40, True),
+				data = self.columnval(self.gap, 1, 40)
+			)
+		)
 
 	def results(self):
 		return Data(
@@ -265,10 +380,11 @@ class CSSRStatistics(Statistics):
 			length = self.length,
 			frequency = self.frequency,
 			density = self.density,
-			complexity = self.CSSRComplexityStatis(),
-			cssrlen = self.CSSRLengthStatis(),
-			gap = self.CSSRGapStatis(),
-			region = self.region('cssr')
+			complexity = self.complexity,
+			cssrlen = self.cssrlen,
+			gap = self.gap,
+			location = self.location,
+			plot = self.plot
 		)
 
 class ISSRStatistics(Statistics):
@@ -276,6 +392,12 @@ class ISSRStatistics(Statistics):
 	_issr_length = 0
 	def __init__(self):
 		super(ISSRStatistics, self).__init__()
+		self.type = self.motifTypeStatis()
+		self.category = self.motifCategoryStatis()
+		self.score = self.ISSRScoreStatis()
+		self.issrlen = self.ISSRLengthStatis()
+		self.location = self.region('issr')
+		self.plot = self.plotting()
 
 	@property
 	def count(self):
@@ -307,7 +429,7 @@ class ISSRStatistics(Statistics):
 			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
-			rows.append((self.type(row.type), row.count, row.length, percent, average, frequency, density))
+			rows.append((self.group(row.type), row.count, row.length, percent, average, frequency, density))
 		return rows
 
 	def motifCategoryStatis(self):
@@ -330,12 +452,57 @@ class ISSRStatistics(Statistics):
 		return rows
 
 	def ISSRLengthStatis(self):
-		rows = []
+		rows = {}
 		for i in range(1,7):
 			sql = "SELECT length FROM issr WHERE type=%s" % i
 			r = self.db.get_column(sql)
-			if r: rows.append(r)
+			if not r:
+				continue
+
+			rows[i] = collections.Counter(r)
+		
 		return rows
+
+	def plotting(self):
+		pie1 = Data(
+			labels = self.rownames(self.type[1:]),
+			data = self.columnval(self.type[1:], 1)
+		)
+		pie2 = Data(
+			labels = pie1.labels,
+			data = self.columnval(self.type[1:], 2)
+		)
+		pie3 = Data(
+			labels = self.rownames(self.location),
+			data = self.columnval(self.location, 1)
+		)
+		
+		rows = sorted(self.category[1:], key=lambda x:x[5], reverse=True)[:50]
+		bar1 = Data(
+			labels = self.rownames(rows),
+			data = self.columnval(rows, 5)
+		)
+
+		labels1 = set()
+		for k in self.issrlen:
+			labels1 |= set(self.issrlen[k])
+		labels1 = sorted(labels1)[:40]
+		data1 = []
+		for k in sorted(self.issrlen.keys()):
+			data1.append((self.group(k), ",".join([str(self.issrlen[k][j]) for j in labels1])))
+		
+		line1 = Data(
+			labels = ",".join(map(str,labels1)),
+			data = data1
+		)
+
+		return Data(
+			pie1 = pie1,
+			pie2 = pie2,
+			pie3 = pie3,
+			bar1 = bar1,
+			line1 = line1
+		)
 
 	def results(self):
 		return Data(
@@ -343,11 +510,12 @@ class ISSRStatistics(Statistics):
 			length = self.length,
 			frequency = self.frequency,
 			density = self.density,
-			type = self.motifTypeStatis(),
-			category = self.motifCategoryStatis(),
-			score = self.ISSRScoreStatis(),
-			issrlen = self.ISSRLengthStatis(),
-			region = self.region('issr')
+			type = self.type,
+			category = self.category,
+			score = self.score,
+			issrlen = self.issrlen,
+			location = self.location,
+			plot = self.plot
 		)
 
 class VNTRStatistics(Statistics):
@@ -355,6 +523,11 @@ class VNTRStatistics(Statistics):
 	_vntr_length = 0
 	def __init__(self):
 		super(VNTRStatistics, self).__init__()
+		self.type = self.motifTypeStatis()
+		self.repeat = self.motifRepeatStatis()
+		self.vntrlen = self.VNTRLengthStatis()
+		self.location = self.region('vntr')
+		self.plot = self.plotting()
 
 	@property
 	def count(self):
@@ -377,19 +550,35 @@ class VNTRStatistics(Statistics):
 		return self.rd(self.length)
 
 	def motifTypeStatis(self):
-		sql = "SELECT type, COUNT(1) AS count FROM vntr GROUP BY type"
-		rows = [row.values for row in self.db.query(sql)]
+		sql = "SELECT type, COUNT(1) AS count FROM vntr GROUP BY type ORDER BY type"
+		rows = [(row[0], row[1]) for row in self.db.query(sql)]
 		return rows
 
 	def motifRepeatStatis(self):
-		sql = "SELECT repeat, COUNT(1) AS count FROM vntr GROUP BY repeat"
-		rows = [row.values for row in self.db.query(sql)]
+		sql = "SELECT repeat, COUNT(1) AS count FROM vntr GROUP BY repeat ORDER BY repeat"
+		rows = [(row[0], row[1]) for row in self.db.query(sql)]
 		return rows
 
 	def VNTRLengthStatis(self):
-		sql = "SELECT length, COUNT(1) AS count FROM vntr GROUP BY length"
-		rows = [row.values for row in self.db.query(sql)]
+		sql = "SELECT length, COUNT(1) AS count FROM vntr GROUP BY length ORDER BY length"
+		rows = [(row[0], row[1]) for row in self.db.query(sql)]
 		return rows
+
+	def plotting(self):
+		return Data(
+			line1 = Data(
+				labels = self.rownames(self.type, 40, True),
+				data = self.columnval(self.type, 1, 40)
+			),
+			line2 = Data(
+				labels = self.rownames(self.repeat, 40, True),
+				data = self.columnval(self.repeat, 1, 40)
+			),
+			line3 = Data(
+				labels = self.rownames(self.vntrlen, 40, True),
+				data = self.columnval(self.vntrlen, 1, 40)
+			)
+		)
 
 	def results(self):
 		return Data(
@@ -397,9 +586,10 @@ class VNTRStatistics(Statistics):
 			length = self.length,
 			frequency = self.frequency,
 			density = self.density,
-			type = self.motifTypeStatis(),
-			repeat = self.motifRepeatStatis(),
-			vntrlen = self.VNTRLengthStatis(),
-			region = self.region('vntr')
+			type = self.type,
+			repeat = self.repeat,
+			vntrlen = self.vntrlen,
+			location = self.location,
+			plot = self.plot
 		)
 

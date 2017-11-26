@@ -17,12 +17,30 @@ class Data(dict):
 	def __setattr__(self, name, val):
 		self[name] = val
 
-def sortfilter(it, index=0, count=20):
-	it = sorted(it, key=lambda x:x[index], reverse=True)
-	return it[:20]
+def abundant_motifs(rows):
+	res = [rows[0]]
+	rows = rows[1:]
+	indexes = []
+	mlen = 0
+	for idx, row in enumerate(rows):
+		if len(row[0]) > mlen:
+			indexes.append(idx)
+			mlen = len(row[0])
+	
+	indexes.append(len(rows))
+	
+	for i in range(len(indexes)-1):
+		tmp = sorted(rows[indexes[i]:indexes[i+1]], key=lambda x: (x[0], -x[1]))
+		res.extend(tmp[:5])
+	
+	return res
+
+def sortfilter():
+	pass
 
 env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 env.filters['sortfilter'] = sortfilter
+env.filters['abundant_motifs'] = abundant_motifs
 def template_render(template_name, **kwargs):
 	template = env.get_template(template_name)
 	return template.render(**kwargs)
