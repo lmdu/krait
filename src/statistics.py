@@ -137,6 +137,8 @@ class Statistics(object):
 			ns = (self.ns, round(self.ns/self.size*100, 2)),
 			gc = self.gc,
 			unit = self.unit,
+			version = VERSION,
+			fastas = self.db.get_column("SELECT path FROM fasta")
 		)
 
 
@@ -292,7 +294,10 @@ class SSRStatistics(Statistics):
 			repeat = self.repeat,
 			ssrlen = self.ssrlen,
 			location = self.location,
-			plot = self.plot
+			plot = self.plot,
+			parameters = json.loads(self.db.get_option('ssr_parameters')),
+			start = self.db.get_option('ssr_start_time'),
+			end = self.db.get_option('ssr_end_time')
 		)
 
 class CSSRStatistics(Statistics):
@@ -370,6 +375,10 @@ class CSSRStatistics(Statistics):
 			line3 = Data(
 				labels = self.rownames(self.gap, 40, True),
 				data = self.columnval(self.gap, 1, 40)
+			),
+			pie1 = Data(
+				labels = self.rownames(self.location),
+				data = self.columnval(self.location, 1)
 			)
 		)
 
@@ -384,7 +393,10 @@ class CSSRStatistics(Statistics):
 			cssrlen = self.cssrlen,
 			gap = self.gap,
 			location = self.location,
-			plot = self.plot
+			plot = self.plot,
+			parameters = json.loads(self.db.get_option('cssr_parameters')),
+			start = self.db.get_option('cssr_start_time'),
+			end = self.db.get_option('cssr_end_time')
 		)
 
 class ISSRStatistics(Statistics):
@@ -515,7 +527,10 @@ class ISSRStatistics(Statistics):
 			score = self.score,
 			issrlen = self.issrlen,
 			location = self.location,
-			plot = self.plot
+			plot = self.plot,
+			parameters = json.loads(self.db.get_option('issr_parameters')),
+			start = self.db.get_option('issr_start_time'),
+			end = self.db.get_option('issr_end_time')
 		)
 
 class VNTRStatistics(Statistics):
@@ -577,6 +592,10 @@ class VNTRStatistics(Statistics):
 			line3 = Data(
 				labels = self.rownames(self.vntrlen, 40, True),
 				data = self.columnval(self.vntrlen, 1, 40)
+			),
+			pie1 = Data(
+				labels = self.rownames(self.location),
+				data = self.columnval(self.location, 1)
 			)
 		)
 
@@ -590,6 +609,9 @@ class VNTRStatistics(Statistics):
 			repeat = self.repeat,
 			vntrlen = self.vntrlen,
 			location = self.location,
-			plot = self.plot
+			plot = self.plot,
+			parameters = json.loads(self.db.get_option('vntr_parameters')),
+			start = self.db.get_option('vntr_start_time'),
+			end = self.db.get_option('vntr_end_time')
 		)
 

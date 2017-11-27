@@ -1,40 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <title>Statistical report</title>
 <style>
 @font-face{font-family: "Roboto";src: url("qrc:/fonts/roboto.ttf") format('truetype');}
-*{box-sizing:border-box}body,html{margin:0;padding:0}body{line-height:1.6;color:#111;font-size:1rem;font-weight:400;font-family:"Roboto";}.container{width:90%;margin:0 auto}.row{display:-webkit-box;display:-webkit-flex;display:flex;flex-flow:row wrap;justify-content:space-between;width:100%;margin-bottom:10px}.row:last-child{margin-bottom:0}.row .col{flex:1 1 0px;display:felx;flex-direction:column;}.row .col,.row [class*=" col-"],.row [class^=col-]{padding-right:10px}.row .col:last-child,.row [class*=" col-"]:last-child,.row [class^=col-]:last-child{padding-right:0}.row .col-1{width:8.333333333333332%}.row .col-2{width:16.666666666666664%}.row .col-3{width:25%}.row .col-4{width:33.33333333333333%}.row .col-5{width:41.66666666666667%}.row .col-6{width:50%}.row .col-7{width:58.333333333333336%}.row .col-8{width:66.66666666666666%}.row .col-9{width:75%}.row .col-10{width:83.33333333333334%}.row .col-11{width:91.66666666666666%}.row .col-12{width:100%}@media screen and (max-width:768px){.row .col,.row [class*=" col-"],.row [class^=col-]{flex:0 0 100%;margin-bottom:10px;padding:0}.row .col:last-child,.row [class*=" col-"]:last-child,.row [class^=col-]:last-child{margin-bottom:0}}h1,h2,h3,h4,h5,h6,p{margin-top:0;margin-bottom:10px;font-family:"Roboto";}h1,h2,h3,h4,h5,h6{font-weight:500}h1{font-size:2.986rem;line-height:1.2}h2{font-size:2.488rem;line-height:1.25}h3{font-size:2.074rem;line-height:1.3}h4{font-size:1.728rem;line-height:1.35}h5{font-size:1.44rem;line-height:1.5}h6{font-size:1.2rem;line-height:1.6}p{font-size:1rem}@media (max-width:768px){h1{font-size:2.027rem}h2{font-size:1.802rem}h3{font-size:1.602rem}h4{font-size:1.424rem}h5{font-size:1.266rem}h6{font-size:1.125rem}}input[type=email],input[type=file],input[type=number],input[type=password],input[type=search],input[type=tel],input[type=text],input[type=url],select,textarea{height:45px;width:100%;margin-bottom:10px;padding:10px;font-size:1rem;background:#f5f5f5;border:1px solid #a7a7a7;border-radius:2px;transition:all .2s ease}input[type=email]:hover,input[type=file]:hover,input[type=number]:hover,input[type=password]:hover,input[type=search]:hover,input[type=tel]:hover,input[type=text]:hover,input[type=url]:hover,select:hover,textarea:hover{border-color:#111}input[type=email]:focus,input[type=file]:focus,input[type=number]:focus,input[type=password]:focus,input[type=search]:focus,input[type=tel]:focus,input[type=text]:focus,input[type=url]:focus,select:focus,textarea:focus{outline:0;border-color:#0062ff}textarea{min-height:70px}.button,[type=submit],button{height:45px;margin-bottom:10px;padding:10px 30px;outline:0;text-decoration:none;color:#f5f5f5;font-size:1rem;background:#111;border:1px solid #111;border-radius:2px;transition:all .2s ease}.button:focus,.button:hover,[type=submit]:focus,[type=submit]:hover,button:focus,button:hover{opacity:.9}.button:active,[type=submit]:active,button:active{opacity:.7}.button[disabled],[type=submit][disabled],button[disabled]{opacity:.8;cursor:not-allowed}.button.outline,[type=submit].outline,button.outline{color:#111;background:0 0}.button.outline:focus,.button.outline:hover,[type=submit].outline:focus,[type=submit].outline:hover,button.outline:focus,button.outline:hover{color:#f5f5f5;background:#111}a{color:#0062ff;transition:all .2s ease}a:hover{cursor:pointer;color:#111}ol,ul{margin-top:0;margin-bottom:10px;padding-left:0;list-style-position:inside}ol li,ul li{margin-bottom:10px}ol li:last-child,ul li:last-child{margin-bottom:0}ol ol,ol ul,ul ol,ul ul{margin-left:10px}img{margin-top:0;margin-bottom:10px}.box{margin-bottom:10px;padding-top:10px;padding-right:10px;padding-left:10px;border:1px solid #a7a7a7;border-radius:2px}.nav{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding-top:10px;padding-bottom:10px}.nav .nav-item{margin-right:10px}.nav .nav-item:last-child{margin-right:0}.card{display:flex;flex-direction:column;margin-bottom:10px;border:1px solid #a7a7a7;border-radius:2px}.card .card-content{margin:0;padding:10px}.card .card-image{display:block;height:auto;width:100%}pre{margin-top:0;margin-bottom:10px}pre code{display:block;padding:10px 10px;white-space:pre-wrap;word-wrap:break-word}code{padding:2px;white-space:nowrap;background:#e7e7e7;border:1px solid #d7d7d7;border-radius:2px;font-family:Consolas,Monaco,Menlo,monospace}hr{border-width:.5px;border-color:#a7a7a7}.position-relative{position:relative}.position-absolute{position:absolute}.position-fixed{position:fixed}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.size-full-height{min-height:100vh}.size-full-width{width:100%}.size-full{width:100%;min-height:100vh}.hidden{display:none}.flex{display:flex}.justify-start{justify-content:flex-start}.justify-center{justify-content:center}.justify-end{justify-content:flex-end}.align-start{align-items:flex-start}.align-center{align-items:center}.align-end{align-items:flex-end}.direction-vertical{flex-direction:column}.direction-horizontal{flex-direction:row}.center{flex-direction:column;justify-content:center;align-items:center}.border-black{border:1px solid #111}.border-gray{border:1px solid #a7a7a7}.border-white{border:1px solid #f5f5f5}.border-blue{border:1px solid #0062ff}.border-red{border:1px solid #ff1500}.border-yellow{border:1px solid #ffbf00}.border-green{border:1px solid #00b30f}.border-rounded{border-radius:2px}.border-circle{border-radius:2px}.color-black{color:#111}.color-gray{color:#a7a7a7}.color-white{color:#f5f5f5}.color-blue{color:#0062ff}.color-red{color:#ff1500}.color-yellow{color:#ffbf00}.color-green{color:#00b30f}.background-black{background-color:#111}.background-gray{background-color:#a7a7a7}.background-white{background-color:#f5f5f5}.background-blue{background-color:#0062ff}.background-red{background-color:#ff1500}.background-yellow{background-color:#ffbf00}.background-green{background-color:#00b30f}
+*{box-sizing:border-box}body,html{margin:0;padding:0}body{line-height:1.6;color:#111;font-size:1rem;font-weight:400;font-family:"Roboto";}.container{width:90%;max-width:2000px;margin:0 auto}.row{display:-webkit-box;display:-webkit-flex;display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;margin-bottom:10px}.row:last-child{margin-bottom:0}.row .col{flex:1 1 0px;display:felx;flex-direction:column;}.row .col,.row [class*=" col-"],.row [class^=col-]{padding-right:10px}.row .col:last-child,.row [class*=" col-"]:last-child,.row [class^=col-]:last-child{padding-right:0}.row .col-1{width:8.333333333333332%}.row .col-2{width:16.666666666666664%}.row .col-3{width:25%}.row .col-4{width:33.33333333333333%}.row .col-5{width:41.66666666666667%}.row .col-6{width:50%}.row .col-7{width:58.333333333333336%}.row .col-8{width:66.66666666666666%}.row .col-9{width:75%}.row .col-10{width:83.33333333333334%}.row .col-11{width:91.66666666666666%}.row .col-12{width:100%}@media screen and (max-width:768px){.row .col,.row [class*=" col-"],.row [class^=col-]{flex:0 0 100%;margin-bottom:10px;padding:0}.row .col:last-child,.row [class*=" col-"]:last-child,.row [class^=col-]:last-child{margin-bottom:0}}h1,h2,h3,h4,h5,h6,p{margin-top:0;margin-bottom:10px;font-family:"Roboto";}h1,h2,h3,h4,h5,h6{font-weight:500}h1{font-size:2.986rem;line-height:1.2}h2{font-size:2.488rem;line-height:1.25}h3{font-size:2.074rem;line-height:1.3}h4{font-size:1.728rem;line-height:1.35}h5{font-size:1.44rem;line-height:1.5}h6{font-size:1.2rem;line-height:1.6}p{font-size:1rem}@media (max-width:768px){h1{font-size:2.027rem}h2{font-size:1.802rem}h3{font-size:1.602rem}h4{font-size:1.424rem}h5{font-size:1.266rem}h6{font-size:1.125rem}}input[type=email],input[type=file],input[type=number],input[type=password],input[type=search],input[type=tel],input[type=text],input[type=url],select,textarea{height:45px;width:100%;margin-bottom:10px;padding:10px;font-size:1rem;background:#f5f5f5;border:1px solid #a7a7a7;border-radius:2px;transition:all .2s ease}input[type=email]:hover,input[type=file]:hover,input[type=number]:hover,input[type=password]:hover,input[type=search]:hover,input[type=tel]:hover,input[type=text]:hover,input[type=url]:hover,select:hover,textarea:hover{border-color:#111}input[type=email]:focus,input[type=file]:focus,input[type=number]:focus,input[type=password]:focus,input[type=search]:focus,input[type=tel]:focus,input[type=text]:focus,input[type=url]:focus,select:focus,textarea:focus{outline:0;border-color:#0062ff}textarea{min-height:70px}.button,[type=submit],button{height:30px;margin-bottom:10px;padding:3px 10px;outline:0;text-decoration:none;color:#f5f5f5;font-size:1rem;background:#111;border:1px solid #111;border-radius:2px;transition:all .2s ease}.button:focus,.button:hover,[type=submit]:focus,[type=submit]:hover,button:focus,button:hover{opacity:.9}.button:active,[type=submit]:active,button:active{opacity:.7}.button[disabled],[type=submit][disabled],button[disabled]{opacity:.8;cursor:not-allowed}.button.outline,[type=submit].outline,button.outline{color:#111;background:0 0}.button.outline:focus,.button.outline:hover,[type=submit].outline:focus,[type=submit].outline:hover,button.outline:focus,button.outline:hover{color:#f5f5f5;background:#111}a{color:#0062ff;transition:all .2s ease}a:hover{cursor:pointer;color:#111}ol,ul{margin-top:0;margin-bottom:10px;padding-left:0;list-style-position:inside}ol li,ul li{margin-bottom:10px}ol li:last-child,ul li:last-child{margin-bottom:0}ol ol,ol ul,ul ol,ul ul{margin-left:10px}img{margin-top:0;margin-bottom:10px}.box{margin-bottom:10px;padding-top:10px;padding-right:10px;padding-left:10px;border:1px solid #a7a7a7;border-radius:2px}.nav{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding-top:10px;padding-bottom:10px}.nav .nav-item{margin-right:10px}.nav .nav-item:last-child{margin-right:0}.card{display:flex;flex-direction:column;margin-bottom:10px;border:1px solid #a7a7a7;border-radius:2px}.card .card-content{margin:0;padding:10px}.card .card-image{display:block;height:auto;width:100%}pre{margin-top:0;margin-bottom:10px}pre code{display:block;padding:10px 10px;white-space:pre-wrap;word-wrap:break-word}code{padding:2px;white-space:nowrap;background:#e7e7e7;border:1px solid #d7d7d7;border-radius:2px;font-family:Consolas,Monaco,Menlo,monospace}hr{border-width:.5px;border-color:#a7a7a7}.position-relative{position:relative}.position-absolute{position:absolute}.position-fixed{position:fixed}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.size-full-height{min-height:100vh}.size-full-width{width:100%}.size-full{width:100%;min-height:100vh}.hidden{display:none}.flex{display:flex}.justify-start{justify-content:flex-start}.justify-center{justify-content:center}.justify-end{justify-content:flex-end}.align-start{align-items:flex-start}.align-center{align-items:center}.align-end{align-items:flex-end}.direction-vertical{flex-direction:column}.direction-horizontal{flex-direction:row}.center{flex-direction:column;justify-content:center;align-items:center}.border-black{border:1px solid #111}.border-gray{border:1px solid #a7a7a7}.border-white{border:1px solid #f5f5f5}.border-blue{border:1px solid #0062ff}.border-red{border:1px solid #ff1500}.border-yellow{border:1px solid #ffbf00}.border-green{border:1px solid #00b30f}.border-rounded{border-radius:2px}.border-circle{border-radius:2px}.color-black{color:#111}.color-gray{color:#a7a7a7}.color-white{color:#f5f5f5}.color-blue{color:#0062ff}.color-red{color:#ff1500}.color-yellow{color:#ffbf00}.color-green{color:#00b30f}.background-black{background-color:#111}.background-gray{background-color:#a7a7a7}.background-white{background-color:#f5f5f5}.background-blue{background-color:#0062ff}.background-red{background-color:#ff1500}.background-yellow{background-color:#ffbf00}.background-green{background-color:#00b30f}
 /*
 .row{width:100%;display:-webkit-box;display:-webkit-flex;display:flex;flex-wrap:wrap;}
 .col{width:50%; display:flex;flex-direction:column;overflow: hidden;}*/
-img {border-style: none;display: block;max-width: 65%;height: auto;margin: 0 auto;}
-
+.inline-list{list-style: none;}
+.inline-list li{margin-right: 30px; display: inline-block;}
+.right{float: right;}
 /* table */
-.table{width: 100%;box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);border-spacing:0;}
+.table{width:100%;box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);border-spacing:0;}
 .table tr{background:#f6f6f6;}
 .table tr:nth-of-type(odd){background: #e9e9e9;}
 .table tr th{font-weight:bold;color: #ffffff;background: #ea6153;font-size: 1.1em;text-align: left;}
 .table.green tr th{background: #27ae60;}
 .table.blue tr th{background: #2980b9;}
 .table tr td,.table tr th{padding: 6px 12px;}
+.table-header{margin-top: 30px;}
 
-
-.btn{
-	display: inline-block;
-	padding: 0 5px;
-	color: #fff;
-	background: #feae1b;
-	text-decoration: none;
-	font-size: 12px;
-	border-radius: 3px;
-}
-.btn:hover{
-	background: #fec04e;
-}
 /* plot */
 .pie{position:relative;max-width:400px; margin: 0 auto;}
-.chart{margin-top: 30px;}
+.chart{margin-top: 30px;width: 100%;}
 
 /* split line */
 hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
@@ -42,8 +32,21 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 </head>
 <body>
 <div class="container">
-<h1 class="text-center">The summary statistical analysis report</h1>
-<h2 class="text-center">The summary information of detected sequences</h3>
+<h3 class="text-center">The summary statistical analysis report</h3>
+<div class="start-info">
+	<p>This report was automatically generated by Krait v{{ seq.version }}, Krait is a robust and ultrafast tool with
+	 a user-friendly graphic interface for genome-wide investigation of microsatellites and primer design</p>
+</div>
+<hr>
+<h4 class="text-center">Sequnce information</h4>
+<div class="input-files">
+	{% if seq.fastas|length > 1 %}
+	<p>Input FASTA files: {{ seq.fastas[0] }}...{{ seq.fastas[-1] }} including {{ seq.fastas|length }} files. </p>
+	{% else %}
+	<p>Input FASTA file: {{ seq.fastas[0] }}</p>
+	{% endif %}
+</div>
+<h5 class="table-header">The summary information of detected sequences</h5>
 <table class="table blue">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of sequences</td><td>Counts</td><td>{{ seq.seqcount }}</td></tr>
@@ -55,7 +58,7 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 </table>
 
 {% macro table(title, rows, name) -%}
-<h3 class="text-center">{{ title }} <a class="btn" href="{{ name }}">Save full table</a></h3>
+<h5 class="table-header">{{ title }} <!--{% if name %}<a class="right" href="{{ name }}"><button>Save full table</button></a>{% endif %}--></h5>
 <table class="table">
 <tr>
 	{% for col in rows[0] %}
@@ -79,8 +82,26 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 <!-- perfect SSRs statistics -->
 {% if ssr %}
 <hr>
-<h2 class="text-center">Perfect Microsatellites</h2>
-<h3 class="text-center">The summary information of perfect SSRs</h3>
+<h4 class="text-center">Perfect Microsatellites</h4>
+<div class="parameters">
+	<p>
+		The minimum repeats for each perfect SSR type were set to
+		<span class="color-red">{{ ssr.parameters.mono }}</span> for Mono-,
+		<span class="color-red">{{ ssr.parameters.di }}</span> for Di-,
+		<span class="color-red">{{ ssr.parameters.tri }}</span> for Tri,
+		<span class="color-red">{{ ssr.parameters.tetra }}</span> for Tetra-,
+		<span class="color-red">{{ ssr.parameters.penta }}</span> for Penta-,
+		<span class="color-red">{{ ssr.parameters.hexa }}</span> for Hexa-,
+		and motif standardization level was set to <span class="color-red">Level {{ ssr.parameters.level }}</span>
+	</p>
+	<ul class="inline-list">
+		<li>Start time: <span class="color-blue">{{ ssr.start|time_format }}</span></li> 
+		<li>End time: <span class="color-blue">{{ ssr.end|time_format }}</span></li>
+		<li>Elapsed time: <span class="color-blue">{{ (ssr.end-ssr.start)|used_format }}</span></li>
+	</ul>
+</div>
+
+<h5 class="table-header">The summary information of perfect microsatellites</h5>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of perfect SSRs</td><td>Counts</td><td>{{ ssr.count }}</td></tr>
@@ -92,48 +113,62 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 	<tr><td>Relative density</td><td>total SSR length/total valid length ( bp/{{ seq.unit }})</td><td>{{ ssr.density }}</td></tr>
 </table>
 
-<p>{{ table('The summary of perfect SSR types', ssr.type, 'ssr-type') }}</p>
+<p>{{ table('The summary of perfect microsatellite types', ssr.type) }}</p>
 
 <!-- SSR distribution pie plot -->
 <div class="row">
-	<div class="col">
+	<div class="{% if ssr.location %} col-4 {% else %} col-6 {% endif %}">
 		<div class="pie text-center"><canvas id="ssr-count-pie" width="400" height="400"></canvas></div>
-		<p class="text-center">SSR counts distribution for each type</p>
+		<h6 class="text-center">SSR counts distribution for each type</h6>
 	</div>
-	<div class="col">
+	<div class="{% if ssr.location %} col-4 {% else %} col-6 {% endif %}">
 		<div class="pie text-center"><canvas id="ssr-cover-pie" width="400" height="400"></canvas></div>
-		<p class="text-center">SSR length distribution for each type</p>
+		<h6 class="text-center">SSR length distribution for each type</h6>
 	</div>
+	{% if ssr.location %}
+	<div class="col-4">
+		<div class="pie text-center"><canvas id="ssr-region-pie" width="400" height="400"></canvas></div>
+		<h6 class="text-center">The distribution of perfect SSRs in different region</h6>
+	</div>
+	{% endif %}
 </div>
 
-{% if ssr.region %}
-<div>{{ figure('The distribution of perfect SSRs in different region', 'ssr_region') }}</div>
-{% endif %}
 
 <!-- most abundant motif in each category -->
 <div>{{ table('The most abundant motif categories', ssr.category|abundant_motifs, 'ssr-category') }}</div>
 <!-- most abundant motif bar plot -->
 <div class="chart">
 	<canvas id="motif-count-bar" width="400" height="100"></canvas>
-	<p class="text-center">The most abundant motif categories</p>
+	<h6 class="text-center">The most abundant motif categories</h6>
 </div>
 <!-- SSR repeats distribution for each motif type -->
 <div class="chart">
 	<canvas id="ssr-repeat-line" width="400" height="100"></canvas>
-	<p class="text-center">SSR repeats distribution for each SSR type</p>
+	<h6 class="text-center">SSR repeats distribution for each SSR type</h6>
 </div>
 <!-- SSR length distribution for each motif type -->
 <div class="chart">
 	<canvas id="ssr-length-line" width="400" height="100"></canvas>
-	<p class="text-center">SSR length distribution for each SSR type</p>
+	<h6 class="text-center">SSR length distribution for each SSR type</h6>
 </div>
 {% endif %}
 
 <!-- compound SSRs statistics -->
 {% if cssr %}
 <hr>
-<h2 class="text-center">Compound Microsatellites (CM)</h2>
-<h3 class="text-center">The summary information of compound SSRs</h3>
+<h4 class="text-center">Compound Microsatellites (CM)</h4>
+
+<div class="parameters">
+	<p>The maximum distance allowed between adjacent SSRs as to account as compounded (dMax) was specified to <span class="color-red">{{ cssr.parameters.dmax }}</span> bp</p>
+	<ul class="inline-list">
+		<li>Start time: <span class="color-blue">{{ cssr.start|time_format }}</span></li> 
+		<li>End time: <span class="color-blue">{{ cssr.end|time_format }}</span></li>
+		<li>Elapsed time: <span class="color-blue">{{ (cssr.end-cssr.start)|used_format }}</span></li>
+	</ul>
+</div>
+
+
+<h5 class="text-center">The summary information of compound SSRs</h5>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of compound SSRs</td><td>Counts</td><td>{{ cssr.cm_count }}</td></tr>
@@ -143,8 +178,11 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 	<tr><td>Relative density</td><td>total CM length/toal valid length (bp/{{ seq.unit }})</td><td>{{ cssr.density }}</td></tr>
 </table>
 
-{% if cssr.region %}
-<p>{{ figure('The distribution of compound SSRs in different region', 'cssr_region') }}</p>
+{% if cssr.location %}
+<div class="pie text-center">
+	<canvas id="cssr-region-pie" width="400" height="400"></canvas>
+	<h6 class="text-center">The distribution of compound SSRs in different region</h6>
+</div>
 {% endif %}
 
 <div class="chart">
@@ -165,8 +203,30 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 <!-- imperfect SSRs statistics -->
 {% if issr %}
 <hr>
-<h2 class="text-center">Imperfect Microsatellites</h2>
-<h3 class="text-center">The summary information of iSSRs</h3>
+<h4 class="text-center">Imperfect Microsatellites</h4>
+
+<div class="parameters">
+	<p>
+		The minimum seed length and seed repeats were set to
+		<span class="color-red">{{ issr.parameters.seed_length }}</span> and
+		<span class="color-red">{{ issr.parameters.seed_repeat }}</span>, respectively,
+		The maximum consecutive edits (including: substitutions and indels) allowed was specified to 
+		<span class="color-red">{{ issr.parameters.max_edits }}</span>,
+		The penalty cost was set to
+		<span class="color-red">{{ issr.parameters.mis_penalty }}</span> for mismatch and
+		<span class="color-red">{{ issr.parameters.gap_penalty }}</span> for indels (gaps),
+		The minimum required score for identified iSSR was set to
+		<span class="color-red">{{ issr.parameters.min_score }}</span>,
+		and motif standardization level was set to <span class="color-red">Level {{ issr.parameters.level }}</span>
+	</p>
+	<ul class="inline-list">
+		<li>Start time: <span class="color-blue">{{ issr.start|time_format }}</span></li> 
+		<li>End time: <span class="color-blue">{{ issr.end|time_format }}</span></li>
+		<li>Elapsed time: <span class="color-blue">{{ (issr.end-issr.start)|used_format }}</span></li>
+	</ul>
+</div>
+
+<h5>The summary information of imperfect SSRs</h5>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of iSSRs</td><td>Counts</td><td>{{ issr.count }}</td></tr>
@@ -177,22 +237,24 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 
 <p>{{ table('The summary of imperfect SSR types', issr.type, 'issr-type') }}</p>
 
-<!-- SSR distribution pie plot -->
+<!-- iSSR distribution pie plot -->
 <div class="row">
-	<div class="col">
+	<div class="{% if issr.location %} col-4 {% else %} col-6 {% endif %}">
 		<div class="pie text-center"><canvas id="issr-count-pie" width="400" height="400"></canvas></div>
-		<p class="text-center">cSSR counts distribution for each type</p>
+		<h6 class="text-center">iSSR counts distribution for each type</h6>
 	</div>
-	<div class="col">
+	<div class="{% if issr.location %} col-4 {% else %} col-6 {% endif %}">
 		<div class="pie text-center"><canvas id="issr-cover-pie" width="400" height="400"></canvas></div>
-		<p class="text-center">cSSR length distribution for each type</p>
+		<h6 class="text-center">iSSR length distribution for each type</h6>
 	</div>
-	{% if issr.region %}
-	<div class="col">
-		<p>{{ figure('The distribution of imperfect SSRs in different region', 'issr_region') }}</p>
+	{% if issr.location %}
+	<div class="col-4">
+		<div class="pie text-center"><canvas id="issr-region-pie" width="400" height="400"></canvas></div>
+		<h6 class="text-center">The distribution of imperfect SSRs in different region</h6>
 	</div>
 	{% endif %}
 </div>
+
 
 <p>{{ table('The most abundant imperfect SSR motif category for each SSR type', issr.category|abundant_motifs, 'issr-category') }}</p>
 
@@ -211,8 +273,24 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 <!-- VNTRs statistics -->
 {% if vntr %}
 <hr>
-<h2 class="text-center">Variable Number Tandem Repeats (VNTRs)</h2>
-<h3 class="text-center">The summary information of VNTRs</h3>
+<h4 class="text-center">Variable Number Tandem Repeats (VNTRs)</h4>
+
+<div class="parameters">
+	<p>
+		The minimum motif length and maximum motif length were set to
+		<span class="color-red">{{ vntr.parameters.min_motif }}</span> and
+		<span class="color-red">{{ vntr.parameters.max_motif }}</span>, respectively,
+		The minimum repeats was set to
+		<span class="color-red">{{ vntr.parameters.min_repeat }}</span>
+	</p>
+	<ul class="inline-list">
+		<li>Start time: <span class="color-blue">{{ vntr.start|time_format }}</span></li> 
+		<li>End time: <span class="color-blue">{{ vntr.end|time_format }}</span></li>
+		<li>Elapsed time: <span class="color-blue">{{ (vntr.end-issr.start)|used_format }}</span></li>
+	</ul>
+</div>
+
+<h5 class="text-center">The summary information of VNTRs</h5>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of VNTRs</td><td>Counts</td><td>{{ vntr.count }}</td></tr>
@@ -221,8 +299,11 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 	<tr><td>Relative density</td><td>total VNTR length/toal valid length (bp/{{ seq.unit }})</td><td>{{ vntr.density }}</td></tr>
 </table>
 
-{% if vntr.region %}
-<div>{{ figure('The distribution of VNTRs in different region', 'vntr_region') }}</div>
+{% if vntr.location %}
+<div class="pie text-center">
+	<canvas id="vntr-region-pie" width="400" height="400"></canvas>
+	<h6 class="text-center">The distribution of VNTRs in different region</h6>
+</div>
 {% endif %}
 
 <div class="chart">
@@ -299,6 +380,18 @@ plot("ssr-cover-pie", "doughnut", {
 		backgroundColor: colors
 	}]
 });
+
+//ssr region pie plot
+{% if ssr.location %}
+plot("ssr-region-pie", "doughnut", {
+	labels: [{{ ssr.plot.pie3.labels }}],
+	datasets: [{
+		label: "Number of SSRs",
+		data: [{{ ssr.plot.pie3.data }}],
+		backgroundColor: colors
+	}]
+});
+{% endif %}
 
 //most abundant motif bar plot
 plot("motif-count-bar", "bar", {
@@ -383,6 +476,18 @@ plot("cssr-gap-line", "line", {
 	}]
 });
 
+//cssr region pie plot
+{% if cssr.location %}
+plot("cssr-region-pie", "doughnut", {
+	labels: [{{ cssr.plot.pie1.labels }}],
+	datasets: [{
+		label: "Number of SSRs",
+		data: [{{ cssr.plot.pie1.data }}],
+		backgroundColor: colors
+	}]
+});
+{% endif %}
+
 {% endif %}
 
 {% if issr %}
@@ -403,6 +508,17 @@ plot("issr-cover-pie", "doughnut", {
 	datasets: [{
 		label: "Length of SSRs",
 		data: [{{ issr.plot.pie2.data }}],
+		backgroundColor: colors
+	}]
+});
+
+//issr region pie plot
+{% if issr.location %}
+plot("issr-region-pie", "doughnut", {
+	labels: [{{ issr.plot.pie3.labels }}],
+	datasets: [{
+		label: "Number of SSRs",
+		data: [{{ issr.plot.pie3.data }}],
 		backgroundColor: colors
 	}]
 });
@@ -470,6 +586,18 @@ plot("vntr-length-line", "line", {
 		data: [{{ vntr.plot.line3.data }}]
 	}]
 });
+
+//vntr region pie plot
+{% if vntr.location %}
+plot("vntr-region-pie", "doughnut", {
+	labels: [{{ vntr.plot.pie1.labels }}],
+	datasets: [{
+		label: "Number of SSRs",
+		data: [{{ vntr.plot.pie1.data }}],
+		backgroundColor: colors
+	}]
+});
+
 {% endif %}
 
 </script>

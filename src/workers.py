@@ -53,11 +53,11 @@ class Worker(QObject):
 
 	def emit_progress(self, percent):
 		self.update_progress.emit(percent)
-		time.sleep(0.001)
+		time.sleep(0)
 
 	def emit_message(self, msg):
 		self.update_message.emit(msg)
-		time.sleep(0.001)
+		time.sleep(0)
 
 	def emit_finish(self, msg):
 		self.update_progress.emit(100)
@@ -87,7 +87,19 @@ class SSRWorker(Worker):
 		self.fasta_counts = len(self.fastas)
 		self.progress = 0
 
+		parameters = Data(
+			mono = min_repeats[0],
+			di = min_repeats[1],
+			tri = min_repeats[2],
+			tetra = min_repeats[3],
+			penta = min_repeats[4],
+			hexa = min_repeats[5],
+			level = standard_level
+		)
+		self.db.set_option("ssr_parameters", json.dumps(parameters))
+
 	def process(self):
+		self.db.set_option('ssr_start_time', int(time.time()))
 		current_fastas = 0
 		for fasta_id, fasta_file in self.fastas:
 			current_fastas += 1
@@ -95,7 +107,7 @@ class SSRWorker(Worker):
 			
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
-
+			time.sleep(0.001)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
 			total_bases = seqs.get_total_length()
 			#insert ssr to database
@@ -119,6 +131,7 @@ class SSRWorker(Worker):
 				self.db.insert(sql, values())
 				self.emit_progress(int(seq_progress*fasta_progress*100))
 
+		self.db.set_option('ssr_end_time', int(time.time()))
 		self.emit_finish('Perfect SSRs search completed')
 
 
@@ -126,19 +139,31 @@ class ISSRWorker(Worker):
 	'''
 	perfect microsatellite search thread
 	'''
-	def __init__(self, fastas, seed_repeat, seed_length, max_eidts, mis_penalty, gap_penalty, score, standard_level):
+	def __init__(self, fastas, seed_repeat, seed_length, max_edits, mis_penalty, gap_penalty, score, standard_level):
 		super(ISSRWorker, self).__init__()
 		self.fastas = fastas
 		self.motifs = motif.StandardMotif(standard_level)
 		self.fasta_counts = len(self.fastas)
 		self.seed_repeat = seed_repeat
 		self.seed_length = seed_length
-		self.max_eidts = max_eidts
+		self.max_edits = max_edits
 		self.mis_penalty = mis_penalty
 		self.gap_penalty = gap_penalty
 		self.score = score
 
+		parameters = Data(
+			seed_repeat = seed_repeat,
+			seed_length = seed_length,
+			max_edits = max_edits,
+			mis_penalty = mis_penalty,
+			gap_penalty = gap_penalty,
+			min_score = score,
+			level = standard_level
+		)
+		self.db.set_option('issr_parameters', json.dumps(parameters))
+
 	def process(self):
+		self.db.set_option('issr_start_time', int(time.time()))
 		current_fastas = 0
 		for fasta_id, fasta_file in self.fastas:
 			current_fastas += 1
@@ -160,7 +185,7 @@ class ISSRWorker(Worker):
 
 				self.emit_message("Search imperfect SSRs from %s" % name)
 
-				issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_eidts, self.mis_penalty, self.gap_penalty, self.score, 500)
+				issrs = tandem.search_issr(seq, self.seed_repeat, self.seed_length, self.max_edits, self.mis_penalty, self.gap_penalty, self.score, 500)
 				
 				def values():
 					for issr in issrs:
@@ -170,7 +195,7 @@ class ISSRWorker(Worker):
 
 				self.db.insert(sql, values())
 				self.emit_progress(int(seq_progress*fasta_progress*100))
-	
+		self.db.set_option("issr_end_time", int(time.time()))
 		self.emit_finish('Imperfect SSRs search completed')
 
 
@@ -178,8 +203,13 @@ class CSSRWorker(Worker):
 	def __init__(self, dmax):
 		super(CSSRWorker, self).__init__()
 		self.dmax = dmax
+		parameters = Data(
+			dmax = dmax
+		)
+		self.db.set_option('cssr_parameters', json.dumps(parameters))
 
 	def process(self):
+		self.db.set_option('cssr_start_time', int(time.time()))
 		ssrs = self.db.query("SELECT * FROM ssr")
 		total = self.db.get_one("SELECT COUNT(1) FROM ssr LIMIT 1")
 		self.db.begin()
@@ -203,7 +233,7 @@ class CSSRWorker(Worker):
 			self.concatenate(cssrs)
 
 		self.db.commit()
-
+		self.db.set_option('cssr_end_time', int(time.time()))
 		self.emit_finish("Compound SSRs search completed")
 
 	def concatenate(self, cssrs):
@@ -231,7 +261,16 @@ class VNTRWorker(Worker):
 		self.repeats = repeats
 		self.fasta_counts = len(self.fastas)
 
+		parameters = Data(
+			min_motif = min_motif,
+			max_motif = max_motif,
+			min_repeat = repeats
+		)
+
+		self.db.set_option('vntr_parameters', json.dumps(parameters))
+
 	def process(self):
+		self.db.set_option('vntr_start_time', int(time.time()))
 		current_fastas = 0
 		for fasta_id, fasta_file in self.fastas:
 			current_fastas += 1
@@ -261,7 +300,7 @@ class VNTRWorker(Worker):
 
 				self.db.insert(sql, values())
 				self.emit_progress(int(seq_progress*fasta_progress*100))
-				
+		self.db.set_option('vntr_end_time', int(time.time()))	
 		self.emit_finish('VNTRs search completed')
 
 class StatisWorker(Worker):
@@ -282,70 +321,13 @@ class StatisWorker(Worker):
 			self.emit_message("Doing perfect SSR statistics...")
 			ssr_statis = SSRStatistics().results()
 			self.db.set_option('ssr_statis', json.dumps(ssr_statis))
-
-			#generate ssr type distribution pie plot
-			#x = [row[1] for row in ssr_statis.type[1:]]
-			#l = [row[0] for row in ssr_statis.type[1:]]
-			#plot.pie(x, l, "ssr_type", self.dpi)
-
-			#generate most abundant ssr motif distribution bar plot
-			#motifs = [[], [], [], [], [], []]
-			#for row in ssr_statis.category[1:]:
-			#	motifs[len(row[0])-1].append((row[0], row[1]))
-
-			#x = []
-			#l1 = []
-			#for m in motifs:
-			#	m = sorted(m, key=lambda x: (x[0], -x[1]))
-			#	for a, b in m[:10]:
-			#		x.append(b)
-			#		l1.append(a)
-
-			#plot.bar(l1, x, "SSR motif category", "SSR counts", "ssr_motif", self.dpi)
-
-			#generate ssr repeat distribution box plot
-			#x = ssr_statis.repeat
-			#plot.box(x, l, "SSR repeats", "ssr_repeat", self.dpi)
-
-			#generate ssr length distribution box plot
-			#x = ssr_statis.ssrlen
-			#plot.box(x, l, "SSR length (bp)", "ssr_length", self.dpi)
-
-
-			#generate ssr distribution in diff regions pie plot
-			#if ssr_statis.region:
-			#	x = [row[1] for row in ssr_statis.region]
-			#	l = [row[0] for row in ssr_statis.region]
-			#	plot.pie(x, l, "ssr_region", self.dpi)
-
 		else:
 			self.db.set_option('ssr_statis', '[]')
-
 
 		if not self.db.is_empty('issr'):
 			self.emit_message("Doing imperfect SSR statistics...")
 			issr_statis = ISSRStatistics().results()
 			self.db.set_option('issr_statis', json.dumps(issr_statis))
-
-			#generate issr type distribution pie plot
-			#x = [row[1] for row in issr_statis.type[1:]]
-			#l = [row[0] for row in issr_statis.type[1:]]
-			#plot.pie(x, l, "issr_type", self.dpi)
-
-			#generate ssr repeat distribution box plot
-			#x = issr_statis.score
-			#plot.box(x, l, "iSSR score", "issr_score", self.dpi)
-
-			#generate ssr length distribution box plot
-			#x = issr_statis.issrlen
-			#plot.box(x, l, "iSSR length (bp)", "issr_length", self.dpi)
-
-			#generate ssr distribution in diff regions pie plot
-			#if issr_statis.region:
-			#	x = [row[1] for row in issr_statis.region]
-			#	l = [row[0] for row in issr_statis.region]
-			#	plot.pie(x, l, "issr_region", self.dpi)
-
 		else:
 			self.db.set_option('issr_statis', '[]')
 
@@ -354,28 +336,6 @@ class StatisWorker(Worker):
 			self.emit_message("Doing compound SSR statistics...")
 			cssr_statis = CSSRStatistics().results()
 			self.db.set_option('cssr_statis', json.dumps(cssr_statis))
-
-			#generate cssr complexity distribution
-			#x = [row[0] for row in cssr_statis.complexity[1:]]
-			#y = [row[1] for row in cssr_statis.complexity[1:]]
-			#plot.line(x, y, 'cSSR complexity', 'cSSR Counts', 'cssr_complexity', self.dpi)
-
-			#genrate cssr length distribution
-			#x = [row[0] for row in cssr_statis.cssrlen[1:]]
-			#y = [row[1] for row in cssr_statis.cssrlen[1:]]
-			#plot.line(x, y, 'cSSR length (bp)', 'cSSR Counts', 'cssr_length', self.dpi)
-
-			#genrate cssr gap distribution
-			#x = [row[0] for row in cssr_statis.gap[1:]]
-			#y = [row[1] for row in cssr_statis.gap[1:]]
-			#plot.line(x, y, 'Gap length (bp)', 'cSSR Counts', 'cssr_gap', self.dpi)
-
-			#generate ssr distribution in diff regions pie plot
-			#if cssr_statis.region:
-			#	x = [row[1] for row in cssr_statis.region]
-			#	l = [row[0] for row in cssr_statis.region]
-			#	plot.pie(x, l, "cssr_region", self.dpi)
-
 		else:
 			self.db.set_option('cssr_statis', '[]')
 
@@ -384,28 +344,6 @@ class StatisWorker(Worker):
 			self.emit_message("Doing VNTR statistics...")
 			vntr_statis = VNTRStatistics().results()
 			self.db.set_option('vntr_statis', json.dumps(vntr_statis))
-
-			#generate vntr type distribution
-			#x = [row[0] for row in vntr_statis.type]
-			#y = [row[1] for row in vntr_statis.type]
-			#plot.line(x, y, 'VNTR motif length (bp)', 'VNTR Counts', 'vntr_type', self.dpi)
-
-			#genrate vntr length distribution
-			#x = [row[0] for row in vntr_statis.vntrlen]
-			#y = [row[1] for row in vntr_statis.vntrlen]
-			#plot.line(x, y, 'VNTR length (bp)', 'VNTR Counts', 'vntr_length', self.dpi)
-
-			#genrate vntr repeat distribution
-			#x = [row[0] for row in vntr_statis.repeat]
-			#y = [row[1] for row in vntr_statis.repeat]
-			#plot.line(x, y, 'VNTR repeats', 'VNTR Counts', 'vntr_repeat', self.dpi)
-
-			#generate ssr distribution in diff regions pie plot
-			#if vntr_statis.region:
-			#	x = [row[1] for row in vntr_statis.region]
-			#	l = [row[0] for row in vntr_statis.region]
-			#	plot.pie(x, l, "vntr_region", self.dpi)
-
 		else:
 			self.db.set_option('vntr_statis', '[]')
 
@@ -659,8 +597,8 @@ class LocateWorker(Worker):
 					break
 
 		self.emit_message("Creating query index")
-		self.db.query("CREATE INDEX loci ON location (target, category)")
-		self.db.query("CREATE INDEX sel ON location (category, feature)")
+		self.db.query("CREATE REINDEX loci ON location (target, category)")
+		self.db.query("CREATE REINDEX sel ON location (category, feature)")
 
 		self.emit_finish("%s location completed." % self.table)
 

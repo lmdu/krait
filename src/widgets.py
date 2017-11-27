@@ -628,9 +628,11 @@ class SSRMainWindow(QMainWindow):
 
 			if ret == QMessageBox.Yes:
 				self.saveProject()
-			
+		
 		self.db.drop_tables()
 		self.createTableModel()
+		self.browser.setHtml('')
+		self.changed_rows = self.db.changes()
 
 	def importFasta(self, fasta=None):
 		'''
@@ -718,7 +720,7 @@ class SSRMainWindow(QMainWindow):
 		)
 
 	def exportStatisResult(self):
-		pdfname, _ = QFileDialog.getSaveFileName(self, filter="PDF Report (*.pdf);; HTML Report (*.html)")
+		pdfname, _ = QFileDialog.getSaveFileName(self, filter="HTML Report (*.html);; PDF Report (*.pdf)")
 		if not file: return
 
 		if pdfname.endswith('.pdf'):
@@ -1710,7 +1712,7 @@ class GeneralTab(QWidget):
 		self.max_error = QSpinBox()
 		mis_penalty_label = QLabel("Mismatch penalty")
 		self.mis_penalty = QSpinBox()
-		gap_penalty_label = QLabel("Indel penalty")
+		gap_penalty_label = QLabel("Gap penalty")
 		self.gap_penalty = QSpinBox()
 		min_score_label = QLabel("Min required score")
 		self.min_score = QSpinBox()
@@ -2083,7 +2085,12 @@ class BrowserWidget(QWebView):
 		stats_obj = json.loads(stats_str)
 		outfile, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv)")
 		if not outfile: return
-		write_to_csv(outfile, stats_obj[name][0], stats_obj[name][1:])
+
+		with open(outfile, 'wb') as fh:
+			writer = csv.writer(fh)
+			writer.write(stats_obj[name][0])
+			write_to_csv(writer, stats_obj[name][1:])
+		
 		self.parent.setStatusMessage("Table %s has been successfully saved" % outfile)
 
 

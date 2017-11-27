@@ -3,6 +3,7 @@
 from __future__ import division
 import csv
 import gzip
+import time
 
 from libs import *
 from config import *
@@ -35,11 +36,39 @@ def abundant_motifs(rows):
 	
 	return res
 
-def sortfilter():
-	pass
+def time_format(dt):
+	if dt is None:
+		return ''
+	else:
+		return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(dt))
+
+def used_format(dt):
+	if dt == 0:
+		return "0s"
+	
+	hours = int(dt/3600)
+	divisor_for_minutes = dt % 3600
+	minutes = int(divisor_for_minutes/60)
+	divisor_for_seconds = divisor_for_minutes % 60
+	seconds = int(divisor_for_seconds)
+
+	res = []
+	if hours:
+		res.append("%sh" % hours)
+
+	if minutes:
+		res.append("%smin" % minutes)
+
+	if seconds:
+		res.append("%ss" % seconds)
+
+	return " ".join(res)
+
+
 
 env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
-env.filters['sortfilter'] = sortfilter
+env.filters['time_format'] = time_format
+env.filters['used_format'] = used_format
 env.filters['abundant_motifs'] = abundant_motifs
 def template_render(template_name, **kwargs):
 	template = env.get_template(template_name)
