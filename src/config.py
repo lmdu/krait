@@ -123,13 +123,12 @@ CREATE TABLE IF NOT EXISTS `primer_meta`(
 );
 
 CREATE TABLE IF NOT EXISTS `location`(
-	id INTEGER PRIMARY KEY,
 	category TEXT,
 	target INTEGER,
-	gene_id TEXT,
-	gene_name TEXT,
 	feature TEXT
 );
+
+CREATE INDEX IF NOT EXISTS loc ON location (category, target);
 
 CREATE TABLE IF NOT EXISTS `option`(
 	id INTEGER PRIMARY KEY,

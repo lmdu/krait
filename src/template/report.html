@@ -24,7 +24,8 @@
 
 /* plot */
 .pie{position:relative;max-width:400px; margin: 0 auto;}
-.chart{margin-top: 30px;width: 100%;}
+.chart{position:relative;margin-top:30px;width:100%;}
+canvas{width: 100%;}
 
 /* split line */
 hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
@@ -38,7 +39,7 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 	 a user-friendly graphic interface for genome-wide investigation of microsatellites and primer design</p>
 </div>
 <hr>
-<h4 class="text-center">Sequnce information</h4>
+<h4 class="text-center">Sequence information</h4>
 <div class="input-files">
 	{% if seq.fastas|length > 1 %}
 	<p>Input FASTA files: {{ seq.fastas[0] }}...{{ seq.fastas[-1] }} including {{ seq.fastas|length }} files. </p>
@@ -116,7 +117,7 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 <p>{{ table('The summary of perfect microsatellite types', ssr.type) }}</p>
 
 <!-- SSR distribution pie plot -->
-<div class="row">
+<div class="row chart">
 	<div class="{% if ssr.location %} col-4 {% else %} col-6 {% endif %}">
 		<div class="pie text-center"><canvas id="ssr-count-pie" width="400" height="400"></canvas></div>
 		<h6 class="text-center">SSR counts distribution for each type</h6>
@@ -238,7 +239,7 @@ hr{height:3px;border:none;color: #ddd;background-color:#ccc;margin: 50px 0;}
 <p>{{ table('The summary of imperfect SSR types', issr.type, 'issr-type') }}</p>
 
 <!-- iSSR distribution pie plot -->
-<div class="row">
+<div class="row chart">
 	<div class="{% if issr.location %} col-4 {% else %} col-6 {% endif %}">
 		<div class="pie text-center"><canvas id="issr-count-pie" width="400" height="400"></canvas></div>
 		<h6 class="text-center">iSSR counts distribution for each type</h6>
@@ -522,6 +523,7 @@ plot("issr-region-pie", "doughnut", {
 		backgroundColor: colors
 	}]
 });
+{% endif %}
 
 //most abundant issr motif bar plot
 plot("issr-motif-bar", "bar", {
@@ -597,6 +599,7 @@ plot("vntr-region-pie", "doughnut", {
 		backgroundColor: colors
 	}]
 });
+{% endif %}
 
 {% endif %}
 

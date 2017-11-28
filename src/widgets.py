@@ -604,17 +604,18 @@ class SSRMainWindow(QMainWindow):
 		#os.remove(self.opened_project)
 		self.db.save(self.opened_project)
 		self.changed_rows = self.db.changes()
-		self.setStatusMessage("Project has been successfully saved to %s" % self.opened_project)
+		worker = SaveProjectWorker(dbfile)
+		self.executeTask(worker, lambda: 1)
 
 	def saveProjectAs(self):
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
 		if not dbfile:
 			return
 
-		self.db.save(dbfile)
 		self.opened_project = dbfile
 		self.changed_rows = self.db.changes()
-		self.setStatusMessage("Project has been successfully saved to %s" % dbfile)
+		worker = SaveProjectWorker(dbfile)
+		self.executeTask(worker, lambda: 1)
 
 	def closeProject(self):
 		if self.changed_rows != self.db.changes():
@@ -1003,7 +1004,11 @@ class SSRMainWindow(QMainWindow):
 			return QMessageBox.warning(self, "warning", "No SSRs in table")
 
 		worker = LocateWorker(table, self.annot_file)
-		self.executeTask(worker, lambda : 1)
+		self.executeTask(worker, self.showLocation)
+
+	def showLocation(self):
+		self.model.beginResetModel()
+		self.model.endResetModel()
 
 	def removeMarker(self):
 		self.db.clear('location')
@@ -1344,7 +1349,9 @@ class TableModel(QAbstractTableModel):
 		self.sel_row.emit(0)
 
 	def setTable(self, table):
+		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
 		self.table = table
+		self.cat = categories[self.table]
 		self.headers = self.db.get_fields(self.table) or []
 		self.query = ["SELECT %s FROM {0}".format(self.table), '', '']
 
@@ -1438,8 +1445,9 @@ class TableModel(QAbstractTableModel):
 
 	def rowColor(self, index):
 		#ID = self.dataset[index.row()]
+
 		ID = self.displayed[index.row()]
-		sql = "SELECT feature FROM location WHERE target=%s AND category='%s' LIMIT 1" % (ID, self.table)
+		sql = "SELECT feature FROM location WHERE target=%s AND category=%s LIMIT 1" % (ID, self.cat)
 		feature = self.db.get_one(sql)
 		if not feature:
 			return QColor(255, 255, 255)
@@ -1447,7 +1455,7 @@ class TableModel(QAbstractTableModel):
 			return QColor(245, 183, 177)
 		elif feature == 'EXON':
 			return QColor(169, 223, 191)
-		elif feature == '3UTR' or feature == '5UTR':
+		elif feature in ['3UTR', '5UTR', 'UTR']:
 			return QColor(250, 215, 160) 
 		elif feature == 'INTRON':
 			return QColor(174, 214, 241)

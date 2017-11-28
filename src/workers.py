@@ -224,7 +224,7 @@ class CSSRWorker(Worker):
 				if len(cssrs) > 1:
 					self.concatenate(cssrs)
 					progress = int(cssrs[-1].id/total*100)
-					if progress != prev_progress:
+					if progress > prev_progress:
 						self.emit_progress(progress)
 						prev_progress = progress
 				cssrs = [ssr]
@@ -484,7 +484,7 @@ class ExportTableWorker(Worker):
 				current += 1
 				process = int(current/total_counts*100)
 
-				if process != prev_progress:
+				if process > prev_progress:
 					self.emit_progress(process)
 					prev_progress = process
 
@@ -515,7 +515,7 @@ class ExportFastaWorker(Worker):
 		prev_progress = 0
 		seqs = None
 
-		with open(self.outfile, 'w') as fp:
+		with open(self.outfile, 'wb') as fp:
 			for item in self.db.query(sql):
 				if seqs is None or item.sequence not in seqs:
 					sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='%s' LIMIT 1" % item.sequence
@@ -538,6 +538,22 @@ class ExportFastaWorker(Worker):
 
 		self.emit_finish("Successfully exported to fasta %s" % self.outfile)
 
+class SaveProjectWorker(Worker):
+	def __init__(self, dbfile):
+		super(SaveProjectWorker, self).__init__()
+		self.dbfile = dbfile
+
+	def process(self):
+		self.emit_message("Save project to %s" % self.dbfile)
+		bak = self.db.save(self.dbfile)
+		with bak as b:
+			while not b.done:
+				b.step(100)
+				progress = int((b.pagecount-b.remaining)/b.pagecount*100)
+				self.emit_progress(progress)
+		self.emit_finish("Project has been successfully saved to %s" % self.dbfile)
+
+
 class LocateWorker(Worker):
 	"""
 	Locate the SSRs in which region of genome
@@ -553,7 +569,6 @@ class LocateWorker(Worker):
 	def process(self):
 		self.emit_message("Building interval tree")
 		interval_forest = {}
-		genes_info = {}
 		f = check_gene_annot_format(self.annot_file)
 		if f == 'GFF':
 			features = get_gff_coordinate(self.annot_file)
@@ -562,43 +577,44 @@ class LocateWorker(Worker):
 
 		self.emit_message("Building interval tree")
 		for feature in features:
-			if feature[0] == 'GENE':
-				genes_info[feature[1]] = feature[2]
-				continue
-
 			if feature[1] not in interval_forest:
 				interval_forest[feature[1]] = intersection.IntervalTree()
 
-			interval_forest[feature[1]].insert(feature[2], feature[3], (feature[0], feature[4]))
+			interval_forest[feature[1]].insert(feature[2], feature[3], feature[0])
 
 		total = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
 		current = 0
+		progress = 0
+		prev_progress = 0
+		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+		cat = categories[self.table]
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
 			self.emit_message("Locating %ss in sequence %s" % (self.table.upper(), ssr.sequence))
 			current += 1
 			progress = int(current/total*100)
-			if progress%2 == 0:
+			if progress > prev_progress:
 				self.emit_progress(progress)
+				prev_progress = progress
 
 			if ssr.sequence not in interval_forest:
 				continue
 
 			res = interval_forest[ssr.sequence].find(ssr.start, ssr.end)
-			if not res: continue
+			if not res:
+				continue
 
-			res = {f:g for f, g in res}
+			#res = {f:g for f, g in res}
 
-			record = [None, self.table, ssr.id]
-			for feat in ['CDS', '5UTR', '3UTR', 'EXON', 'INTRON']:
+			record = [cat, ssr.id]
+			for feat in ['CDS', '5UTR', '3UTR', 'UTR', 'EXON', 'INTRON']:
 				if feat in res:
-					gid = res[feat]
-					record.extend([gid, genes_info[gid], feat])
-					self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?,?,?,?)", record)
+					record.append(feat)
+					self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?)", record)
 					break
 
-		self.emit_message("Creating query index")
-		self.db.query("CREATE REINDEX loci ON location (target, category)")
-		self.db.query("CREATE REINDEX sel ON location (category, feature)")
+		#self.emit_message("Creating query index")
+		#self.db.query("CREATE REINDEX loci ON location (target, category)")
+		#self.db.query("CREATE REINDEX sel ON location (category, feature)")
 
 		self.emit_finish("%s location completed." % self.table)
 

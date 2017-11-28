@@ -77,6 +77,7 @@ class Database:
 	def drop_tables(self):
 		for table in self.get_tables():
 			self.query("DROP TABLE %s" % table)
+		self.query("DROP INDEX IF EXISTS loc")
 
 	def get_tables(self):
 		sql = "SELECT name FROM sqlite_master WHERE type='table'"
@@ -144,8 +145,12 @@ class Database:
 
 	def save(self, dbfile):
 		target = apsw.Connection(dbfile)
-		with target.backup("main", conn, "main") as b:
-			b.step()
+		return target.backup("main", conn, "main")
+		#with target.backup("main", conn, "main") as b:
+		#	b.step()
+
+	def memory(self):
+		return apsw.memoryused()
 
 	def begin(self):
 		self.query("BEGIN;")

@@ -196,19 +196,19 @@ def get_gtf_coordinate(gtf_file):
 	father = None
 	exons = []
 	for r in gff_gtf_parser(gtf_file, 'GTF'):
-		if r.feature == 'GENE':
-			yield ('GENE', r.attrs['GENE_ID'], r.attrs['GENE_NAME'])
-		elif r.feature == 'CDS':
-			yield ('CDS', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
+		if r.feature == 'CDS':
+			yield ('CDS', r.seqid, r.start, r.end)
 		elif r.feature == 'FIVE_PRIME_UTR':
-			yield ('5UTR', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
+			yield ('5UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'THREE_PRIME_UTR':
-			yield ('3UTR', r.seqid, r.start, r.end, r.attrs['GENE_ID'])
+			yield ('3UTR', r.seqid, r.start, r.end)
+		elif r.feature == 'UTR':
+			yield ('UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'EXON':
 			mother = r.attrs['TRANSCRIPT_ID']
 
 			if father == mother:
-				exons.append(('EXON', r.seqid, r.start, r.end, r.attrs['GENE_ID']))
+				exons.append(('EXON', r.seqid, r.start, r.end))
 			else:
 				if exons:
 					exons = sorted(exons, key=lambda x: x[2])
@@ -219,9 +219,9 @@ def get_gtf_coordinate(gtf_file):
 						if idx < len(exons)-1:
 							start = end+1
 							end = exons[idx+1][2]-1
-							yield ('INTRON', exons[0][1], start, end, exons[0][4])
+							yield ('INTRON', exons[0][1], start, end)
 				
-				exons = [('EXON', r.seqid, r.start, r.end, r.attrs['GENE_ID'])]
+				exons = [('EXON', r.seqid, r.start, r.end)]
 				father = mother
 
 	exons = sorted(exons, key=lambda x: x[2])
@@ -232,31 +232,25 @@ def get_gtf_coordinate(gtf_file):
 		if idx < len(exons)-1:
 			start = end+1
 			end = exons[idx+1][2]-1
-			yield ('INTRON', exons[0][1], start, end, exons[0][4])
+			yield ('INTRON', exons[0][1], start, end)
 
 def get_gff_coordinate(gff_file):
 	father = None
 	exons = []
-	relations = {}
 	for r in gff_gtf_parser(gff_file, 'GFF'):
-		try:
-			relations[r.attrs['ID']] = r.attrs['PARENT']
-		except KeyError:
-			relations[r.attrs['ID']] = r.attrs['ID']
-
-		if r.feature == 'GENE':
-			yield ('GENE', r.attrs['ID'], r.attrs['NAME'])
-		elif r.feature == 'CDS':
-			yield ('CDS', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
+		if r.feature == 'CDS':
+			yield ('CDS', r.seqid, r.start, r.end)
 		elif r.feature == 'FIVE_PRIME_UTR':
-			yield ('5UTR', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
+			yield ('5UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'THREE_PRIME_UTR':
-			yield ('3UTR', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])
+			yield ('3UTR', r.seqid, r.start, r.end)
+		elif r.feature == 'UTR':
+			yield ('UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'EXON':
 			mother = r.attrs['PARENT']
 
 			if father == mother:
-				exons.append(('EXON', r.seqid, r.start, r.end, relations[r.attrs['PARENT']]))
+				exons.append(('EXON', r.seqid, r.start, r.end))
 			else:
 				if exons:
 					exons = sorted(exons, key=lambda x: x[2])
@@ -267,9 +261,9 @@ def get_gff_coordinate(gff_file):
 						if idx < len(exons)-1:
 							start = end+1
 							end = exons[idx+1][2]-1
-							yield ('INTRON', exons[0][1], start, end, exons[0][4])
+							yield ('INTRON', exons[0][1], start, end)
 				
-				exons = [('EXON', r.seqid, r.start, r.end, relations[r.attrs['PARENT']])]
+				exons = [('EXON', r.seqid, r.start, r.end)]
 				father = mother
 
 	exons = sorted(exons, key=lambda x: x[2])
