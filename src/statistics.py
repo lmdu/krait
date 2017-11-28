@@ -97,7 +97,7 @@ class Statistics(object):
 	def region(self, table):
 		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
 		cat = categories[table]
-		total_counts = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % cat)
+		total_counts = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % table)
 		sql = "SELECT feature,COUNT(1) AS count FROM location WHERE category=%s GROUP BY feature"
 		rows = []
 		feat_counts = 0

@@ -50,8 +50,8 @@ import db
 show_splash_msg("Loading database library...")
 import motif
 show_splash_msg("Loading motif library...")
-import plot
-show_splash_msg("Loading plot library...")
+#import plot
+#show_splash_msg("Loading plot library...")
 import statistics
 show_splash_msg("Loading statistical library...")
 import workers

@@ -10,7 +10,7 @@ import functools
 
 from PySide.QtCore import *
 
-import plot
+#import plot
 import motif
 from libs import *
 from db import *
