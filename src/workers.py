@@ -379,6 +379,16 @@ class PrimerWorker(Worker):
 		else:
 			sql = "SELECT * FROM %s WHERE id IN (%s) ORDER BY id" % (table, ",".join(map(str, selected)))
 
+		def iter_ssrs():
+			if total_ssrs == total_select:
+				sql = "SELECT * FROM %s" % table
+				for ssr in self.db.query(sql):
+					yield ssr
+			else:
+				for sid in sorted(selected):
+					sql = "SELECT * FROM %s WHERE id=%s" % (table, sid)
+					yield self.db.get_row(sql)
+
 		current = 0
 		seqs = None
 		succeeded = 0
@@ -388,7 +398,7 @@ class PrimerWorker(Worker):
 		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
 		
 		self.db.begin()
-		for item in self.db.query(sql):
+		for item in iter_ssrs():
 			if seqs is None or item.sequence not in seqs:
 				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='%s' LIMIT 1" % item.sequence
 				seqfile = self.db.get_one(sql)

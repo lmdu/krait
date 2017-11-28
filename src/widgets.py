@@ -1335,7 +1335,8 @@ class TableModel(QAbstractTableModel):
 
 	def selectAll(self):
 		self.beginResetModel()
-		if self.db.get_one(self.query[0] % 'COUNT(1)') == self.total_row_counts:
+		sql = self.query[0] % 'COUNT(1)' + ' ' + self.query[1]
+		if self.db.get_one(sql) == self.total_row_counts:
 			self.selected = range(self.total_row_counts)
 		else:
 			self.selected = range(len(self.displayed))
@@ -1351,7 +1352,7 @@ class TableModel(QAbstractTableModel):
 	def setTable(self, table):
 		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
 		self.table = table
-		self.cat = categories[self.table]
+		self.cat = categories.get(self.table, self.table)
 		self.headers = self.db.get_fields(self.table) or []
 		self.query = ["SELECT %s FROM {0}".format(self.table), '', '']
 
@@ -1445,6 +1446,8 @@ class TableModel(QAbstractTableModel):
 
 	def rowColor(self, index):
 		#ID = self.dataset[index.row()]
+		if self.table == 'primer':
+			return QColor(255, 255, 255)
 
 		ID = self.displayed[index.row()]
 		sql = "SELECT feature FROM location WHERE target=%s AND category=%s LIMIT 1" % (ID, self.cat)
