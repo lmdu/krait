@@ -597,6 +597,7 @@ class LocateWorker(Worker):
 		progress = 0
 		prev_progress = 0
 		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+		features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
 		cat = categories[self.table]
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
 			self.emit_message("Locating %ss in sequence %s" % (self.table.upper(), ssr.sequence))
@@ -616,15 +617,11 @@ class LocateWorker(Worker):
 			#res = {f:g for f, g in res}
 
 			record = [cat, ssr.id]
-			for feat in ['CDS', '5UTR', '3UTR', 'UTR', 'EXON', 'INTRON']:
+			for feat in ['CDS', 'UTR', 'EXON', 'INTRON']:
 				if feat in res:
-					record.append(feat)
+					record.append(features[feat])
 					self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?)", record)
 					break
-
-		#self.emit_message("Creating query index")
-		#self.db.query("CREATE REINDEX loci ON location (target, category)")
-		#self.db.query("CREATE REINDEX sel ON location (category, feature)")
 
 		self.emit_finish("%s location completed." % self.table)
 

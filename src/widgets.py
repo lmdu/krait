@@ -1014,16 +1014,18 @@ class SSRMainWindow(QMainWindow):
 		self.db.clear('location')
 
 	def showMarker(self, marker):
+		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+		features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
 		table = self.model.table
-		if not table: return
+		if not table or table == 'primer':
+			return
 
-		if marker == 'UTR':
-			sql = "SELECT target FROM location WHERE category='%s' AND feature IN ('3UTR', '5UTR')" % table
-		else:
-			sql = "SELECT target FROM location WHERE category='%s' AND feature='%s'" % (table, marker)
+		sql = "SELECT target FROM location WHERE category=%s AND feature=%s" % (categories[table], features[marker])
+
 		data = self.db.get_column(sql)
 		if not data:
 			return QMessageBox.warning(self, "Warning", "No %ss located in %s region" % (table.upper(), marker))
+		
 		self.model.setFilter('id IN (%s)' % ",".join(map(str, data)))
 
 	def showCDSMarker(self):
@@ -1446,24 +1448,20 @@ class TableModel(QAbstractTableModel):
 
 	def rowColor(self, index):
 		#ID = self.dataset[index.row()]
-		if self.table == 'primer':
+		if self.table == 'primer' or self.db.is_empty('location'):
 			return QColor(255, 255, 255)
+
+		colors = {1: QColor(245, 183, 177), 2: QColor(250, 215, 160), 3: QColor(169, 223, 191), 4: QColor(174, 214, 241)}
 
 		ID = self.displayed[index.row()]
 		sql = "SELECT feature FROM location WHERE target=%s AND category=%s LIMIT 1" % (ID, self.cat)
+		
 		feature = self.db.get_one(sql)
+
 		if not feature:
 			return QColor(255, 255, 255)
-		if feature == 'CDS':
-			return QColor(245, 183, 177)
-		elif feature == 'EXON':
-			return QColor(169, 223, 191)
-		elif feature in ['3UTR', '5UTR', 'UTR']:
-			return QColor(250, 215, 160) 
-		elif feature == 'INTRON':
-			return QColor(174, 214, 241)
-		else:
-			return QColor(255, 255, 255)
+
+		return colors.get(feature, QColor(255, 255, 255))
 
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():

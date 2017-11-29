@@ -96,13 +96,14 @@ class Statistics(object):
 
 	def region(self, table):
 		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+		features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
 		cat = categories[table]
 		total_counts = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % table)
 		sql = "SELECT feature,COUNT(1) AS count FROM location WHERE category=%s GROUP BY feature"
 		rows = []
 		feat_counts = 0
 		for row in self.db.query(sql % cat):
-			rows.append((row.feature, row.count))
+			rows.append((features[row.feature], row.count))
 			feat_counts += row.count
 		
 		if rows:

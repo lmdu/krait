@@ -125,10 +125,11 @@ CREATE TABLE IF NOT EXISTS `primer_meta`(
 CREATE TABLE IF NOT EXISTS `location`(
 	category TEXT,
 	target INTEGER,
-	feature TEXT
+	feature INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS loc ON location (category, target);
+CREATE INDEX IF NOT EXISTS fea ON location (category, feature);
 
 CREATE TABLE IF NOT EXISTS `option`(
 	id INTEGER PRIMARY KEY,

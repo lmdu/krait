@@ -199,9 +199,9 @@ def get_gtf_coordinate(gtf_file):
 		if r.feature == 'CDS':
 			yield ('CDS', r.seqid, r.start, r.end)
 		elif r.feature == 'FIVE_PRIME_UTR':
-			yield ('5UTR', r.seqid, r.start, r.end)
+			yield ('UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'THREE_PRIME_UTR':
-			yield ('3UTR', r.seqid, r.start, r.end)
+			yield ('UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'UTR':
 			yield ('UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'EXON':
@@ -241,9 +241,9 @@ def get_gff_coordinate(gff_file):
 		if r.feature == 'CDS':
 			yield ('CDS', r.seqid, r.start, r.end)
 		elif r.feature == 'FIVE_PRIME_UTR':
-			yield ('5UTR', r.seqid, r.start, r.end)
+			yield ('UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'THREE_PRIME_UTR':
-			yield ('3UTR', r.seqid, r.start, r.end)
+			yield ('UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'UTR':
 			yield ('UTR', r.seqid, r.start, r.end)
 		elif r.feature == 'EXON':
