@@ -182,7 +182,7 @@ cdef class IntervalNode:
             self.cleft._intersect( start, end, results )
         # This interval
         #if ( self.end > start ) and ( self.start < end ):
-        if self.end >= end and self.start <= start:
+        if (self.end >= end) and (self.start <= start):
             results.append( self.interval )
         # Right subtree
         if self.cright is not EmptyNode and self.start < end:
