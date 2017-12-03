@@ -1160,14 +1160,15 @@ class SSRMainWindow(QMainWindow):
 		about_message =	"""
 			<p><b>Krait - Microsatellite Identification and Primer Design</b></p>
 			<p>Version v{version} Build {build}<p>
-			<p>Krait is a robust and ultrafast tool and provides a user-friendly GUI for no computationally
-			skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs with any length
-			of motif from DNA fasta sequences and design PCR primers and do statistics analysis.</p>
+			<p>Krait is a robust and ultrafast tool that provides a user-friendly GUI for no computationally
+			skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs from fasta
+			formatted DNA sequences; and design primers; and perform statistical analysis.</p>
 			<p><a href="https://pypi.python.org/pypi/PySide/1.2.4">PySide</a> for GUI. 
 			<a href="http://lh3lh3.users.sourceforge.net/kseq.shtml">Kseq.h</a> for parsing fasta.
 			<a href="https://github.com/libnano/primer3-py">primer3-py</a> and 
 			<a href="http://primer3.sourceforge.net/">primer3</a> for primer design. 
-			Intersection from <a href="https://github.com/bxlab/bx-python">bx-python</a> for locating SSRs
+			Intersection from <a href="https://github.com/bxlab/bx-python">bx-python</a> for locating SSRs.
+			<a href="http://www.chartjs.org/">Chartjs</a> for plotting.
 			</p>
 			<p>Contact: adullb@qq.com</p>
 		""".format(version=VERSION, build=BUILD)

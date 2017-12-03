@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Krait"
-#define MyAppVersion "0.10.1"
+#define MyAppVersion "0.10.2"
 #define MyAppPublisher "Lianming Du"
 #define MyAppURL "https://github.com/lmdu/krait"
 #define MyAppExeName "Krait.exe"
@@ -23,7 +23,7 @@ DefaultDirName={pf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 LicenseFile=..\LICENSE
 OutputDir=.
-OutputBaseFilename=Krait-0.10.1-win64-installer
+OutputBaseFilename=Krait-0.10.2-win64-installer
 SetupIconFile=..\src\icons\logo.ico
 Compression=lzma
 SolidCompression=yes
