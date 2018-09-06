@@ -1,14 +1,13 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-from __future__ import division
 import csv
 import time
 import json
+import numpy
 import jinja2
 import requests
 import functools
+import multiprocessing
 
-from PySide.QtCore import *
+from PySide2.QtCore import *
 
 #import plot
 import motif
@@ -41,23 +40,27 @@ class Worker(QObject):
 		@return Fasta object
 		'''
 		seqs = fasta.GzipFasta(fasta_path)
-		sql = "SELECT 1 FROM seq WHERE name='%s' LIMIT 1" % seqs.keys[0]
+		
+		#get the first sequence name
+		seqnames = seqs.keys()
+		for first in seqnames:
+			break
+
+		sql = "SELECT 1 FROM seq WHERE name='{}' LIMIT 1".format(first)
 		if not self.db.get_one(sql):
 			rows = []
-			for name in seqs.keys:
+			for name in seqnames:
 				row = (None, name, fasta_id, seqs.get_len(name), seqs.get_gc(name), seqs.get_ns(name))
 				rows.append(row)
 			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
-
+		
 		return seqs
 
 	def emit_progress(self, percent):
 		self.update_progress.emit(percent)
-		time.sleep(0)
 
 	def emit_message(self, msg):
 		self.update_message.emit(msg)
-		time.sleep(0)
 
 	def emit_finish(self, msg):
 		self.update_progress.emit(100)
@@ -107,9 +110,9 @@ class SSRWorker(Worker):
 			
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
-			time.sleep(0.001)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
 			total_bases = seqs.get_total_length()
+
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
 
@@ -121,7 +124,7 @@ class SSRWorker(Worker):
 
 				self.emit_message("Search perfect SSRs from %s" % name)
 				ssrs = tandem.search_ssr(seq, self.min_repeats)
-				
+
 				def values():
 					for ssr in ssrs:
 						row = [None, name, self.motifs.standard(ssr[0])]
@@ -203,9 +206,7 @@ class CSSRWorker(Worker):
 	def __init__(self, dmax):
 		super(CSSRWorker, self).__init__()
 		self.dmax = dmax
-		parameters = Data(
-			dmax = dmax
-		)
+		parameters = Data(dmax = dmax)
 		self.db.set_option('cssr_parameters', json.dumps(parameters))
 
 	def process(self):
@@ -214,8 +215,9 @@ class CSSRWorker(Worker):
 		total = self.db.get_one("SELECT COUNT(1) FROM ssr LIMIT 1")
 		self.db.begin()
 		self.emit_message("Concatenate compound SSRs...")
-		cssrs = [ssrs.next()]
-		prev_progress = None
+		cssrs = [ssrs.__next__()]
+		prev_progress = 0
+
 		for ssr in ssrs:
 			d = ssr.start - cssrs[-1].end - 1
 			if ssr.sequence == cssrs[-1].sequence and d <= self.dmax:
@@ -395,12 +397,12 @@ class PrimerWorker(Worker):
 		progress = 0
 		prev_progress = 0
 
-		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		
 		self.db.begin()
 		for item in iter_ssrs():
 			if seqs is None or item.sequence not in seqs:
-				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='%s' LIMIT 1" % item.sequence
+				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 				seqfile = self.db.get_one(sql)
 				seqs = fasta.GzipFasta(seqfile)
 			
@@ -426,7 +428,7 @@ class PrimerWorker(Worker):
 				succeeded += 1
 			
 			for i in range(primer_count):
-				primer = [None, target['SEQUENCE_ID'], i+1]
+				primer = [None, table, item.id, i+1]
 				primer.append(res['PRIMER_PAIR_%s_PRODUCT_SIZE' % i])
 				primer.append(res['PRIMER_LEFT_%s_SEQUENCE' % i])
 				primer.append(round(res['PRIMER_LEFT_%s_TM' % i], 2))
@@ -436,6 +438,7 @@ class PrimerWorker(Worker):
 				primer.append(round(res['PRIMER_RIGHT_%s_TM' % i], 2))
 				primer.append(round(res['PRIMER_RIGHT_%s_GC_PERCENT' % i], 2))
 				primer.append(round(res['PRIMER_RIGHT_%s_END_STABILITY' % i], 2))
+
 				self.db.get_cursor().execute(insert_sql, primer)
 
 				meta = [self.db.get_last_insert_rowid()]
@@ -454,8 +457,9 @@ class PrimerWorker(Worker):
 
 
 class ExportTableWorker(Worker):
-	def __init__(self, model, outfile):
+	def __init__(self, selected, model, outfile):
 		super(ExportTableWorker, self).__init__()
+		self.selected = selected
 		self.model = model
 		self.outfile = outfile
 
@@ -463,33 +467,38 @@ class ExportTableWorker(Worker):
 		#get selected ids from table model
 		self.emit_message("Exporting to %s" % self.outfile)
 
-		table = self.model.tableName()
+		table_name = self.model.tableName()
 		headers = self.model.columnNames()
-		selected = self.model.getSelectedRows()
 
-		if len(selected) == self.db.get_one("SELECT COUNT(1) FROM %s" % table):
-			sql = "SELECT * FROM %s" % table
+		whole_counts = self.db.get_one("SELECT COUNT(*) FROM %s" % table_name)
+		total_counts = whole_counts
+
+		if self.selected == 'whole' or len(self.model.selected) == whole_counts:
+			sql = "SELECT * FROM {}".format(table_name)
 		else:
-			sql = "SELECT * FROM %s WHERE id IN (%s)" % (table, ",".join(map(str, selected)))
+			ids = self.model.getSelectedRows()
+			total_counts = len(ids)
+			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
 
-		rows = self.db.query(sql)
-		total_counts = len(selected)
 		prev_progress = 0
 		progress = 0
 		current = 0
-		with open(self.outfile, 'wb') as outfh:
-			if self.outfile.endswith('.csv'):
-				write_line = functools.partial(write_to_csv, csv.writer(outfh))
-				write_line(headers)
-			elif self.outfile.endswith('.gff'):
-				outfh.write("##gff-version 3\n")
-				outfh.write("##generated by Krait %s\n" % VERSION)
-				write_line = functools.partial(write_to_gff, outfh, table.upper())
-			else:
-				write_line = functools.partial(write_to_tab, outfh)
-				write_line(headers)
 
-			for row in rows:
+		with open(self.outfile, 'w', newline='') as outfh:
+			if self.outfile.endswith('.csv'):
+				writer = csv.writer(outfh)
+			else:
+				writer = csv.writer(outfh, delimiter='\t')
+
+			if self.outfile.endswith('.gff'):
+				writer.writerow(["##gff-version 3"])
+				writer.writerow(["##generated by Krait {}".format(VERSION)])
+				write_line = lambda x: writer.writerow(format_to_gff(table_name, x))
+			else:
+				writer.writerow(headers)
+				write_line = lambda x: writer.writerow(x)
+
+			for row in self.db.query(sql):
 				write_line(row)
 				current += 1
 				process = int(current/total_counts*100)
@@ -502,33 +511,37 @@ class ExportTableWorker(Worker):
 
 
 class ExportFastaWorker(Worker):
-	def __init__(self, model, flank, outfile):
+	def __init__(self, selected, model, flank, outfile):
 		super(ExportFastaWorker, self).__init__()
+		self.selected = selected
 		self.model = model
 		self.flank = flank
 		self.outfile = outfile
 
 	def process(self):
 		self.emit_message("Exporting fasta sequence to %s" % self.outfile)
-		table = self.model.tableName()
-		selected = self.model.getSelectedRows()
-		total_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % table)
-		total_select = len(selected)
+		
+		table_name = self.model.tableName()
+		
+		whole_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % table_name)
+		total_ssrs = whole_ssrs
 
-		if total_ssrs == total_select:
-			sql = "SELECT * FROM %s" % table
+		if self.selected == 'whole' or len(self.model.selected) == whole_ssrs:
+			sql = "SELECT * FROM {}".format(table_name)
 		else:
-			sql = "SELECT * FROM %s WHERE id IN (%s) ORDER BY id" % (table, ",".join(map(str, selected)))
+			ids = self.model.getSelectedRows()
+			total_ssrs = len(ids)
+			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
 
 		current = 0
 		progress = 0
 		prev_progress = 0
 		seqs = None
 
-		with open(self.outfile, 'wb') as fp:
+		with open(self.outfile, 'wt') as fp:
 			for item in self.db.query(sql):
 				if seqs is None or item.sequence not in seqs:
-					sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='%s' LIMIT 1" % item.sequence
+					sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 					seqfile = self.db.get_one(sql)
 					seqs = fasta.GzipFasta(seqfile)
 				
@@ -537,16 +550,73 @@ class ExportFastaWorker(Worker):
 					start = 1
 				end = item.end + self.flank
 				ssr = seqs.get_seq_by_loci(item.sequence, start, end)
-				name = ">%s%s %s:%s-%s|motif:%s" % (table.upper(), item.id, item.sequence, item.start, item.end, item.motif)
-				fp.write("%s\n%s" % (name, format_fasta_sequence(ssr, 70)))
+				name = ">{}{} {}:{}-{}|motif:{}".format(table_name.upper(), item.id, item.sequence, item.start, item.end, item.motif)
+				fp.write("{}\n{}".format(name, format_fasta_sequence(ssr, 70)))
 				
 				current += 1
-				progress = int(current/total_select*100)
+				progress = int(current/total_ssrs*100)
 				if progress > prev_progress:
 					self.emit_progress(progress)
 					prev_progress = progress
 
 		self.emit_finish("Successfully exported to fasta %s" % self.outfile)
+
+class ExportPrimerWorker(Worker):
+	def __init__(self, selected, model, outfile):
+		super(ExportPrimerWorker, self).__init__()
+		self.selected = selected
+		self.model = model
+		self.outfile = outfile
+
+	def process(self):
+		#get selected ids from table model
+		self.emit_message("Exporting to %s" % self.outfile)
+
+		table_name = self.model.tableName()
+		headers = self.model.columnNames()
+
+		whole_counts = self.db.get_one("SELECT COUNT(*) FROM %s" % table_name)
+		total_counts = whole_counts
+
+		if self.selected == 'whole' or len(self.model.selected) == whole_counts:
+			sql = "SELECT * FROM {}".format(table_name)
+		else:
+			ids = self.model.getSelectedRows()
+			total_counts = len(ids)
+			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+
+		prev_progress = 0
+		progress = 0
+		current = 0
+
+		with open(self.outfile, 'w', newline='') as outfh:
+			if self.outfile.endswith('.csv'):
+				writer = csv.writer(outfh)
+			else:
+				writer = csv.writer(outfh, delimiter='\t')
+
+			ssr_table = self.db.get_one("SELECT category FROM primer LIMIT 1")
+			ssr_headers = self.db.get_fields(ssr_table)
+			writer.writerow(ssr_headers + headers[3:])
+
+			for row in self.db.query(sql):
+				ssr = self.db.get_row("SELECT * FROM {} WHERE id={} LIMIT 1".format(row.category, row.target))
+
+				print(row.category, row.target)
+
+				ssr_with_primer = list(ssr.getValues())
+				ssr_with_primer.extend(row.getValues()[3:])
+
+				writer.writerow(ssr_with_primer)
+				
+				current += 1
+				process = int(current/total_counts*100)
+
+				if process > prev_progress:
+					self.emit_progress(process)
+					prev_progress = process
+
+		self.emit_finish("Successfully exported to %s" % self.outfile)
 
 class SaveProjectWorker(Worker):
 	def __init__(self, dbfile):
@@ -577,28 +647,61 @@ class LocateWorker(Worker):
 		self.annot_file = annot_file
 
 	def process(self):
-		self.emit_message("Building interval tree")
+		self.emit_message("Building interval tree for annotation...")
 		interval_forest = {}
+
 		f = check_gene_annot_format(self.annot_file)
+
 		if f == 'GFF':
 			features = get_gff_coordinate(self.annot_file)
 		else:
 			features = get_gtf_coordinate(self.annot_file)
 
-		self.emit_message("Building interval tree")
+		locations = {}
+		locid = 0
+		prev_chrom = None
+		starts = []
+		ends = []
+		indexes = []
 		for feature in features:
-			if feature[1] not in interval_forest:
-				interval_forest[feature[1]] = intersection.IntervalTree()
+			locid += 1
+			locations[locid] = feature[3]
 
-			interval_forest[feature[1]].insert(feature[2], feature[3], feature[0])
+			if feature[0] != prev_chrom:
+				if starts:
+					starts = numpy.array(starts, dtype=numpy.long)
+					ends = numpy.array(ends, dtype=numpy.long)
+					indexes = numpy.array(indexes, dtype=numpy.long)
+					interval_forest[prev_chrom] = ncls.NCLS(starts, ends, indexes)
+				
+				prev_chrom = feature[0]
+				starts = []
+				ends = []
+				indexes = []
 
+			starts.append(feature[1])
+			ends.append(feature[2])
+			indexes.append(locid)
+
+		if starts:
+			starts = numpy.array(starts, dtype=numpy.long)
+			ends = numpy.array(ends, dtype=numpy.long)
+			indexes = numpy.array(indexes, dtype=numpy.long)
+			interval_forest[prev_chrom] = ncls.NCLS(starts, ends, indexes)
+
+		if not interval_forest:
+			self.emit_finish("No feature found in annotation file.")
+			return
+
+		#do mapping
 		total = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
 		current = 0
 		progress = 0
 		prev_progress = 0
-		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
-		features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
-		cat = categories[self.table]
+		#categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+		#features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
+		#cat = categories[self.table]
+		cat = self.table
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
 			self.emit_message("Locating %ss in sequence %s" % (self.table.upper(), ssr.sequence))
 			current += 1
@@ -610,20 +713,103 @@ class LocateWorker(Worker):
 			if ssr.sequence not in interval_forest:
 				continue
 
-			res = interval_forest[ssr.sequence].find(ssr.start, ssr.end)
+			res = set(interval_forest[ssr.sequence].find_overlap(ssr.start, ssr.end))
 			if not res:
 				continue
 
-			#res = {f:g for f, g in res}
+			candidates = {'CDS', 'exon', 'intron', 'UTR', '5UTR', '3UTR'}
+			feats = [locations[fid[2]] for fid in res if locations[fid[2]].feature in candidates]
+			ssrfeats = set()
+			for feat in sorted(feats, key=lambda x:x.feature):
+				if feat.feature == 'exon':
+					checks = [(i, feat.gene_id, feat.gene_name) in ssrfeats for i in ['CDS', '5UTR', '3UTR', 'UTR']]
+					if any(checks):
+						continue
+				
+				if (feat.feature, feat.gene_id, feat.gene_name)	not in ssrfeats:
+					ssrfeats.add((feat.feature, feat.gene_id, feat.gene_name))
 
-			record = [cat, ssr.id]
-			for feat in ['CDS', 'UTR', 'EXON', 'INTRON']:
-				if feat in res:
-					record.append(features[feat])
-					self.db.get_cursor().execute("INSERT INTO location VALUES (?,?,?)", record)
-					break
+			for ssrfeat in ssrfeats:
+				if cat == 'issr':
+					repeats = round(ssr.length/ssr.type, 2)
+				else:
+					repeats = ssr.repeat
+				record = [None, cat, ssr.id, ssr.motif, repeats, ssrfeat[0], ssrfeat[1], ssrfeat[2]]
+				self.db.get_cursor().execute("INSERT INTO feature VALUES (?,?,?,?,?,?,?,?)", record)
 
 		self.emit_finish("%s location completed." % self.table)
+
+class ExportFeatureWorker(Worker):
+	def __init__(self, selected, model, outfile):
+		super(ExportFeatureWorker, self).__init__()
+		self.selected = selected
+		self.model = model
+		self.outfile = outfile
+
+	def process(self):
+		#get selected ids from table model
+		self.emit_message("Exporting to %s" % self.outfile)
+
+		table_name = self.model.tableName()
+		headers = self.model.columnNames()
+
+		whole_counts = self.db.get_one("SELECT COUNT(*) FROM %s" % table_name)
+		total_counts = whole_counts
+
+		if self.selected == 'whole' or len(self.model.selected) == whole_counts:
+			sql = "SELECT * FROM {}".format(table_name)
+		else:
+			ids = self.model.getSelectedRows()
+			total_counts = len(ids)
+			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+
+		prev_progress = 0
+		progress = 0
+		current = 0
+
+		ssr_table = self.db.get_one("SELECT category FROM feature LIMIT 1")
+		ssr_headers = self.db.get_fields(ssr_table)
+
+		with open(self.outfile, 'w', newline='') as outfh:
+			if self.outfile.endswith('.csv'):
+				writer = csv.writer(outfh)
+			else:
+				writer = csv.writer(outfh, delimiter='\t')
+
+			writer.writerow(ssr_headers + ["GI;GN;LOC"])
+
+			prev_ssr_id = None
+			ssr_group = []
+			for row in self.db.query(sql):
+				if row.target != prev_ssr_id:
+					if ssr_group:
+						locations = ['{};{};{}'.format(marker.geneid, marker.genename, marker.location) for marker in ssr_group]
+						ssr = self.db.get_row("SELECT * FROM {} WHERE id={} LIMIT 1".format(ssr_table, prev_ssr_id))
+						ssr_with_primer = list(ssr.getValues())
+						ssr_with_primer.extend(locations)
+						writer.writerow(ssr_with_primer)
+					
+					ssr_group = [row]
+					prev_ssr_id = row.target
+				
+				else:
+					ssr_group.append(row)
+
+				current += 1
+				progress = int(current/total_counts*100)
+
+				if progress > prev_progress:
+					self.emit_progress(progress)
+					prev_progress = progress
+
+			if ssr_group:
+				locations = ['{};{};{}'.format(ssr.geneid, ssr.genename, ssr.location) for ssr in ssr_group]
+				ssr = self.db.get_row("SELECT * FROM {} WHERE id={} LIMIT 1".format(ssr_table, prev_ssr_id))
+				ssr_with_primer = list(ssr.getValues())
+				ssr_with_primer.extend(locations)
+				writer.writerow(ssr_with_primer)
+
+		self.emit_finish("Successfully exported to %s" % self.outfile)
 
 class EutilWorker(Worker):
 	def __init__(self, acc, outfile, bank='nucleotide'):

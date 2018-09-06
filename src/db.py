@@ -45,6 +45,7 @@ def row_factory(cursor, row):
 
 conn = apsw.Connection(':memory:')
 conn.setrowtrace(row_factory)
+conn.cursor().execute("PRAGMA synchronous=0")
 
 class Database:
 	def __init__(self):

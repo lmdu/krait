@@ -2,8 +2,9 @@
 import os
 import gzip
 import mmap
-import kseq
 import collections
+from . import kseq
+from . import indexed_gzip as igzip
 
 class GzipFasta:
 	def __init__(self, fasta_file, rebuild=False):
@@ -27,7 +28,7 @@ class GzipFasta:
 		kseq.open_fasta(self.fasta_file)
 		return self
 
-	def next(self):
+	def __next__(self):
 		seq = kseq.iter_seq()
 		if seq is None:
 			#end loop and close fasta
@@ -47,12 +48,18 @@ class GzipFasta:
 
 	def _read_fasta(self):
 		if self.fasta_file.endswith('.gz'):
-			return gzip.open(self.fasta_file, 'rb')
+			idxfile = '{}.gzidx'.format(self.fasta_file)
+			if os.path.exists(idxfile):
+				handler = igzip.IndexedGzipFile(self.fasta_file, index_file=idxfile)
+			else:
+				handler = igzip.IndexedGzipFile(self.fasta_file)
+				#handler.build_full_index()
+				#handler.export_index(idxfile)
 		else:
-			#return open(self.fasta_file, 'rb')
 			f = open(self.fasta_file, 'rb')
-			mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-			return mm
+			handler = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+		
+		return handler
 	
 	def _read_index(self):
 		self._index = collections.OrderedDict()
@@ -62,7 +69,7 @@ class GzipFasta:
 		with open(self.index_file) as fh:
 			for line in fh:
 				cols = line.strip().split('\t')
-				self._index[cols[0]] = map(int, cols[1:])
+				self._index[cols[0]] = [int(x) for x in cols[1:]]
 
 	def _build_index(self):
 		chroms = kseq.build_index(self.fasta_file)
@@ -70,7 +77,6 @@ class GzipFasta:
 			for chrom in chroms:
 				fw.write("%s\t%s\t%s\t%s\t%s\t%s\n" % chrom)
 
-	@property
 	def keys(self):
 		return self._index.keys()
 
@@ -102,7 +108,7 @@ class GzipFasta:
 		fp.seek(start)
 		content = fp.read(length)
 		fp.close()
-		return kseq.clean_seq(content)
+		return kseq.clean_seq(content.decode('utf-8'))
 
 	def get_seq_by_loci(self, name, start, end):
 		'''
@@ -117,6 +123,15 @@ class GzipFasta:
 			self.buff['seq'] = self.get_seq_by_name(name)
 
 		return self.buff['seq'][start-1:end]
+
+	def get_seq_by_pos(self, name, start, end):
+		start, length = self._index[name][:2]
+		fp = self._read_fasta()
+		fp.seek(start)
+		content = fp.read(length)
+		fp.close()
+		return kseq.sub_seq(content.decode('utf-8'), start, end)
+
 
 if __name__ == '__main__':
 	GzipFasta('D:/tandem/data/Danio_rerio.GRCz10.dna.chromosome.1.fa', True)

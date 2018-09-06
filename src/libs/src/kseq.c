@@ -56,6 +56,39 @@ static PyObject *clean_seq(PyObject *self, PyObject *args){
 	return Py_BuildValue("s", seq);
 }
 
+static PyObject *sub_seq(PyObject *self, PyObject *args){
+	char *seq;
+	int start;
+	int end;
+
+	if (!PyArg_ParseTuple(args, "sii", &seq, &start, &end)){
+		return NULL;
+	}
+	int i;
+	int j = 0;
+	int real_pos = 0;
+	int flag;
+	for(i=0; seq[i]; i++){
+		flag = isspace(seq[i]);
+
+		if(!flag){
+			real_pos++;
+		}
+
+		if(real_pos > end){
+			break;
+		}
+
+		if(real_pos >= start){
+			if(!flag){
+				seq[j++] = upper(seq[i]);
+			}
+		}
+	}
+	seq[j] = '\0';
+	return Py_BuildValue("s", seq);
+}
+
 static PyObject *iter_seq(PyObject *self, PyObject *args){
 	int l;
 	while((l=kseq_read(SEQ))>=0){
@@ -121,41 +154,25 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 	return result;
 }
 
-static PyObject *extract_seq(PyObject *self, PyObject *args){
-	char *fasta_path;
-	int start;
-	if (!PyArg_ParseTuple(args, "si", &fasta_path, &start)){
-		return NULL;
-	}
-	gzFile fp;
-	int l;
-	kseq_t *seq;
-	PyObject *retval;
-	fp = gzopen(fasta_path, "rb");
-	seq = kseq_init(fp);
-	gzseek(fp, start, SEEK_SET);
-	while((l=kseq_read(seq))>=0){
-		retval = Py_BuildValue("s", seq->seq.s);
-		break;
-	}
-	gzclose(fp);
-	return retval;
-}
-
-static PyMethodDef add_methods[] = {
+static PyMethodDef kseq_methods[] = {
 	{"build_index", build_index, METH_VARARGS},
 	{"open_fasta", open_fasta, METH_VARARGS},
 	{"close_fasta", close_fasta, METH_VARARGS},
 	{"iter_seq", iter_seq, METH_VARARGS},
-	{"extract_seq", extract_seq, METH_VARARGS},
 	{"clean_seq", clean_seq, METH_VARARGS},
+	{"sub_seq", sub_seq, METH_VARARGS},
 	{NULL, NULL, 0, NULL}
 };
 
-void initkseq(){
-	PyObject *m;
-	m = Py_InitModule("kseq", add_methods);
-	if(m == NULL){
-		return;
-	}
+static struct PyModuleDef kseq_definition = {
+	PyModuleDef_HEAD_INIT,
+	"kseq",
+	"Read sequence from fasta file",
+	-1,
+	kseq_methods
+};
+
+PyMODINIT_FUNC PyInit_kseq(void){
+	Py_Initialize();
+    return PyModule_Create(&kseq_definition);
 }

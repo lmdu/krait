@@ -11,6 +11,7 @@ PRIMER_SRC_PATH = os.path.join(PRIMER_PATH, 'src')
 LIBPRIMER3_PATH = os.path.join(PRIMER_SRC_PATH, 'libprimer3')
 THERMO_PARAMS_PATH = os.path.join(LIBPRIMER3_PATH, 'primer3_config')
 KLIB_PATH = os.path.join(LIBPRIMER3_PATH, 'klib')
+NCLS_PATH = os.path.join(PACKAGE_PATH, 'ncls', 'src')
 
 libprimer3_paths = [
 	os.path.join(LIBPRIMER3_PATH, 'thal.c'),
@@ -23,12 +24,15 @@ libprimer3_paths = [
 
 extensions = [
 	Extension('tandem', ['tandem.c']),
-	Extension('intersection', ['intersection.pyx']),
+	#Extension('intersection', ['intersection.pyx']),
 	Extension('kseq', ['kseq.c'], extra_link_args=['-lz']),
 	Extension('primerdesign',
 		sources=[os.path.join('primer3','src','primerdesign_py.c')] + libprimer3_paths,
 		include_dirs=[LIBPRIMER3_PATH, KLIB_PATH]
 	),
+	Extension('ncls', ['ncls/src/ncls.pyx', 'ncls/src/intervaldb.c'],
+		include_dirs = ['.']
+	)
 	#Extension(
 	#	'thermoanalysis',
 	#	sources=[os.path.join('primer3','thermoanalysis.pyx')] + libprimer3_paths,
@@ -39,6 +43,6 @@ extensions = [
 
 setup(
 	name = 'libs',
-	version = '0.8.1',
-	ext_modules=cythonize(extensions)
+	version = '1.0.0',
+	ext_modules = cythonize(extensions)
 )

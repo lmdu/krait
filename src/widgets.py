@@ -11,10 +11,12 @@ import shutil
 import requests
 import platform
 
-from PySide.QtCore import *
-from PySide.QtGui import *
-from PySide.QtSql import *
-from PySide.QtWebKit import *
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtSql import *
+from PySide2.QtWebEngineWidgets import *
+from PySide2.QtWidgets import *
+from PySide2.QtPrintSupport import *
 
 from db import *
 from utils import *
@@ -37,12 +39,13 @@ class SSRMainWindow(QMainWindow):
 		self.table = SSRTableView(self)
 		self.createTableModel()
 
-		self.browser = BrowserWidget(self)
+		self.browser = QWebEngineView(self)
 
 		self.main_widget.addWidget(self.table)
 		self.main_widget.addWidget(self.browser)
 
 		#self.setCentralWidget(self.browser)
+		#self.main_widget.setCurrentIndex(1)
 
 		#search text input
 		self.filter = SSRFilterInput(self)
@@ -63,7 +66,7 @@ class SSRMainWindow(QMainWindow):
 		self.opened_project = None
 
 		#annotation file
-		self.annot_file = ''
+		self.annot_file = None
 
 		#statistical results
 		self.statis_result = None
@@ -75,7 +78,7 @@ class SSRMainWindow(QMainWindow):
 		self.readSettings()
 
 		#read home page
-		self.homepage()
+		#self.homepage()
 
 		#Enable dragging and dropping onto the main window
 		self.setAcceptDrops(True)
@@ -103,8 +106,9 @@ class SSRMainWindow(QMainWindow):
 			self.exportGFFAct.setDisabled(True)
 
 	def homepage(self):
-		content = template_render('index.html')
-		self.browser.setHtml(content, QUrl.fromLocalFile(CACHE_PATH))
+		#content = template_render('index.html')
+		#self.browser.setHtml(content, QUrl("qrc:/"))
+		self.browser.load(QUrl('https://github.com/lmdu/krait'))
 
 	def createTableModel(self):
 		self.model = TableModel()
@@ -176,7 +180,7 @@ class SSRMainWindow(QMainWindow):
 			"Drag a fasta formatted sequence file with .fa, .fna, .fas, .fasta, "
 			".fa.gz, .fna.gz, .fas.gz, .fasta.gz suffix to search repeats"
 		)
-		QMessageBox.warning(self, "Input file format not right", warn_msg)		
+		QMessageBox.warning(self, "Input file format not right", warn_msg)
 
 	def createActions(self):
 		#open a project action
@@ -207,6 +211,13 @@ class SSRMainWindow(QMainWindow):
 		self.loadFastasAct.triggered.connect(self.importFastas)
 		
 		#export the Results
+		self.exportWholeTableAct = QAction(self.tr("Export Whole Table"), self)
+		self.exportWholeTableAct.triggered.connect(self.exportWholeTable)
+		self.exportWholeTableAct.setDisabled(True)
+		self.exportSelectedRowsAct = QAction(self.tr("Export Selected Rows"), self)
+		self.exportSelectedRowsAct.triggered.connect(self.exportSelectedRows)
+		self.exportSelectedRowsAct.setDisabled(True)
+
 		self.exportTableAct = QAction(self.tr("Exprot Selected as Table"), self)
 		self.exportTableAct.triggered.connect(self.exportTableRows)
 		self.exportTableAct.setDisabled(True)
@@ -241,7 +252,7 @@ class SSRMainWindow(QMainWindow):
 		self.pasteAct.triggered.connect(self.doPaste)
 	
 		self.selectAllAct = QAction(self.tr("Select All"), self)
-		#self.selectAllAct.setShortcut(QKeySequence.SelectAll)
+		self.selectAllAct.setShortcut(QKeySequence.SelectAll)
 		self.selectAllAct.triggered.connect(self.doSelectAll)
 
 		self.preferenceAct = QAction(self.tr("Preferences"), self)
@@ -253,7 +264,7 @@ class SSRMainWindow(QMainWindow):
 		self.SSRSearchAct = QAction(QIcon(":/icons/ssr.png"), self.tr("SSRs"), self)
 		self.SSRSearchAct.setToolTip(self.tr("Search for Perfect SSRs"))
 		self.SSRSearchAct.triggered.connect(self.searchOrShowSSR)
-		self.SSRForceAct = QAction(self.tr("Search for SSRs"), self)
+		self.SSRForceAct = QAction(self.tr("Redo Search for SSRs"), self)
 		self.SSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_1))
 		self.SSRForceAct.triggered.connect(self.searchSSR)
 		self.SSRShowAct = QAction(self.tr("Show Perfect SSRs"), self)
@@ -268,7 +279,7 @@ class SSRMainWindow(QMainWindow):
 		self.CSSRSearchAct = QAction(QIcon(":/icons/cssr.png"), self.tr("cSSRs"), self)
 		self.CSSRSearchAct.setToolTip(self.tr("Search for Compound SSRs"))
 		self.CSSRSearchAct.triggered.connect(self.searchOrShowCSSR)
-		self.CSSRForceAct = QAction(self.tr("Search for cSSRs"), self)
+		self.CSSRForceAct = QAction(self.tr("Redo Search for cSSRs"), self)
 		self.CSSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_2))
 		self.CSSRForceAct.triggered.connect(self.searchCSSR)
 		self.CSSRShowAct = QAction(self.tr("Show Compound SSRs"), self)
@@ -285,7 +296,7 @@ class SSRMainWindow(QMainWindow):
 		self.VNTRSearchAct = QAction(QIcon(":/icons/vntr.png"), self.tr("VNTRs"), self)
 		self.VNTRSearchAct.setToolTip(self.tr("Search for Minisatellites or Macrosatellites"))
 		self.VNTRSearchAct.triggered.connect(self.searchOrShowVNTR)
-		self.VNTRForceAct = QAction(self.tr("Search for VNTRs"), self)
+		self.VNTRForceAct = QAction(self.tr("Redo Search for VNTRs"), self)
 		self.VNTRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_4))
 		self.VNTRForceAct.triggered.connect(self.searchVNTR)
 		self.VNTRShowAct = QAction(self.tr("Show VNTRs"), self)
@@ -300,7 +311,7 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRSearchAct = QAction(QIcon(":/icons/issr.png"), self.tr("iSSRs"), self)
 		self.ISSRSearchAct.setToolTip(self.tr("Search for Imperfect SSRs"))
 		self.ISSRSearchAct.triggered.connect(self.searchOrShowISSR)
-		self.ISSRForceAct = QAction(self.tr("Search for iSSRs"), self)
+		self.ISSRForceAct = QAction(self.tr("Redo Search for iSSRs"), self)
 		self.ISSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_3))
 		self.ISSRForceAct.triggered.connect(self.searchISSR)
 		self.ISSRShowAct = QAction(self.tr("Show Imperfect SSRs"), self)
@@ -312,43 +323,45 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRSetAct.triggered.connect(self.setPreference)
 
 		#locate ssrs
-		self.locateAct = QAction(QIcon(":/icons/locate.png"), self.tr("Locate"), self)
-		self.locateAct.setToolTip(self.tr("Locate SSRs in genes"))
-		self.locateAct.triggered.connect(self.locateTandem)
-		self.locateToolAct = QAction(self.tr("Locate SSRs in genes"), self)
+		self.locateAct = QAction(QIcon(":/icons/locate.png"), self.tr("Mapping"), self)
+		self.locateAct.setToolTip(self.tr("Mapping tandem repeats to gene regions"))
+		self.locateAct.triggered.connect(self.LocateOrShowTandem)
+		self.locateToolAct = QAction(self.tr("Redo Mapping"), self)
 		self.locateToolAct.triggered.connect(self.locateTandem)
+		self.locateShowAct = QAction(self.tr("Show mapping reslult"), self)
+		self.locateShowAct.triggered.connect(self.showLocation)
 
 		self.locateSetAct = QAction(self.tr("Import Annotation File"), self)
 		self.locateSetAct.triggered.connect(self.provideAnnotation)
-		self.removeLocateAct = QAction(self.tr("Remove locations"), self)
+		self.removeLocateAct = QAction(self.tr("Remove mapping reslult"), self)
 		self.removeLocateAct.triggered.connect(self.removeMarker)
 		
-		cds_icon = QPixmap(16, 16)
-		cds_icon.fill(QColor(245, 183, 177))
-		self.showCDSAct = QAction(QIcon(cds_icon), self.tr("Show SSRs in CDS"), self)
-		self.showCDSAct.triggered.connect(self.showCDSMarker)
+		#cds_icon = QPixmap(16, 16)
+		#cds_icon.fill(QColor(245, 183, 177))
+		#self.showCDSAct = QAction(QIcon(cds_icon), self.tr("Show SSRs in CDS"), self)
+		#self.showCDSAct.triggered.connect(self.showCDSMarker)
 
-		exon_icon = QPixmap(16, 16)
-		exon_icon.fill(QColor(169, 223, 191))
-		self.showExonAct = QAction(QIcon(exon_icon), self.tr("Show SSRs in Exon"), self)
-		self.showExonAct.triggered.connect(self.showExonMarker)
+		#exon_icon = QPixmap(16, 16)
+		#exon_icon.fill(QColor(169, 223, 191))
+		#self.showExonAct = QAction(QIcon(exon_icon), self.tr("Show SSRs in Exon"), self)
+		#self.showExonAct.triggered.connect(self.showExonMarker)
 
-		utr_icon = QPixmap(16, 16)
-		utr_icon.fill(QColor(250, 215, 160))
-		self.showUTRAct = QAction(QIcon(utr_icon), self.tr("Show SSRs in UTR"), self)
-		self.showUTRAct.triggered.connect(self.showUTRMarker)
+		#utr_icon = QPixmap(16, 16)
+		#utr_icon.fill(QColor(250, 215, 160))
+		#self.showUTRAct = QAction(QIcon(utr_icon), self.tr("Show SSRs in UTR"), self)
+		#self.showUTRAct.triggered.connect(self.showUTRMarker)
 
-		intron_icon = QPixmap(16, 16)
-		intron_icon.fill(QColor(174, 214, 241))
-		self.showIntronAct = QAction(QIcon(intron_icon), self.tr("Show SSRs in Intron"), self)
-		self.showIntronAct.triggered.connect(self.showIntronMarker)
+		#intron_icon = QPixmap(16, 16)
+		#intron_icon.fill(QColor(174, 214, 241))
+		#self.showIntronAct = QAction(QIcon(intron_icon), self.tr("Show SSRs in Intron"), self)
+		#self.showIntronAct.triggered.connect(self.showIntronMarker)
 
 
 		#design primer
 		self.primerDesignAct = QAction(QIcon(":/icons/primer.png"), self.tr("Primer"), self)
 		self.primerDesignAct.setToolTip(self.tr("Design primers"))
 		self.primerDesignAct.triggered.connect(self.designOrShowPrimer)
-		self.primerForceAct = QAction(self.tr("Design Primers"), self)
+		self.primerForceAct = QAction(self.tr("Redo Design Primers"), self)
 		self.primerForceAct.triggered.connect(self.designPrimer)
 		self.primerShowAct = QAction(self.tr("Show Designed Primer"), self)
 		self.primerShowAct.triggered.connect(self.showPrimer)
@@ -360,7 +373,7 @@ class SSRMainWindow(QMainWindow):
 		#statistics report
 		self.statisticsAct = QAction(QIcon(":/icons/report.png"), self.tr("Statistics"), self)
 		self.statisticsAct.triggered.connect(self.doOrShowStatistics)
-		self.statisticsForceAct = QAction(self.tr("Statistical Analysis"), self)
+		self.statisticsForceAct = QAction(self.tr("Redo Statistical Analysis"), self)
 		self.statisticsForceAct.triggered.connect(self.performStatistics)
 		self.statisticsShowAct = QAction(self.tr("Show Statistical Result"), self)
 		self.statisticsShowAct.triggered.connect(self.showStatistics)
@@ -383,6 +396,10 @@ class SSRMainWindow(QMainWindow):
 		#report issue action
 		self.issueAct = QAction(self.tr("Report issue..."), self)
 		self.issueAct.triggered.connect(self.reportIssue)
+
+		#view input action
+		self.showInputAct = QAction(self.tr("Show Input Files"), self)
+		self.showInputAct.triggered.connect(self.showInputFastas)
 		
 
 	def createMenus(self):
@@ -401,11 +418,14 @@ class SSRMainWindow(QMainWindow):
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.loadFastaAct)
 		self.fileMenu.addAction(self.loadFastasAct)
+		self.fileMenu.addAction(self.locateSetAct)
 		self.fileMenu.addSeparator()
-		self.fileMenu.addAction(self.exportTableAct)
-		self.fileMenu.addAction(self.exportFastaAct)
-		self.fileMenu.addAction(self.exportGFFAct)
-		self.fileMenu.addAction(self.exportStatsAct)
+		self.fileMenu.addAction(self.exportWholeTableAct)
+		self.fileMenu.addAction(self.exportSelectedRowsAct)
+		#self.fileMenu.addAction(self.exportTableAct)
+		#self.fileMenu.addAction(self.exportFastaAct)
+		#self.fileMenu.addAction(self.exportGFFAct)
+		#self.fileMenu.addAction(self.exportStatsAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exitAct)
 		
@@ -422,6 +442,8 @@ class SSRMainWindow(QMainWindow):
 		self.searchMenu.addAction(self.ISSRForceAct)
 		self.searchMenu.addAction(self.VNTRForceAct)
 
+		self.viewMenu.addAction(self.showInputAct)
+		self.viewMenu.addSeparator()
 		self.viewMenu.addAction(self.SSRShowAct)
 		self.viewMenu.addAction(self.CSSRShowAct)
 		self.viewMenu.addAction(self.ISSRShowAct)
@@ -484,14 +506,15 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRMenu.addAction(self.ISSRSetAct)
 
 		self.locateMenu = QMenu()
-		self.locateMenu.addAction(self.locateSetAct)
+		self.locateMenu.addAction(self.locateToolAct)
+		self.locateMenu.addAction(self.locateShowAct)
 		self.locateMenu.addSeparator()
 		self.locateMenu.addAction(self.removeLocateAct)
-		self.locateMenu.addSeparator()
-		self.locateMenu.addAction(self.showCDSAct)
-		self.locateMenu.addAction(self.showExonAct)
-		self.locateMenu.addAction(self.showUTRAct)
-		self.locateMenu.addAction(self.showIntronAct)
+		#self.locateMenu.addSeparator()
+		#self.locateMenu.addAction(self.showCDSAct)
+		#self.locateMenu.addAction(self.showExonAct)
+		#self.locateMenu.addAction(self.showUTRAct)
+		#self.locateMenu.addAction(self.showIntronAct)
 
 		self.primerMenu = QMenu()
 		self.primerMenu.addAction(self.primerForceAct)
@@ -564,9 +587,32 @@ class SSRMainWindow(QMainWindow):
 		self.progressBar.setMaximum(100)
 		self.progressBar.setMinimum(0)
 		self.statusBar.addPermanentWidget(self.progressBar)
+
+	def showInputFastas(self, event):
+		inputs = []
+		
+		if self.opened_project:
+			inputs.append("<b>Input project:</b><p>{}</p>".format(self.opened_project))
+
+		if self.annot_file:
+			inputs.append("<b>Input annotation:</b><p>{}</p>".format(self.annot_file))
+
+		fastas = self.db.get_all("SELECT * FROM fasta")
+
+		if fastas:
+			inputs.append("<b>Input Fastas:</b>")
+
+		for fasta in fastas:
+			inputs.append("<p>{}</p>".format(fasta[1]))
+
+		if not inputs:
+			QMessageBox.information(self, "Input files", "No input file found, import fasta file for analysis")
+		else:
+			QMessageBox.information(self, "Input files", "".join(inputs))
+
 		
 	def openProject(self, dbfile=None):
-		if dbfile is None:
+		if not dbfile:
 			dbfile, _ = QFileDialog.getOpenFileName(self, filter="Krait Database (*.kdb)")
 		
 		if not dbfile:
@@ -600,22 +646,23 @@ class SSRMainWindow(QMainWindow):
 			if not dbfile:
 				return
 			self.opened_project = dbfile
-
-		#os.remove(self.opened_project)
+		
 		self.db.save(self.opened_project)
-		self.changed_rows = self.db.changes()
-		worker = SaveProjectWorker(dbfile)
+		worker = SaveProjectWorker(self.opened_project)
 		self.executeTask(worker, lambda: 1)
+		
+		self.changed_rows = self.db.changes()
+		
 
 	def saveProjectAs(self):
 		dbfile, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
 		if not dbfile:
 			return
 
-		self.opened_project = dbfile
 		self.changed_rows = self.db.changes()
 		worker = SaveProjectWorker(dbfile)
 		self.executeTask(worker, lambda: 1)
+		self.opened_project = dbfile
 
 	def closeProject(self):
 		if self.changed_rows != self.db.changes():
@@ -635,15 +682,27 @@ class SSRMainWindow(QMainWindow):
 		self.browser.setHtml('')
 		self.changed_rows = self.db.changes()
 
-	def importFasta(self, fasta=None):
+	def importFasta(self, fasta):
 		'''
 		Import a fasta file from a directory
 		'''
-		if fasta is None:
+		if not self.db.is_empty('fasta'):
+			ret = QMessageBox.warning(self, "Closing", 
+				"Are you sure you want to import new fasta file?<br>This will remove the previously imported fasta file.",
+				QMessageBox.Yes | QMessageBox.No
+			)
+
+			if ret == QMessageBox.No:
+				return
+
+		if not fasta:
 			fasta, _ = QFileDialog.getOpenFileName(self, filter="Fasta (*.fa *.fna *.fas *.fasta *.fna.gz *.fa.gz *.fasta.gz);;All files (*.*)")
-		
+	
 		if not fasta:
 			return
+
+		self.db.clear('fasta')
+
 		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, fasta))
 		self.setStatusMessage("Import fasta %s" % fasta)
 
@@ -651,14 +710,34 @@ class SSRMainWindow(QMainWindow):
 		'''
 		import all fasta files from a directory
 		'''
+		if not self.db.is_empty('fasta'):
+			ret = QMessageBox.warning(self, "Closing", 
+				"Are you sure you want to import new fasta file?<br>This will remove the previously imported fasta file.",
+				QMessageBox.Yes | QMessageBox.No
+			)
+
+			if ret == QMessageBox.No:
+				return
+
 		directory = QFileDialog.getExistingDirectory(self)
-		if not directory: return
+		if not directory:
+			return
+		
 		folder = QDir(directory)
+		fastas = folder.entryList(QDir.Files)
+
+		if not fastas:
+			return
+		else:
+			self.db.clear('fasta')
+		
 		count = 0
-		for fasta in  folder.entryList(QDir.Files):
-			self.db.get_cursor().execute("INSERT INTO fasta VALUES (?,?)", (None, folder.absoluteFilePath(fasta)))
+		for fasta in fastas:
 			count += 1
+			self.db.get_cursor().execute("INSERT INTO fasta VALUES (?,?)", (None, folder.absoluteFilePath(fasta)))
+		
 		self.setStatusMessage("Import %s fastas in %s" % (count, directory))
+
 
 	def downloadFasta(self):
 		'''
@@ -672,6 +751,45 @@ class SSRMainWindow(QMainWindow):
 		self.progressBar.setMaximum(0)
 		worker = EutilWorker(acc, out)
 		self.executeTask(worker, lambda: self.progressBar.setMaximum(100))
+
+	def exportTable(self, selected):
+		suffix = ['Tabular (*.tsv)', 'CSV (*.csv)']
+		if self.main_widget.currentWidget() == self.table:
+			if self.model.tableName() in ('ssr', 'issr', 'cssr', 'vntr'):
+				suffix.append('Fasta (*.fa);;GFF3 (*.gff)')
+		suffix.append('TXT (*.txt)')
+
+		outfile, _ = QFileDialog.getSaveFileName(self, filter=";;".join(suffix))
+		if not outfile:
+			return
+
+		if self.model.tableName() == 'primer':
+			worker = ExportPrimerWorker(selected, self.model, outfile)
+
+		elif self.model.tableName() == 'feature':
+			worker = ExportFeatureWorker(selected, self.model, outfile)
+
+		elif outfile.endswith('.fa'):
+			flank = int(self.settings.value('ssr/flank', 100))
+			worker = ExportFastaWorker(selected, self.model, flank, outfile)
+		
+		else:
+			worker = ExportTableWorker(selected, self.model, outfile)
+
+
+		#worker.process()
+		self.executeTask(worker, 
+			lambda: QMessageBox.information(self, "Export Successed", "Successfully exported to {}".format(outfile))
+		)
+
+	def exportWholeTable(self):
+		self.exportTable('whole')
+
+	def exportSelectedRows(self):
+		if not self.model.selected:
+			return QMessageBox.warning(self, 'Warning', "No rows in table have been selected to export.")
+
+		self.exportTable('selecte')
 
 	def exportTableRows(self):
 		#selected = self.model.getSelectedRows()
@@ -722,19 +840,16 @@ class SSRMainWindow(QMainWindow):
 
 	def exportStatisResult(self):
 		pdfname, _ = QFileDialog.getSaveFileName(self, filter="HTML Report (*.html);; PDF Report (*.pdf)")
-		if not file: return
+		if not pdfname: return
 
 		if pdfname.endswith('.pdf'):
-			printer = QPrinter(QPrinter.HighResolution)
-			printer.setPageSize(QPrinter.A4)
-			printer.setColorMode(QPrinter.Color)
-			printer.setOutputFormat(QPrinter.PdfFormat)
-			printer.setOutputFileName(pdfname)
-			self.browser.print_(printer)
+			page_layout = QPageLayout(
+
+			)
+			self.browser.page().printToPdf(pdfname, QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(30,30,30,30)))
+
 		elif pdfname.endswith('.html'):
-			content = self.browser.page().mainFrame().toHtml()
-			with open(pdfname, 'wb') as outfh:
-				outfh.write(content)
+			content = self.browser.page().save(pdfname, QWebEngineDownloadItem.SingleHtmlSaveFormat)
 
 		self.setStatusMessage("Statistical report was successfully save to %s" % pdfname)
 
@@ -779,7 +894,6 @@ class SSRMainWindow(QMainWindow):
 		#check the running task
 		if hasattr(self, 'work_thread') and self.work_thread.isRunning():
 			return QMessageBox.warning(self, "Warning", "Task is running! Please wait until finished.")
-			
 
 		self.worker = worker
 		self.worker.update_message.connect(self.setStatusMessage)
@@ -944,7 +1058,7 @@ class SSRMainWindow(QMainWindow):
 		for key in keys:
 			if key == 'PRIMER_PRODUCT_SIZE_RANGE':
 				sgs = self.settings.value(key)
-				p3_settings[key] = [map(int, sg.split('-')) for sg in sgs.split()]
+				p3_settings[key] = [list(map(int, sg.split('-'))) for sg in sgs.split()]
 			else:
 				p3_settings[key] = int(self.settings.value(key))
 		self.settings.endGroup()
@@ -963,8 +1077,9 @@ class SSRMainWindow(QMainWindow):
 		worker = PrimerWorker(self.model, flank, primer3_settings)
 
 		self.removePrimer()
-
-		self.executeTask(worker, self.showPrimer)
+		worker.process()
+		self.showPrimer()
+		#self.executeTask(worker, self.showPrimer)
 
 	def designOrShowPrimer(self):
 		if self.db.is_empty('primer'):
@@ -992,6 +1107,12 @@ class SSRMainWindow(QMainWindow):
 		self.setStatusMessage("Import annotation file %s" % self.annot_file)
 
 
+	def LocateOrShowTandem(self):
+		if self.db.is_empty('feature'):
+			self.locateTandem()
+		else:
+			self.showLocation()
+	
 	def locateTandem(self):
 		if not self.annot_file:
 			return QMessageBox.warning(self, "Warning", "Please provide gtf or gff well formated annotation file")
@@ -1004,41 +1125,44 @@ class SSRMainWindow(QMainWindow):
 			return QMessageBox.warning(self, "warning", "No SSRs in table")
 
 		worker = LocateWorker(table, self.annot_file)
-		self.executeTask(worker, self.showLocation)
+		worker.process()
+		self.showLocation()
+		#self.executeTask(worker, self.showLocation)
 
 	def showLocation(self):
-		self.model.beginResetModel()
-		self.model.endResetModel()
+		self.model.setTable('feature')
+		self.model.select()
+		self.swichMainWidget('table')
 
 	def removeMarker(self):
-		self.db.clear('location')
+		self.model.remove('feature')
 
-	def showMarker(self, marker):
-		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
-		features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
-		table = self.model.table
-		if not table or table == 'primer':
-			return
+	#def showMarker(self, marker):
+	#	categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+	#	features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
+	#	table = self.model.table
+	#	if not table or table == 'primer':
+	#		return
 
-		sql = "SELECT target FROM location WHERE category=%s AND feature=%s" % (categories[table], features[marker])
+	#	sql = "SELECT target FROM location WHERE category=%s AND feature=%s" % (categories[table], features[marker])
 
-		data = self.db.get_column(sql)
-		if not data:
-			return QMessageBox.warning(self, "Warning", "No %ss located in %s region" % (table.upper(), marker))
+	#	data = self.db.get_column(sql)
+	#	if not data:
+	#		return QMessageBox.warning(self, "Warning", "No %ss located in %s region" % (table.upper(), marker))
 		
-		self.model.setFilter('id IN (%s)' % ",".join(map(str, data)))
+	#	self.model.setFilter('id IN (%s)' % ",".join(map(str, data)))
 
-	def showCDSMarker(self):
-		self.showMarker('CDS')
+	#def showCDSMarker(self):
+	#	self.showMarker('CDS')
 
-	def showExonMarker(self):
-		self.showMarker('EXON')
+	#def showExonMarker(self):
+	#	self.showMarker('EXON')
 
-	def showUTRMarker(self):
-		self.showMarker('UTR')
+	#def showUTRMarker(self):
+	#	self.showMarker('UTR')
 
-	def showIntronMarker(self):
-		self.showMarker('INTRON')
+	#def showIntronMarker(self):
+	#	self.showMarker('INTRON')
 
 	def estimateBestMaxDistance(self):
 		pass
@@ -1057,13 +1181,14 @@ class SSRMainWindow(QMainWindow):
 			return QMessageBox.warning(self, "Warning", "No fasta file inputted")
 
 		worker = StatisWorker()
+		#worker.process()
 		self.progressBar.setMaximum(0)
 		self.executeTask(worker, self.showStatistics)
 
 	def doOrShowStatistics(self):
 		if self.statis_result:
 			self.swichMainWidget('browser')
-			self.browser.setHtml(self.statis_result, QUrl.fromLocalFile(CACHE_PATH))
+			self.browser.setHtml(self.statis_result, QUrl("qrc:/"))
 		else:
 			self.performStatistics()
 
@@ -1103,7 +1228,7 @@ class SSRMainWindow(QMainWindow):
 		)
 
 		self.swichMainWidget('browser')
-		self.browser.setHtml(self.statis_result, QUrl.fromLocalFile(CACHE_PATH))
+		self.browser.setHtml(self.statis_result, QUrl("qrc:/"))
 
 		self.progressBar.setMaximum(100)
 
@@ -1139,14 +1264,23 @@ class SSRMainWindow(QMainWindow):
 	def changeRowColCount(self, count):
 		#self.table.setColumnWidth(0, 30)
 		self.table.resizeColumnToContents(0)
+		#self.table.horizontalHeader().setSortIndicator(1, Qt.AscendingOrder)
 		#self.table.resizeColumnsToContents()
 		labels = {'ssr':'SSRs', 'vntr':'VNTRs', 'cssr':'cSSRs', 'issr':'iSSRs', 'primer':'Primers'}
 		label = labels.get(count[0], 'Row')
 		self.rowCounts.setText("%s: %s" % (label, count[1]))
 		self.colCounts.setText("Column: %s" % count[2])
 
+		if count[1] > 0:
+			self.exportWholeTableAct.setDisabled(False)
+
 	def changeSelectCount(self, count):
-		self.selectCounts.setText("Select: %s" % count)
+		self.selectCounts.setText("Select: {}".format(count))
+		if count > 0:
+			self.exportSelectedRowsAct.setDisabled(False)
+		else:
+			self.exportSelectedRowsAct.setDisabled(True)
+
 	
 	def setProgress(self, percent):
 		self.progressBar.setValue(percent)
@@ -1163,14 +1297,15 @@ class SSRMainWindow(QMainWindow):
 			<p>Krait is a robust and ultrafast tool that provides a user-friendly GUI for no computationally
 			skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs from fasta
 			formatted DNA sequences; and design primers; and perform statistical analysis.</p>
-			<p><a href="https://pypi.python.org/pypi/PySide/1.2.4">PySide</a> for GUI. 
+			<p><a href="https://wiki.qt.io/Qt_for_Python">PySide2</a> for GUI. 
 			<a href="http://lh3lh3.users.sourceforge.net/kseq.shtml">Kseq.h</a> for parsing fasta.
 			<a href="https://github.com/libnano/primer3-py">primer3-py</a> and 
 			<a href="http://primer3.sourceforge.net/">primer3</a> for primer design. 
-			Intersection from <a href="https://github.com/bxlab/bx-python">bx-python</a> for locating SSRs.
+			<a href="https://github.com/hunt-genes/ncls">NCLS</a> for mapping SSRs.
 			<a href="http://www.chartjs.org/">Chartjs</a> for plotting.
 			</p>
-			<p>Contact: adullb@qq.com</p>
+			<p><b>Citation:</b><br>Du L, Zhang C, Liu Q, Zhang X, Yue B (2018) Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design. Bioinformatics. 34(4):681-683.</p>
+			<p><b>Contact:</b><br>dulianming@cdu.edu.cn</p>
 		""".format(version=VERSION, build=BUILD)
 
 		QMessageBox.about(self, "About Krait", about_message)
@@ -1202,9 +1337,11 @@ class SSRTableView(QTableView):
 		self.parent = parent
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
+		#self.horizontalHeader().setDefaultSectionSize(150)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setSelectionMode(QAbstractItemView.SingleSelection)
+		#self.setSelectionMode(QAbstractItemView.MultiSelection)
 		self.setSortingEnabled(True)
 
 		self.checkbox = QCheckBox(self.horizontalHeader())
@@ -1212,6 +1349,7 @@ class SSRTableView(QTableView):
 		self.checkbox.stateChanged.connect(self.checkboxAction)
 
 		self.clicked.connect(self.showCellContent)
+
 
 	def showCellContent(self, index):
 		msg = self.model().data(index)
@@ -1261,7 +1399,7 @@ class SSRTableView(QTableView):
 	def deselectCurrentRow(self):
 		self.model().deselectRow(self.current_row)
 
-	def selectAll(self):
+	def selectAll(self): 
 		self.model().selectAll()
 
 	def deselectAll(self):
@@ -1296,7 +1434,7 @@ class TableModel(QAbstractTableModel):
 		self.headers = []
 
 		#store ids of selected row
-		self.selected = []
+		self.selected = set()
 
 		#store ids of displayed row
 		self.displayed = []
@@ -1319,20 +1457,23 @@ class TableModel(QAbstractTableModel):
 	def getRowCounts(self):
 		return self.total_row_counts
 
+	def getColCounts(self):
+		return len(self.headers)
+
 	def getAllItems(self):
 		return self.total_row_counts
 
 	def selectRow(self, row):
 		if row not in self.selected:
 			self.beginResetModel()
-			self.selected.append(row)
+			self.selected.add(row)
 			self.endResetModel()
 			self.sel_row.emit(len(self.selected))
 
 	def deselectRow(self, row):
 		if row in self.selected:
 			self.beginResetModel()
-			self.selected.reomve(row)
+			self.selected.remove(row)
 			self.endResetModel()
 			self.sel_row.emit(len(self.selected))
 
@@ -1340,15 +1481,15 @@ class TableModel(QAbstractTableModel):
 		self.beginResetModel()
 		sql = self.query[0] % 'COUNT(1)' + ' ' + self.query[1]
 		if self.db.get_one(sql) == self.total_row_counts:
-			self.selected = range(self.total_row_counts)
+			self.selected = set(range(self.total_row_counts))
 		else:
-			self.selected = range(len(self.displayed))
+			self.selected = set(range(len(self.displayed)))
 		self.endResetModel()
 		self.sel_row.emit(len(self.selected))
 
 	def deselectAll(self):
 		self.beginResetModel()
-		self.selected = []
+		self.selected = set()
 		self.endResetModel()
 		self.sel_row.emit(0)
 
@@ -1390,7 +1531,7 @@ class TableModel(QAbstractTableModel):
 
 	def select(self):
 		self.sql = " ".join(self.query)
-		self.selected = []
+		self.selected = set()
 		self.cached_row = [-1, None]
 		self.total_row_counts = self.db.get_one(self.query[0] % "COUNT(1)" + " " + self.query[1] + " LIMIT 1")
 
@@ -1398,7 +1539,7 @@ class TableModel(QAbstractTableModel):
 		self.displayed = self.db.get_column(self.sql % 'id' + " LIMIT 100")
 		self.readed_row_counts = len(self.displayed)
 		self.endResetModel()
-		
+
 		self.row_col.emit((self.table, self.total_row_counts, len(self.headers)))
 		self.sel_row.emit(len(self.selected))
 
@@ -1406,7 +1547,7 @@ class TableModel(QAbstractTableModel):
 		self.beginResetModel()
 		self.total_row_counts = 0
 		self.readed_row_counts = 0
-		self.selected = []
+		self.selected = set()
 		self.cached_row = [-1, None]
 		self.headers = []
 		self.displayed = []
@@ -1423,19 +1564,16 @@ class TableModel(QAbstractTableModel):
 
 
 	def getSelectedRows(self):
-		if len(self.selected) == self.total_row_counts:
-			sql = self.query[0] % "id" + " " + self.query[1]
-			return self.db.get_column(sql)
-		else:
-			return [self.displayed[i] for i in self.selected]
+		return [str(self.displayed[i]) for i in sorted(self.selected)]
 
 	def getCellId(self, row):
 		return self.displayed[row]
 		#return self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', row))
 
-	def value(self, index):
-		row = index.row()
-		col = index.column() - 1
+	def value(self, row, col):
+		#row = index.row()
+		#col = index.column() - 1
+		col -= 1
 		
 		if row == self.cached_row[0]:
 			return self.cached_row[1][col]
@@ -1447,22 +1585,22 @@ class TableModel(QAbstractTableModel):
 
 		return self.cached_row[1][col]
 
-	def rowColor(self, index):
+	#def rowColor(self, index):
 		#ID = self.dataset[index.row()]
-		if self.table == 'primer' or self.db.is_empty('location'):
-			return QColor(255, 255, 255)
+	#	if self.table == 'primer' or self.db.is_empty('location'):
+	#		return QColor(255, 255, 255)
 
-		colors = {1: QColor(245, 183, 177), 2: QColor(250, 215, 160), 3: QColor(169, 223, 191), 4: QColor(174, 214, 241)}
+	#	colors = {1: QColor(245, 183, 177), 2: QColor(250, 215, 160), 3: QColor(169, 223, 191), 4: QColor(174, 214, 241)}
 
-		ID = self.displayed[index.row()]
-		sql = "SELECT feature FROM location WHERE target=%s AND category=%s LIMIT 1" % (ID, self.cat)
+	#	ID = self.displayed[index.row()]
+	#	sql = "SELECT feature FROM location WHERE target=%s AND category=%s LIMIT 1" % (ID, self.cat)
 		
-		feature = self.db.get_one(sql)
+	#	feature = self.db.get_one(sql)
 
-		if not feature:
-			return QColor(255, 255, 255)
+	#	if not feature:
+	#		return QColor(255, 255, 255)
 
-		return colors.get(feature, QColor(255, 255, 255))
+	#	return colors.get(feature, QColor(255, 255, 255))
 
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():
@@ -1483,12 +1621,12 @@ class TableModel(QAbstractTableModel):
 		if not index.isValid():
 			return None
 
-		if not 0 <= index.row() < self.rowCount():
+		if not (0 <= index.row() < self.rowCount()):
 			return None
 
 		elif role == Qt.DisplayRole:
 			if index.column() > 0:
-				return self.value(index)
+				return self.value(index.row(), index.column())
 			else:
 				return None
 
@@ -1499,16 +1637,17 @@ class TableModel(QAbstractTableModel):
 				else:
 					return Qt.Unchecked
 
-		elif role == Qt.BackgroundColorRole:
-			return self.rowColor(index)
+		#elif role == Qt.BackgroundRole:
+		#	if index.row() in self.selected:
+		#		return QColor(215, 242, 222)
 
 		return None
 
 
 	def headerData(self, section, orientation, role=Qt.DisplayRole):
-		if role == Qt.SizeHintRole:
-			if section == 0:
-				return QSize(20, -1)
+		#if role == Qt.SizeHintRole:
+		#	if section == 0:
+		#		return QSize(20, -1)
 
 		if role != Qt.DisplayRole:
 			return None
@@ -1518,8 +1657,22 @@ class TableModel(QAbstractTableModel):
 				return None
 			else:
 				return self.headers[section-1]
+		
+		elif orientation == Qt.Vertical:
+			#return self.value(section, 1)
+			if role == Qt.CheckStateRole:
+				if index.column() == 0:
+					if index.row() in self.selected:
+						return Qt.ItemIsUserCheckable
+					else:
+						return Qt.ItemIsUserCheckable
 
 		return None
+
+	def setHeaderData(self, section, orientation, value, role=Qt.DisplayRole):
+		if role == Qt.CheckStateRole:
+			if orientation == Qt.Vertical:
+				return 
 
 	def setData(self, index, value, role):
 		if not index.isValid():
@@ -1530,7 +1683,7 @@ class TableModel(QAbstractTableModel):
 
 		if role == Qt.CheckStateRole:
 			if value == Qt.Checked:
-				self.selected.append(index.row())
+				self.selected.add(index.row())
 			else:
 				if index.row() in self.selected:
 					self.selected.remove(index.row())
@@ -1543,7 +1696,8 @@ class TableModel(QAbstractTableModel):
 
 	def flags(self, index):
 		if not index.isValid():
-			return QAbstractItemModel.flags(index)
+			#return QAbstractItemModel.flags(index)
+			return Qt.ItemIsSelectable
 
 		flag = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
@@ -1718,7 +1872,7 @@ class GeneralTab(QWidget):
 		self.seed_min_repeat.setMinimum(1)
 		seed_mlen_label = QLabel("Min seed length")
 		self.seed_min_length = QSpinBox()
-		max_error_label = QLabel("Max consecutive edits")
+		max_error_label = QLabel("Max continuous edits")
 		self.max_error = QSpinBox()
 		mis_penalty_label = QLabel("Mismatch penalty")
 		self.mis_penalty = QSpinBox()
@@ -2009,19 +2163,21 @@ class SSRDetailDialog(QDialog):
 	def __init__(self, parent=None, title=None, content=None):
 		super(SSRDetailDialog, self).__init__(parent)
 		self.setWindowTitle(title)
-		self.viewer = QWebView(self)
-		self.viewer.setHtml(content, QUrl.fromLocalFile(CACHE_PATH))
+		self.viewer = QWebEngineView(self)
+		self.viewer.setHtml(content, QUrl("qrc:/"))
 
-		buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
-		buttonBox.accepted.connect(self.accept)
+		#buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
+		#buttonBox.accepted.connect(self.accept)
 		
 		mainLayout = QVBoxLayout()
+		#mainLayout.setSpacing(0)
+		#mainLayout.setMargin(0)
 		mainLayout.addWidget(self.viewer)
-		mainLayout.addWidget(buttonBox)
+		#mainLayout.addWidget(buttonBox)
 		self.resize(700, 500)
 
 		self.setLayout(mainLayout)
-		self.exec_()
+		self.open()
 
 class DownloadDialog(QDialog):
 	def __init__(self, parent=None):
@@ -2063,45 +2219,45 @@ class DownloadDialog(QDialog):
 		return acc, out
 
 
-class BrowserWidget(QWebView):
+class BrowserWidget(QWebEngineView):
 	def __init__(self, parent):
 		super(BrowserWidget, self).__init__(parent)
 		self.parent = parent
 		self.db = Database()
-		self.pageAction(QWebPage.DownloadImageToDisk).triggered.connect(self.saveImage)
-		self.pageAction(QWebPage.OpenImageInNewWindow).triggered.connect(self.openImage)
-		self.page().setLinkDelegationPolicy(QWebPage.DelegateAllLinks)
-		self.page().linkClicked.connect(self.saveTable)
+		#self.pageAction(QWebEnginePage.DownloadImageToDisk).triggered.connect(self.saveImage)
+		#self.pageAction(QWebEnginePage.OpenImageInNewWindow).triggered.connect(self.openImage)
+		#self.page().setLinkDelegationPolicy(QWebEnginePage.DelegateAllLinks)
+		#self.page().linkClicked.connect(self.saveTable)
 
-	def openImage(self):
-		url = self.page().mainFrame().hitTestContent(QCursor.pos()).imageUrl()
-		QDesktopServices.openUrl(url)
+	#def openImage(self):
+	#	url = self.page().mainFrame().hitTestContent(QCursor.pos()).imageUrl()
+	#	QDesktopServices.openUrl(url)
 
-	def saveImage(self):
-		pm = self.page().mainFrame().hitTestContent(QCursor.pos()).pixmap()
-		filepath, _ = QFileDialog.getSaveFileName(self, "Save image", 
-			filter="TIFF File (*.tiff);;JPEG File (*.jpg);;PNG File (*.png)"
-		)
+	#def saveImage(self):
+	#	pm = self.page().mainFrame().hitTestContent(QCursor.pos()).pixmap()
+	#	filepath, _ = QFileDialog.getSaveFileName(self, "Save image", 
+	#		filter="TIFF File (*.tiff);;JPEG File (*.jpg);;PNG File (*.png)"
+	#	)
 		
-		if not filepath: return
-		pm.save(filepath)
+	#	if not filepath: return
+	#	pm.save(filepath)
 
-		self.parent.setStatusMessage('Image %s has been successfully saved' % filepath)
+	#	self.parent.setStatusMessage('Image %s has been successfully saved' % filepath)
 
-	def saveTable(self, url):
-		url = url.toString()
-		table, name = url.split('/')[-1].split('-')
-		stats_str = self.db.get_option('%s_statis' % table)
-		stats_obj = json.loads(stats_str)
-		outfile, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv)")
-		if not outfile: return
+	#def saveTable(self, url):
+	#	url = url.toString()
+	#	table, name = url.split('/')[-1].split('-')
+	#	stats_str = self.db.get_option('%s_statis' % table)
+	#	stats_obj = json.loads(stats_str)
+	#	outfile, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv)")
+	#	if not outfile: return
 
-		with open(outfile, 'wb') as fh:
-			writer = csv.writer(fh)
-			writer.write(stats_obj[name][0])
-			write_to_csv(writer, stats_obj[name][1:])
+	#	with open(outfile, 'wb') as fh:
+	#		writer = csv.writer(fh)
+	#		writer.write(stats_obj[name][0])
+	#		write_to_csv(writer, stats_obj[name][1:])
 		
-		self.parent.setStatusMessage("Table %s has been successfully saved" % outfile)
+	#	self.parent.setStatusMessage("Table %s has been successfully saved" % outfile)
 
 
 #class SSRTableModel(QSqlTableModel):

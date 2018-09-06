@@ -4,9 +4,9 @@ import os
 import appdirs
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = '0.10.2'
+VERSION = '1.0'
 
-BUILD = '171203'
+BUILD = '20180906'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -101,7 +101,8 @@ CREATE TABLE IF NOT EXISTS `meta`(
 
 CREATE TABLE IF NOT EXISTS `primer`(
 	id INTEGER PRIMARY KEY,
-	target TEXT,
+	category TEXT,
+	target INTEGER,
 	entry INTEGER,
 	product INTEGER,
 	forward TEXT,
@@ -122,14 +123,16 @@ CREATE TABLE IF NOT EXISTS `primer_meta`(
 	length2 INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS `location`(
+CREATE TABLE IF NOT EXISTS `feature`(
+	id INTEGER PRIMARY KEY,
 	category TEXT,
 	target INTEGER,
-	feature INTEGER
+	motif TEXT,
+	repeat REAL,
+	location TEXT,
+	geneid TEXT,
+	genename TEXT
 );
-
-CREATE INDEX IF NOT EXISTS loc ON location (category, target);
-CREATE INDEX IF NOT EXISTS fea ON location (category, feature);
 
 CREATE TABLE IF NOT EXISTS `option`(
 	id INTEGER PRIMARY KEY,
@@ -140,7 +143,7 @@ CREATE TABLE IF NOT EXISTS `option`(
 """
 
 STYLE_QSS = """
-*{	
+*{
 	font-family: "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
@@ -153,6 +156,16 @@ QTableView{
 	border: 0;
 	selection-background-color: #F6F6F6;
 	selection-color: #000000;
+}
+
+QHeaderView::section {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop: 0 #fefefe, stop: 0.5 #fbfbfb,
+                                      stop: 0.6 #f8f8f8, stop: 1 #f2f3f3);
+    padding-left: 4px;
+    border:none;
+    border-right: 1px solid #d8d8d8;
+    border-bottom: 1px solid #afb0b1;
 }
 
 QTextBrowser{

@@ -37,4 +37,4 @@ Krait is a robust and ultrafast tool with a user-friendly graphic interface for 
 [https://github.com/lmdu/krait/blob/master/doc/Manual.pdf](https://github.com/lmdu/krait/blob/master/doc/Manual.pdf)
 
 # Citation
-Du L, Zhang C, Liu Q, Zhang X, Yue B (2017) Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design, Bioinformatics, [10.1093/bioinformatics/btx665](https://doi.org/10.1093/bioinformatics/btx665)
+Du L, Zhang C, Liu Q, Zhang X, Yue B (2018) Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design. Bioinformatics. 34(4):681-683. [10.1093/bioinformatics/btx665](https://doi.org/10.1093/bioinformatics/btx665)

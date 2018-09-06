@@ -46,6 +46,7 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 		{
 			start = i;
 			length = j;
+
 			while(start+length<len && seq[i]==seq[i+j] && seq[i]!=78){
 				i++;
 				length++;
@@ -499,21 +500,24 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 
 	release_matrix(matrix, size);
 	return result;
-};
+}
 
-static PyMethodDef add_methods[] = {
+static PyMethodDef tandem_methods[] = {
 	{"search_ssr", search_ssr, METH_VARARGS},
 	{"search_vntr", search_vntr, METH_VARARGS},
 	{"search_issr", search_issr, METH_VARARGS},
 	{NULL, NULL, 0, NULL}
 };
 
+static struct PyModuleDef tandem_definition = {
+	PyModuleDef_HEAD_INIT,
+	"tandem",
+	"Search perfect or imperfect tandem repeats from sequence",
+	-1,
+	tandem_methods
+};
 
-void inittandem()
-{
-	PyObject *m;
-	m = Py_InitModule("tandem", add_methods);
-	if(m == NULL){
-		return;
-	}
+PyMODINIT_FUNC PyInit_tandem(void){
+	Py_Initialize();
+	return PyModule_Create(&tandem_definition);
 }

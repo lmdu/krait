@@ -95,19 +95,13 @@ class Statistics(object):
 		return round(lengths/self.transize, 2)
 
 	def region(self, table):
-		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
-		features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
-		cat = categories[table]
-		total_counts = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % table)
-		sql = "SELECT feature,COUNT(1) AS count FROM location WHERE category=%s GROUP BY feature"
-		rows = []
-		feat_counts = 0
-		for row in self.db.query(sql % cat):
-			rows.append((features[row.feature], row.count))
-			feat_counts += row.count
-		
+		total_counts = self.db.get_one("SELECT COUNT(*) FROM {} LIMIT 1".format(table))
+		total_annots = self.db.get_one("SELECT COUNT(DISTINCT target) FROM feature WHERE category='{}'".format(table))
+		sql = "SELECT location,COUNT(*) AS count FROM feature WHERE category='{}' GROUP BY location".format(table)
+		rows = [(row.location, row.count) for row in self.db.query(sql)]
+
 		if rows:
-			rows.append(('Intergenic', total_counts-feat_counts))
+			rows.append(('Intergenic', total_counts-total_annots))
 		
 		return rows
 

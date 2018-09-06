@@ -1,7 +1,6 @@
 """
 Data structure for performing intersect queries on a set of intervals which
 preserves all information about the intervals (unlike bitset projection methods).
-
 :Authors: James Taylor (james@jamestaylor.org),
           Ian Schenk (ian.schenck@gmail.com),
           Brent Pedersen (bpederse@gmail.com)
@@ -66,8 +65,8 @@ cdef class IntervalNode:
     """
     cdef float priority
     cdef public object interval
-    cdef public int start, end
-    cdef int minend, maxend, minstart
+    cdef public long start, end
+    cdef long minend, maxend, minstart
     cdef IntervalNode cleft, cright, croot
 
     property left_node:
@@ -83,12 +82,12 @@ cdef class IntervalNode:
     def __repr__(self):
         return "IntervalNode(%i, %i)" % (self.start, self.end)
 
-    def __cinit__(IntervalNode self, int start, int end, object interval):
+    def __cinit__(IntervalNode self, long start, long end, object interval):
         # Python lacks the binomial distribution, so we convert a
         # uniform into a binomial because it naturally scales with
         # tree size.  Also, python's uniform is perfect since the
         # upper limit is not inclusive, which gives us undefined here.
-        self.priority = ceil(nlog * log(-1.0/(0.99999 * rand()/RAND_MAX - 1)))
+        self.priority = ceil(nlog * log(-1.0/(1.0 * rand()/(RAND_MAX+0.1) - 1)))
         self.start    = start
         self.end      = end
         self.interval = interval
@@ -99,7 +98,7 @@ cdef class IntervalNode:
         self.cright   = EmptyNode
         self.croot    = EmptyNode
         
-    cpdef IntervalNode insert(IntervalNode self, int start, int end, object interval):
+    cpdef IntervalNode insert(IntervalNode self, long start, long end, object interval):
         """
         Insert a new IntervalNode into the tree of which this node is
         currently the root. The return value is the new root of the tree (which
@@ -108,7 +107,7 @@ cdef class IntervalNode:
         cdef IntervalNode croot = self
         # If starts are the same, decide which to add interval to based on
         # end, thus maintaining sortedness relative to start/end
-        cdef int decision_endpoint = start
+        cdef long decision_endpoint = start
         if start == self.start:
             decision_endpoint = end
         
@@ -165,7 +164,7 @@ cdef class IntervalNode:
             self.minstart = imin2(self.start, self.cleft.minstart)
         
 
-    def intersect( self, int start, int end, sort=True ):
+    def intersect( self, long start, long end, sort=True ):
         """
         given a start and a end, return a list of features
         falling within that range
@@ -176,13 +175,13 @@ cdef class IntervalNode:
 
     find = intersect
         
-    cdef void _intersect( IntervalNode self, int start, int end, list results):
+    cdef void _intersect( IntervalNode self, long start, long end, list results):
         # Left subtree
         if self.cleft is not EmptyNode and self.cleft.maxend > start:
             self.cleft._intersect( start, end, results )
         # This interval
         #if ( self.end > start ) and ( self.start < end ):
-        if (self.end >= end) and (self.start <= start):
+        if ( self.end >= end ) and ( self.start <= start ):
             results.append( self.interval )
         # Right subtree
         if self.cright is not EmptyNode and self.start < end:
@@ -276,19 +275,17 @@ cdef class Interval:
     Basic feature, with required integer start and end properties.
     Also accepts optional strand as +1 or -1 (used for up/downstream queries),
     a name, and any arbitrary data is sent in on the info keyword argument
-
     >>> from bx.intervals.intersection import Interval
-
+    >>> from collections import OrderedDict
     >>> f1 = Interval(23, 36)
-    >>> f2 = Interval(34, 48, value={'chr':12, 'anno':'transposon'})
+    >>> f2 = Interval(34, 48, value=OrderedDict([('chr', 12), ('anno', 'transposon')]))
     >>> f2
-    Interval(34, 48, value={'anno': 'transposon', 'chr': 12})
-
+    Interval(34, 48, value=OrderedDict([('chr', 12), ('anno', 'transposon')]))
     """
-    cdef public int start, end
+    cdef public long start, end
     cdef public object value, chrom, strand
 
-    def __init__(self, int start, int end, object value=None, object chrom=None, object strand=None ):
+    def __init__(self, long start, long end, object value=None, object chrom=None, object strand=None ):
         assert start <= end, "start must be less than end"
         self.start  = start
         self.end   = end
@@ -372,10 +369,8 @@ cdef class IntervalTree:
     [Interval(0, 10)]
     >>> intersecter.upstream_of_interval(Interval(11, 12, strand="-"))
     [Interval(13, 50)]
-
     >>> intersecter.upstream_of_interval(Interval(1, 2, strand="-"), num_intervals=3)
     [Interval(3, 7), Interval(3, 40), Interval(13, 50)]
-
     
     """
     
@@ -386,7 +381,7 @@ cdef class IntervalTree:
     
     # ---- Position based interfaces -----------------------------------------
     
-    def insert( self, int start, int end, object value=None ):
+    def insert( self, long start, long end, object value=None ):
         """
         Insert the interval [start,end) associated with value `value`.
         """

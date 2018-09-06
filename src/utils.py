@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-from __future__ import division
 import csv
 import gzip
 import time
@@ -74,26 +71,15 @@ def template_render(template_name, **kwargs):
 	template = env.get_template(template_name)
 	return template.render(**kwargs)
 
-def write_to_tab(writer, row):
-	'''
-	write data to tabular file with \t separator
-	'''
-	writer.write("%s\n" % "\t".join(map(str, row)))
-
-def write_to_csv(writer, row):
-	#writer = csv.writer(cf)
-	#writer.writerow(headers)
-	writer.writerow(row)
-
-def write_to_gff(writer, feature, row):
-	cols = [row.sequence, 'Krait', feature, str(row.start), str(row.end), '.', '+', '.', []]
-	cols[-1].append("ID=%s%s" % (feature, row.id))
-	cols[-1].append("Motif=%s" % row.motif)
+def format_to_gff(feature, row):
+	cols = [row.sequence, 'Krait', feature, row.start, row.end, '.', '+', '.', []]
+	cols[-1].append("ID={}{}".format(feature, row.id))
+	cols[-1].append("Motif={}".format(row.motif))
 	for k in row.getKeys():
 		if k not in ['id', 'sequence', 'start', 'end', 'motif']:
-			cols[-1].append("%s=%s" % (k.capitalize(), row.value(k)))
+			cols[-1].append("{}={}".format(k.capitalize(), row.value(k)))
 	cols[-1] = ";".join(cols[-1])
-	writer.write("\t".join(cols)+'\n')
+	return cols
 
 def write_to_gtf(gtf_file, feature, cursor):
 	with open(gtf_file, 'w') as gtf:
@@ -145,18 +131,25 @@ def format_fasta_sequence(sequence, length):
 
 def check_gene_annot_format(annot_file):
 	if annot_file.endswith('.gz'):
-		fh = gzip.open(annot_file)
+		fh = gzip.open(annot_file, 'rt')
 	else:
 		fh = open(annot_file)
 
 	for line in fh:
-		if line[0] == '#': continue
+		if line[0] == '#':
+			continue
+
 		cols = line.strip().split('\t')
-		if cols[2].upper() != 'EXON': continue
-		if cols[-1].count('=') > 2:
+
+		if len(cols) != 9:
+			raise Exception('The annotation file is not GTF or GFF format')
+		
+		if cols[-1].count('=') >= 2:
 			return 'GFF'
-		elif 'transcript_id' in cols[-1]:
+
+		elif 'gene_id' in cols[-1]:
 			return 'GTF'
+
 		else:
 			raise Exception('The annotation file is not GTF or GFF format')
 
@@ -166,27 +159,31 @@ def gff_gtf_parser(annot_file, _format='GFF'):
 	parse GFF, GTF, comparessed gz annotation file
 	"""
 	if annot_file.endswith('.gz'):
-		fh = gzip.open(annot_file)
+		fh = gzip.open(annot_file, 'rt')
 	else:
 		fh = open(annot_file)
 
 	for line in fh:
 		if line[0] == '#': continue
 		cols = line.strip().split('\t')
-		record = Data()
-		record.seqid = cols[0]
-		record.feature = cols[2].upper()
-		record.start = int(cols[3])
-		record.end = int(cols[4])
-		record.attrs = {}
+		record = Data(
+			seqid = cols[0],
+			feature = cols[2].upper(),
+			start = int(cols[3]),
+			end = int(cols[4]),
+			attrs = Data()
+		)
 		
 		for item in cols[-1].split(';'):
-			if not item: continue
+			if not item:
+				continue
+			
 			if _format == 'GFF':
 				name, value = item.split('=')
 			else:
 				name, value = item.strip().strip('"').split('"')
-			record.attrs[name.strip().upper()] = value
+			
+			record.attrs[name.strip()] = value
 		
 		yield record
 
@@ -196,85 +193,164 @@ def get_gtf_coordinate(gtf_file):
 	father = None
 	exons = []
 	for r in gff_gtf_parser(gtf_file, 'GTF'):
+		try:
+			gene_name = r.attrs.gene_name
+		except AttributeError:
+			gene_name = r.attrs.gene_id
+
+		meta = Data(
+			feature = r.feature,
+			gene_id = r.attrs.gene_id,
+			gene_name = gene_name,
+		)
+
 		if r.feature == 'CDS':
-			yield ('CDS', r.seqid, r.start, r.end)
+			yield (r.seqid, r.start, r.end, meta)
+		
 		elif r.feature == 'FIVE_PRIME_UTR':
-			yield ('UTR', r.seqid, r.start, r.end)
+			meta.feature = '5UTR'
+			yield (r.seqid, r.start, r.end, meta)
+		
 		elif r.feature == 'THREE_PRIME_UTR':
-			yield ('UTR', r.seqid, r.start, r.end)
+			meta.feature = '3UTR'
+			yield (r.seqid, r.start, r.end, meta)
+		
 		elif r.feature == 'UTR':
-			yield ('UTR', r.seqid, r.start, r.end)
+			yield (r.seqid, r.start, r.end, meta)
+		
 		elif r.feature == 'EXON':
-			mother = r.attrs['TRANSCRIPT_ID']
+			meta.feature = 'exon'
+			mother = r.attrs.transcript_id
 
 			if father == mother:
-				exons.append(('EXON', r.seqid, r.start, r.end))
+				exons.append((r.seqid, r.start, r.end, meta))
 			else:
 				if exons:
-					exons = sorted(exons, key=lambda x: x[2])
+					exons = sorted(exons, key=lambda x: x[1])
+					intron_chrom = exons[0][0]
+					intron_meta = exons[0][3]
+					intron_meta.feature = 'intron'
+
 					for idx, exon in enumerate(exons):
-						start, end = exon[2], exon[3]
 						yield exon
 
 						if idx < len(exons)-1:
-							start = end+1
-							end = exons[idx+1][2]-1
-							yield ('INTRON', exons[0][1], start, end)
+							start = exon[2] + 1
+							end = exons[idx+1][1] - 1
+							yield (intron_chrom, start, end, intron_meta)
 				
-				exons = [('EXON', r.seqid, r.start, r.end)]
+				exons = [(r.seqid, r.start, r.end, meta)]
 				father = mother
 
-	exons = sorted(exons, key=lambda x: x[2])
-	for idx, exon in enumerate(exons):
-		start, end = exon[2], exon[3]
-		yield exon
+	if exons:
+		exons = sorted(exons, key=lambda x: x[1])
+		intron_chrom = exons[0][0]
+		intron_meta = exons[0][3]
+		intron_meta.feature = 'intron'
+		for idx, exon in enumerate(exons):
+			yield exon
 
-		if idx < len(exons)-1:
-			start = end+1
-			end = exons[idx+1][2]-1
-			yield ('INTRON', exons[0][1], start, end)
+			if idx < len(exons)-1:
+				start = exon[2] + 1
+				end = exons[idx+1][1] - 1
+				yield (intron_chrom, start, end, intron_meta)
 
 def get_gff_coordinate(gff_file):
 	father = None
 	exons = []
+
+	parents = {}
+
 	for r in gff_gtf_parser(gff_file, 'GFF'):
+		if r.feature == 'GENE':
+			parents[r.attrs.ID] = r
+			continue
+		elif r.feature == 'MRNA':
+			try:
+				parents[r.attrs.ID] = parents[r.attrs.Parent]
+			except:
+				parents[r.attrs.ID] = r
+			continue
+
 		if r.feature == 'CDS':
-			yield ('CDS', r.seqid, r.start, r.end)
+			meta = Data(
+				feature = r.feature,
+				gene_id = parents[r.attrs.Parent].attrs.ID,
+				gene_name = parents[r.attrs.Parent].attrs.Name,
+			)
+			yield (r.seqid, r.start, r.end, meta)
+		
 		elif r.feature == 'FIVE_PRIME_UTR':
-			yield ('UTR', r.seqid, r.start, r.end)
+			meta = Data(
+				feature = '5UTR',
+				gene_id = parents[r.attrs.Parent].attrs.ID,
+				gene_name = parents[r.attrs.Parent].attrs.Name,
+			)
+			yield (r.seqid, r.start, r.end, meta)
+
 		elif r.feature == 'THREE_PRIME_UTR':
-			yield ('UTR', r.seqid, r.start, r.end)
+			meta = Data(
+				feature = '3UTR',
+				gene_id = parents[r.attrs.Parent].attrs.ID,
+				gene_name = parents[r.attrs.Parent].attrs.Name,
+			)
+			yield (r.seqid, r.start, r.end, meta)
+		
 		elif r.feature == 'UTR':
-			yield ('UTR', r.seqid, r.start, r.end)
+			meta = Data(
+				feature = 'UTR',
+				gene_id = parents[r.attrs.Parent].attrs.ID,
+				gene_name = parents[r.attrs.Parent].attrs.Name,
+			)
+			yield (r.seqid, r.start, r.end, meta)
+		
 		elif r.feature == 'EXON':
-			mother = r.attrs['PARENT']
+			mother = r.attrs.Parent
+
+			meta = Data(
+				feature = 'exon',
+				gene_id = parents[r.attrs.Parent].attrs.ID,
+				gene_name = parents[r.attrs.Parent].attrs.Name,
+			)
 
 			if father == mother:
-				exons.append(('EXON', r.seqid, r.start, r.end))
+				exons.append((r.seqid, r.start, r.end, meta))
 			else:
 				if exons:
 					exons = sorted(exons, key=lambda x: x[2])
+					intron_chrom = exons[0][0]
+					intron_meta = exons[0][3]
+					intron_meta.feature = 'intron'
+
 					for idx, exon in enumerate(exons):
-						start, end = exon[2], exon[3]
 						yield exon
 
 						if idx < len(exons)-1:
-							start = end+1
-							end = exons[idx+1][2]-1
-							yield ('INTRON', exons[0][1], start, end)
+							start = exon[2] + 1
+							end = exons[idx+1][1] - 1
+							yield (intron_chrom, start, end, intron_meta)
 				
-				exons = [('EXON', r.seqid, r.start, r.end)]
+				exons = [(r.seqid, r.start, r.end, meta)]
 				father = mother
+		else:
+			if 'ID' in r.attrs:
+				try:
+					parents[r.attrs.ID] = parents[r.attrs.Parent]
+				except:
+					parents[r.attrs.ID] = r
 
 	exons = sorted(exons, key=lambda x: x[2])
+	intron_chrom = exons[0][0]
+	intron_meta = exons[0][3]
+	intron_meta.feature = 'intron'
+	
 	for idx, exon in enumerate(exons):
-		start, end = exon[2], exon[3]
 		yield exon
 
 		if idx < len(exons)-1:
-			start = end+1
-			end = exons[idx+1][2]-1
-			yield ('INTRON', exons[0][1], start, end, exons[0][4])
+			start = exon[2] + 1
+			end = exons[idx+1][1] - 1
+			yield (intron_chrom, start, end, intron_meta)
 
 
 def get_ssr_sequence(seq_file, seq_name, start, stop, flank):
