@@ -663,6 +663,7 @@ class LocateWorker(Worker):
 		starts = []
 		ends = []
 		indexes = []
+
 		for feature in features:
 			locid += 1
 			locations[locid] = feature[3]

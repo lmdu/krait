@@ -1,3 +1,0 @@
-LIBRARY kseq.cp37-win_amd64.pyd
-EXPORTS
-PyInit_kseq

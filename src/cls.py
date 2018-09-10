@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(
 	usage = 'krait COMMAND [OPTIONS]',
 	description = description,
 	epilog = '''Contact:
-    Lianming Du (adullb@qq.com)
+    Lianming Du (dulianming@cdu.edu.cn)
 	''',
 	formatter_class = argparse.RawDescriptionHelpFormatter
 )
@@ -33,7 +33,7 @@ subparsers = parser.add_subparsers(
 	metavar = '',
 )
 parser_search = subparsers.add_parser('search',
-	help = "Search for perfect microsatellites",
+	help = "Search for simple tandem repeats",
 	formatter_class = argparse.ArgumentDefaultsHelpFormatter
 )
 parser_search.add_argument('-t', '--type',
@@ -167,9 +167,9 @@ parser_flank.add_argument('-i', '--in',
 	required = True,
 	help = "output file of search command"
 )
-parser_flank.add_argument('-s', '--seqs',
+parser_flank.add_argument('-f', '--fasta',
 	dest = 'seqfile',
-	metavar = 'file',
+	metavar = 'fasta',
 	required = True,
 	help = 'fasta formatted file containing sequences'
 )
@@ -177,7 +177,7 @@ parser_flank.add_argument('-l', '--length',
 	dest = 'length',
 	metavar = 'int',
 	required = True,
-	default = 80,
+	default = 100,
 	help = 'flanking sequence length'
 )
 parser_flank.add_argument('-o', '--out',
@@ -187,7 +187,7 @@ parser_flank.add_argument('-o', '--out',
 	help = "output file name"
 )
 
-parser_locate = subparsers.add_parser('locate', help="Locate tandem to gene feature")
+parser_locate = subparsers.add_parser('mapping', help="mapping microsatellites or tandem repeats to gene (CDS, UTR etc.)")
 parser_locate.add_argument('-i', '--in',
 	dest = 'infile',
 	metavar = 'tsv',
@@ -196,7 +196,7 @@ parser_locate.add_argument('-i', '--in',
 )
 parser_locate.add_argument('-a', '--annot',
 	dest = 'annotfile',
-	metavar = 'gff',
+	metavar = 'gtf',
 	required = True,
 	help = 'annotation file with gff or gtf format'
 )
@@ -217,9 +217,9 @@ parser_primer.add_argument('-i', '--in',
 	required = True,
 	help = "output file of search command"
 )
-parser_primer.add_argument('-s', '--seqs',
+parser_primer.add_argument('-f', '--fasta',
 	dest = 'seqfile',
-	metavar = 'file',
+	metavar = 'fasta',
 	required = True,
 	help = 'fasta formatted file containing sequences'
 )
@@ -228,6 +228,12 @@ parser_primer.add_argument('-o', '--out',
 	metavar = 'file',
 	default = 'stdout',
 	help = 'output file name (default: stdout)'
+)
+parser_primer.add_argument('-s', '--setting',
+	dest = 'primer3_setting_file',
+	required = True,
+	metavar = 'setting file',
+	help = 'primer3 setting file'
 )
 
 primer3_group = parser_primer.add_argument_group('Primer3', 'primer3 parameter')
@@ -238,6 +244,8 @@ primer3_group.add_argument('--setting-file',
 	help = 'primer3 setting file'
 )
 
-
-
 args = parser.parse_args()
+
+class ProcessPool:
+	def __init__(self):
+		pass

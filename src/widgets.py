@@ -41,11 +41,9 @@ class SSRMainWindow(QMainWindow):
 
 		self.browser = QWebEngineView(self)
 
+		
 		self.main_widget.addWidget(self.table)
 		self.main_widget.addWidget(self.browser)
-
-		#self.setCentralWidget(self.browser)
-		#self.main_widget.setCurrentIndex(1)
 
 		#search text input
 		self.filter = SSRFilterInput(self)
@@ -263,6 +261,7 @@ class SSRMainWindow(QMainWindow):
 		#search perfect ssrs tool button
 		self.SSRSearchAct = QAction(QIcon(":/icons/ssr.png"), self.tr("SSRs"), self)
 		self.SSRSearchAct.setToolTip(self.tr("Search for Perfect SSRs"))
+		self.SSRSearchAct.setStatusTip(self.tr("Search for Perfect Microsatellites"))
 		self.SSRSearchAct.triggered.connect(self.searchOrShowSSR)
 		self.SSRForceAct = QAction(self.tr("Redo Search for SSRs"), self)
 		self.SSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_1))
@@ -278,6 +277,7 @@ class SSRMainWindow(QMainWindow):
 		#search compound ssrs tool button
 		self.CSSRSearchAct = QAction(QIcon(":/icons/cssr.png"), self.tr("cSSRs"), self)
 		self.CSSRSearchAct.setToolTip(self.tr("Search for Compound SSRs"))
+		self.CSSRSearchAct.setStatusTip(self.tr("Search for Compound Microsatellites"))
 		self.CSSRSearchAct.triggered.connect(self.searchOrShowCSSR)
 		self.CSSRForceAct = QAction(self.tr("Redo Search for cSSRs"), self)
 		self.CSSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_2))
@@ -295,6 +295,7 @@ class SSRMainWindow(QMainWindow):
 		#search VNTRs
 		self.VNTRSearchAct = QAction(QIcon(":/icons/vntr.png"), self.tr("VNTRs"), self)
 		self.VNTRSearchAct.setToolTip(self.tr("Search for Minisatellites or Macrosatellites"))
+		self.VNTRSearchAct.setStatusTip(self.tr("Search for Minisatellites or Macrosatellites"))
 		self.VNTRSearchAct.triggered.connect(self.searchOrShowVNTR)
 		self.VNTRForceAct = QAction(self.tr("Redo Search for VNTRs"), self)
 		self.VNTRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_4))
@@ -310,6 +311,7 @@ class SSRMainWindow(QMainWindow):
 		#search imperfect microsatellites
 		self.ISSRSearchAct = QAction(QIcon(":/icons/issr.png"), self.tr("iSSRs"), self)
 		self.ISSRSearchAct.setToolTip(self.tr("Search for Imperfect SSRs"))
+		self.ISSRSearchAct.setStatusTip(self.tr("Search for Imperfect Microsatellites"))
 		self.ISSRSearchAct.triggered.connect(self.searchOrShowISSR)
 		self.ISSRForceAct = QAction(self.tr("Redo Search for iSSRs"), self)
 		self.ISSRForceAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_3))
@@ -325,6 +327,7 @@ class SSRMainWindow(QMainWindow):
 		#locate ssrs
 		self.locateAct = QAction(QIcon(":/icons/locate.png"), self.tr("Mapping"), self)
 		self.locateAct.setToolTip(self.tr("Mapping tandem repeats to gene regions"))
+		self.locateAct.setStatusTip(self.tr("Mapping tandem repeats to gene regions"))
 		self.locateAct.triggered.connect(self.LocateOrShowTandem)
 		self.locateToolAct = QAction(self.tr("Redo Mapping"), self)
 		self.locateToolAct.triggered.connect(self.locateTandem)
@@ -360,6 +363,7 @@ class SSRMainWindow(QMainWindow):
 		#design primer
 		self.primerDesignAct = QAction(QIcon(":/icons/primer.png"), self.tr("Primer"), self)
 		self.primerDesignAct.setToolTip(self.tr("Design primers"))
+		self.primerDesignAct.setStatusTip(self.tr("Start design primers"))
 		self.primerDesignAct.triggered.connect(self.designOrShowPrimer)
 		self.primerForceAct = QAction(self.tr("Redo Design Primers"), self)
 		self.primerForceAct.triggered.connect(self.designPrimer)
@@ -373,6 +377,7 @@ class SSRMainWindow(QMainWindow):
 		#statistics report
 		self.statisticsAct = QAction(QIcon(":/icons/report.png"), self.tr("Statistics"), self)
 		self.statisticsAct.triggered.connect(self.doOrShowStatistics)
+		self.statisticsAct.setStatusTip(self.tr("Generate Statistical Report"))
 		self.statisticsForceAct = QAction(self.tr("Redo Statistical Analysis"), self)
 		self.statisticsForceAct.triggered.connect(self.performStatistics)
 		self.statisticsShowAct = QAction(self.tr("Show Statistical Result"), self)
@@ -1077,9 +1082,9 @@ class SSRMainWindow(QMainWindow):
 		worker = PrimerWorker(self.model, flank, primer3_settings)
 
 		self.removePrimer()
-		worker.process()
-		self.showPrimer()
-		#self.executeTask(worker, self.showPrimer)
+		#worker.process()
+		#self.showPrimer()
+		self.executeTask(worker, self.showPrimer)
 
 	def designOrShowPrimer(self):
 		if self.db.is_empty('primer'):
@@ -1125,9 +1130,9 @@ class SSRMainWindow(QMainWindow):
 			return QMessageBox.warning(self, "warning", "No SSRs in table")
 
 		worker = LocateWorker(table, self.annot_file)
-		worker.process()
-		self.showLocation()
-		#self.executeTask(worker, self.showLocation)
+		#worker.process()
+		#self.showLocation()
+		self.executeTask(worker, self.showLocation)
 
 	def showLocation(self):
 		self.model.setTable('feature')
