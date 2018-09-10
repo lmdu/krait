@@ -6,10 +6,13 @@
         "depends": [
             "ncls\\src\\intervaldb.h"
         ],
+        "include_dirs": [
+            "."
+        ],
         "name": "ncls",
         "sources": [
-            "D:\\coding\\krait\\src\\libs\\src\\ncls\\src/ncls.pyx",
-            "D:\\coding\\krait\\src\\libs\\src\\ncls\\src/intervaldb.c"
+            "ncls/src/ncls.pyx",
+            "ncls/src/intervaldb.c"
         ]
     },
     "module_name": "ncls"

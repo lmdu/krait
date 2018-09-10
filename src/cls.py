@@ -3,6 +3,30 @@ import argparse
 import threading
 import multiprocessing
 
+def search_ssr():
+	pass
+
+def search_cssr():
+	pass
+
+def search_issr():
+	pass
+
+def search_vntr():
+	pass
+
+def extract_flank_sequence():
+	pass
+
+def mapping_to_gene():
+	pass
+
+def design_primer():
+	pass
+
+
+
+
 description = '''
 Search for microsatellite from large genome
 
@@ -245,7 +269,3 @@ primer3_group.add_argument('--setting-file',
 )
 
 args = parser.parse_args()
-
-class ProcessPool:
-	def __init__(self):
-		pass
