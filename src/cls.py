@@ -1,10 +1,99 @@
+import os
 import sys
+import glob
+import motif
 import argparse
-import threading
-import multiprocessing
+import multiprocessing as mp 
 
-def search_ssr():
-	pass
+from libs import *
+
+class Workers(object):
+	def __init__(self, target, items, cpus, out):
+		self.out = out
+		self.target = target
+		self.items = items
+		
+		#CPU counts specified by user
+		self.cpus = cpus
+		
+		#number of current tasks in pool
+		self.tasks = 0
+
+		if cpus > mp.cpu_count():
+			self.cpus = mp.cpu_count()
+
+		self.pool = mp.Pool(self.cpus)
+		self.run_task()
+
+	def _callback(self):
+		self.tasks -= 1
+
+	def add_task(self, args):
+		self.pool.apply_async(func=self.target, args=args, callback=self._callback)
+		self.tasks += 1
+
+	def run_task(self):
+		while 1:
+			if self.tasks < self.cpus:
+				try:
+					item = next(items)
+					self.add_task(item)
+				
+				except StopIteration:
+					break
+			
+			time.sleep(0.01)
+		
+		self.pool.close()
+		self.pool.join()
+
+	def merge_task(self):
+		with open(self.out, 'w') as fw:
+			for outfile in glob.glob('{}.*'.format(self.out)):
+				with open(outfile) as fh:
+					fw.write(fh.read())
+					os.remove(outfile)
+
+def format_to_gff(feature, row):
+	cols = [row.sequence, 'Krait', feature, row.start, row.end, '.', '+', '.', []]
+	cols[-1].append("ID={}{}".format(feature, row.id))
+	cols[-1].append("Motif={}".format(row.motif))
+	for k in row.getKeys():
+		if k not in ['id', 'sequence', 'start', 'end', 'motif']:
+			cols[-1].append("{}={}".format(k.capitalize(), row.value(k)))
+	cols[-1] = ";".join(cols[-1])
+	return cols
+
+def save_result(outfile, outfmt, rows, ssr_type='SSR'):
+	with open(outfile, 'w', newline='') as fw:
+		if outfmt == 'csv':
+			writer = csv.writer(outfh)
+		else:
+			writer = csv.writer(outfh, delimiter='\t')
+
+		if outfmt == 'gff':
+			write_line = lambda x: writer.writerow(format_to_gff(ssr_type, x))
+		else:
+			write_line = lambda x: writer.writerow(x)
+
+		for row in rows:
+			write_line(row)
+
+
+def search_ssr(infile, outfile, outfmt, repeats, level):
+	seqs = fasta.GzipFasta(infile)
+	motifs = motif.StandardMotif(level)
+	for name, seq in seqs:
+		ssrs = tandem.search_ssr(seq, repeats)
+
+		def values():
+			for ssr in ssrs:
+				row = [name, motifs.standard(ssr[0])]
+				row.extend(ssr)
+				yield row
+
+		save_result(outfile, outfmt, values(), 'SSR')
+
 
 def search_cssr():
 	pass
@@ -84,7 +173,7 @@ parser_search.add_argument('-f', '--outfmt',
 	default = 'tsv',
 	choices = ('tsv', 'csv', 'gff'),
 	metavar = '',
-	help="output format [csv, tsv, gff]"
+	help="output format [tsv, csv, gff]"
 )
 parser_search.add_argument('-c', '--cpus',
 	dest = 'cpus',
@@ -92,6 +181,13 @@ parser_search.add_argument('-c', '--cpus',
 	type = int,
 	metavar = '',
 	help = 'number of threads'
+)
+parser_search.add_argument('-l', '--level',
+	dest = 'level',
+	default = 3,
+	type = int,
+	metavar = '',
+	help = 'motif standardization level'
 )
 
 ssr_group = parser_search.add_argument_group('SSR', 'perfect SSR search parameter')

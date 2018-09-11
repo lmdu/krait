@@ -49,8 +49,10 @@ p {
 }
 .color-red{
 	color: #9400D3;
+	font-weight: bold;
 }
 .color-blue{
+	font-weight: bold;
 	color: #FF8C00;
 }
 .text-center{
@@ -178,7 +180,7 @@ hr{
 <!-- perfect SSRs statistics -->
 {% if ssr %}
 <hr>
-<h2 class="text-center">Perfect Microsatellites</h2>
+<h2 class="text-center">Perfect Microsatellites (SSRs)</h2>
 <div class="parameters">
 	<p>
 		The minimum repeats for each perfect SSR type were set to
@@ -204,7 +206,7 @@ hr{
 	<tr><td>Total length of perfect SSRs</td><td>Bp</td><td>{{ ssr.length }}</td></tr>
 	<tr><td>The average length of SSRs</td><td>total ssr length/total ssr counts (bp)</td><td>{{ (ssr.length/ssr.count)|round(2,'ceil') }}</td></tr>
 	<tr><td>SSRs per sequence</td><td>total SSR counts/sequence counts</td><td>{{ (ssr.count/seq.seqcount)|round|int }}</td></tr>
-	<tr><td>The percetage of sequence occupied by SSRs</td><td>ssr total length/total sequence size (%)</td><td>{{ (ssr.length/seq.size*100)|round(2,'ceil') }}</td></tr>
+	<tr><td>The percetage of sequence covered by SSRs</td><td>total ssr length/total sequence length (%)</td><td>{{ (ssr.length/seq.size*100)|round(2,'ceil') }}</td></tr>
 	<tr><td>Relative abundace</td><td>total SSRs/total valid length (loci/{{ seq.unit }})</td><td>{{ ssr.frequency }} </td></tr>
 	<tr><td>Relative density</td><td>total SSR length/total valid length ( bp/{{ seq.unit }})</td><td>{{ ssr.density }}</td></tr>
 </table>
@@ -252,7 +254,7 @@ hr{
 <!-- compound SSRs statistics -->
 {% if cssr %}
 <hr>
-<h4 class="text-center">Compound Microsatellites (CM)</h4>
+<h2 class="text-center">Compound Microsatellites (cSSRs)</h2>
 
 <div class="parameters">
 	<p>The maximum distance allowed between adjacent SSRs as to account as compounded (dMax) was specified to <span class="color-red">{{ cssr.parameters.dmax }}</span> bp</p>
@@ -264,7 +266,7 @@ hr{
 </div>
 
 
-<h5 class="text-center">The summary information of compound SSRs</h5>
+<h3 class="text-center">The summary information of compound SSRs</h3>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of compound SSRs</td><td>Counts</td><td>{{ cssr.cm_count }}</td></tr>
@@ -299,7 +301,7 @@ hr{
 <!-- imperfect SSRs statistics -->
 {% if issr %}
 <hr>
-<h4 class="text-center">Imperfect Microsatellites</h4>
+<h2 class="text-center">Imperfect Microsatellites (iSSRs)</h2>
 
 <div class="parameters">
 	<p>
@@ -322,7 +324,7 @@ hr{
 	</ul>
 </div>
 
-<h5>The summary information of imperfect SSRs</h5>
+<h3>The summary information of imperfect SSRs</h3>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of iSSRs</td><td>Counts</td><td>{{ issr.count }}</td></tr>
@@ -369,7 +371,7 @@ hr{
 <!-- VNTRs statistics -->
 {% if vntr %}
 <hr>
-<h4 class="text-center">Variable Number Tandem Repeats (VNTRs)</h4>
+<h2 class="text-center">Variable Number Tandem Repeats (VNTRs)</h2>
 
 <div class="parameters">
 	<p>
@@ -386,7 +388,7 @@ hr{
 	</ul>
 </div>
 
-<h5 class="text-center">The summary information of VNTRs</h5>
+<h3 class="text-center">The summary information of VNTRs</h3>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of VNTRs</td><td>Counts</td><td>{{ vntr.count }}</td></tr>

@@ -430,7 +430,7 @@ class SSRMainWindow(QMainWindow):
 		#self.fileMenu.addAction(self.exportTableAct)
 		#self.fileMenu.addAction(self.exportFastaAct)
 		#self.fileMenu.addAction(self.exportGFFAct)
-		#self.fileMenu.addAction(self.exportStatsAct)
+		self.fileMenu.addAction(self.exportStatsAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exitAct)
 		
