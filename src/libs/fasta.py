@@ -78,7 +78,8 @@ class GzipFasta:
 				fw.write("%s\t%s\t%s\t%s\t%s\t%s\n" % chrom)
 
 	def keys(self):
-		return self._index.keys()
+		for k in self._index:
+			yield k
 
 	def get_gc(self, name):
 		return self._index[name][3]
