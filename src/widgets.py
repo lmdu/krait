@@ -851,7 +851,7 @@ class SSRMainWindow(QMainWindow):
 			page_layout = QPageLayout(
 
 			)
-			self.browser.page().printToPdf(pdfname, QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(30,30,30,30)))
+			self.browser.page().printToPdf(pdfname, QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(32,32,32,32)))
 
 		elif pdfname.endswith('.html'):
 			content = self.browser.page().save(pdfname, QWebEngineDownloadItem.SingleHtmlSaveFormat)
@@ -903,11 +903,14 @@ class SSRMainWindow(QMainWindow):
 		self.worker = worker
 		self.worker.update_message.connect(self.setStatusMessage)
 		self.worker.update_progress.connect(self.setProgress)
+		self.worker.error_message.connect(lambda x: QMessageBox.critical(self, 'Error', x))
 		self.worker.finished.connect(finish_callback)
 		self.work_thread = QThread()
 		self.work_thread.started.connect(self.worker.run)
 		self.worker.finished.connect(self.work_thread.quit)
 		self.worker.finished.connect(self.worker.deleteLater)
+		self.worker.failed.connect(self.work_thread.quit)
+		self.worker.failed.connect(self.worker.deleteLater)
 		self.worker.moveToThread(self.work_thread)
 		self.work_thread.start()
 
@@ -941,7 +944,6 @@ class SSRMainWindow(QMainWindow):
 		level = int(self.settings.value('ssr/level', 3))
 		worker = SSRWorker(fastas, rules, level)
 		self.executeTask(worker, self.showSSR)
-		#proc = SSRTask(fastas, rules, level)
 
 	def searchOrShowSSR(self):
 		if self.db.is_empty('ssr'):

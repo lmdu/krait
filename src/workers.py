@@ -4,6 +4,7 @@ import json
 import numpy
 import jinja2
 import requests
+import traceback
 import functools
 import multiprocessing
 
@@ -20,7 +21,10 @@ from statistics import *
 class Worker(QObject):
 	update_progress = Signal(int)
 	update_message = Signal(str)
+	error_message = Signal(str)
 	finished = Signal()
+	failed = Signal()
+
 	_db = None
 
 	def __init__(self):
@@ -41,15 +45,11 @@ class Worker(QObject):
 		'''
 		seqs = fasta.GzipFasta(fasta_path)
 		
-		#get the first sequence name
-		seqnames = seqs.keys()
-		for first in seqnames:
-			break
-
-		sql = "SELECT 1 FROM seq WHERE name='{}' LIMIT 1".format(first)
+		#get sequence detail information
+		sql = "SELECT * FROM seq INNER JOIN fasta ON (seq.fid=fasta.id) WHERE fasta.path='{}' LIMIT 1".format(fasta_path)
 		if not self.db.get_one(sql):
 			rows = []
-			for name in seqnames:
+			for name in seqs.keys():
 				row = (None, name, fasta_id, seqs.get_len(name), seqs.get_gc(name), seqs.get_ns(name))
 				rows.append(row)
 			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
@@ -67,15 +67,21 @@ class Worker(QObject):
 		self.update_message.emit(msg)
 		self.finished.emit()
 
+	def emit_fail(self):
+		self.update_progress.emit(100)
+		self.failed.emit()
+
 	def process(self):
 		pass
 
 	def run(self):
 		self.emit_progress(0)
-		#try:
-		self.process()
-		#except Exception, e:
-		#	self.emit_finish('Error: %s' % str(e))
+		try:
+			self.process()
+		except Exception:
+			self.error_message.emit(traceback.format_exc())
+		
+		self.emit_fail()
 
 
 class SSRWorker(Worker):
@@ -470,7 +476,7 @@ class ExportTableWorker(Worker):
 		table_name = self.model.tableName()
 		headers = self.model.columnNames()
 
-		whole_counts = self.db.get_one("SELECT COUNT(*) FROM %s" % table_name)
+		whole_counts = self.db.get_one("SELECT COUNT(*) FROM %s LIMIT 1" % table_name)
 		total_counts = whole_counts
 
 		if self.selected == 'whole' or len(self.model.selected) == whole_counts:

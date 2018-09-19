@@ -20,7 +20,7 @@ body{
 }
 
 h1{
-	font-size: 32px;
+	font-size: 28px;
 	margin-bottom: 30px;
 }
 h2{
@@ -266,7 +266,7 @@ hr{
 </div>
 
 
-<h3 class="text-center">The summary information of compound SSRs</h3>
+<h3 class="table-header">The summary information of compound SSRs</h3>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of compound SSRs</td><td>Counts</td><td>{{ cssr.cm_count }}</td></tr>
@@ -285,15 +285,15 @@ hr{
 
 <div class="chart">
 	<canvas id="cssr-complexity-line" width="400" height="100"></canvas>
-	<p class="text-center">The complexity distribution of compound SSRs</p>
+	<h4 class="text-center">The complexity distribution of compound SSRs</h4>
 </div>
 <div class="chart">
 	<canvas id="cssr-length-line" width="400" height="100"></canvas>
-	<p class="text-center">The length distribution of compound SSRs</p>
+	<h4 class="text-center">The length distribution of compound SSRs</h4>
 </div>
 <div class="chart">
 	<canvas id="cssr-gap-line" width="400" height="100"></canvas>
-	<p class="text-center">The gap length distribution of compound SSRs</p>
+	<h4 class="text-center">The gap length distribution of compound SSRs</h4>
 </div>
 
 {% endif %}
@@ -324,7 +324,7 @@ hr{
 	</ul>
 </div>
 
-<h3>The summary information of imperfect SSRs</h3>
+<h3 class="table-header">The summary information of imperfect SSRs</h3>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of iSSRs</td><td>Counts</td><td>{{ issr.count }}</td></tr>
@@ -358,12 +358,12 @@ hr{
 
 <div class="chart">
 	<canvas id="issr-motif-bar" width="400", height="100"></canvas>
-	<p class="text-center">The most abundant motif categories</p>
+	<h4 class="text-center">The most abundant motif categories</h4>
 </div>
 
 <div class="chart">
 	<canvas id="issr-length-line" width="400", height="100"></canvas>
-	<p class="text-center">The distribution of imperfect SSR length</p>
+	<h4 class="text-center">The distribution of imperfect SSR length</h4>
 </div>
 
 {% endif %}
@@ -388,7 +388,7 @@ hr{
 	</ul>
 </div>
 
-<h3 class="text-center">The summary information of VNTRs</h3>
+<h3 class="table-header">The summary information of VNTRs</h3>
 <table class="table green">
 	<tr><th>Item</th><th>Description</th><th>Number</th></tr>
 	<tr><td>Total number of VNTRs</td><td>Counts</td><td>{{ vntr.count }}</td></tr>
@@ -406,15 +406,15 @@ hr{
 
 <div class="chart">
 	<canvas id="vntr-type-line" width="400", height="100"></canvas>
-	<p class="text-center">The distribution of VNTR types</p>
+	<h4 class="text-center">The distribution of VNTR types</h4>
 </div>
 <div class="chart">
 	<canvas id="vntr-repeat-line" width="400", height="100"></canvas>
-	<p class="text-center">The distribution of VNTR repeats</p>
+	<h4 class="text-center">The distribution of VNTR repeats</h4>
 </div>
 <div class="chart">
 	<canvas id="vntr-length-line" width="400", height="100"></canvas>
-	<p class="text-center">The distribution of VNTR length</p>
+	<h4 class="text-center">The distribution of VNTR length</h4>
 </div>
 {% endif %}
 

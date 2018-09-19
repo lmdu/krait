@@ -6,27 +6,34 @@ import time
 import motif
 import random
 import argparse
-import multiprocessing as mp 
+import multiprocessing as mp
 
 from libs import *
 
 class Workers(object):
-	def __init__(self, target, items, cpus):
-		self.target = target
-		self.items = items
-		self.results = {}
-		
+	def __init__(self, cpus):
 		#CPU counts specified by user
 		self.cpus = cpus
+		
+		#store results
+		self.results = {}
 		
 		#number of current tasks in pool
 		self.tasks = 0
 
-		if cpus > mp.cpu_count():
+		if self.cpus > mp.cpu_count():
 			self.cpus = mp.cpu_count()
 
 		self.pool = mp.Pool(self.cpus)
-		self.run_task()
+
+	def add_task(self, target, args):
+		self.pool.apply_async(
+			func = target,
+			args = args,
+			callback = self.success,
+			error_callback = self.failure
+		)
+		self.tasks += 1
 
 	def success(self, res):
 		self.tasks -= 1
@@ -36,36 +43,60 @@ class Workers(object):
 	def failure(self, error):
 		print("Error occured: {}".format(error))
 
-	def add_task(self, args):
-		self.pool.apply_async(
-			func = self.target,
-			args = args, 
-			callback = self.success,
-			error_callback = self.failure
-		)
-		self.tasks += 1
+	def full(self):
+		return self.tasks >= self.cpus
 
-	def run_task(self):
-		while 1:
-			if self.tasks < self.cpus:
-				try:
-					item = next(self.items)
-					self.add_task(item)
-				
-				except StopIteration:
-					break
-			else:
-				time.sleep(0.001)
-		
+	def release(self):
 		self.pool.close()
 		self.pool.join()
 
-	def merge_task(self):
-		with open(self.out, 'w') as fw:
-			for outfile in glob.glob('{}.*'.format(self.out)):
-				with open(outfile) as fh:
-					fw.write(fh.read())
-					os.remove(outfile)
+
+	#def run_task(self):
+	#	while 1:
+	#		if self.tasks < self.cpus:
+	#			try:
+	#				item = next(self.items)
+	#				self.add_task(item)
+	#			
+	#			except StopIteration:
+	#				break
+	#		else:
+	#			time.sleep(0.001)
+		
+	#	self.pool.close()
+	#	self.pool.join()
+
+class Task(object):
+	def __init__(self, target, args, cpus):
+		self.target = target
+		self.args = args
+		self.cpus = cpus
+
+		#read fasta sequence
+
+		#start the task
+		self.run()
+
+	def run(self):
+		pass
+
+	def format_gff(self):
+		pass
+
+	def save_result(fw, outfmt, rows):
+		if outfmt == 'csv':
+			writer = csv.writer(fw)
+		else:
+			writer = csv.writer(fw, delimiter='\t')
+
+		if outfmt == 'gff':
+			write_line = lambda x: writer.writerow(format_to_gff(ssr_type, x))
+		else:
+			write_line = lambda x: writer.writerow(x)
+
+		for row in rows:
+			write_line(row)
+
 
 def format_to_gff(feature, row):
 	cols = [row.sequence, 'Krait', feature, row.start, row.end, '.', '+', '.', []]
@@ -78,11 +109,6 @@ def format_to_gff(feature, row):
 	return cols
 
 def save_result(fw, outfmt, rows, ssr_type='SSR'):
-	if outfile == 'stdout':
-		fw = sys.stdout
-	else:
-		fw = open(outfile, 'w', newline='')
-
 	if outfmt == 'csv':
 		writer = csv.writer(fw)
 	else:
@@ -187,7 +213,7 @@ if __name__ == '__main__':
 
 	parser.add_argument('-v', '--version',
 		action = 'version',
-		version = '%(prog)s version 1.0.0'
+		version = '%(prog)s version 1.0'
 	)
 
 	subparsers = parser.add_subparsers(
