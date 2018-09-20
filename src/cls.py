@@ -67,12 +67,10 @@ class Workers(object):
 	#	self.pool.join()
 
 class Task(object):
-	def __init__(self, target, args, cpus):
+	def __init__(self, target, args):
 		self.target = target
 		self.args = args
 		self.cpus = cpus
-
-		#read fasta sequence
 
 		#start the task
 		self.run()
@@ -81,6 +79,15 @@ class Task(object):
 		pass
 
 	def format_gff(self):
+		pass
+
+	def save_to_csv(self):
+		pass
+
+	def save_to_tsv(self):
+		pass
+
+	def save_to_gff(self):
 		pass
 
 	def save_result(fw, outfmt, rows):
