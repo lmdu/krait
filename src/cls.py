@@ -26,10 +26,9 @@ class Workers(object):
 
 		self.pool = mp.Pool(self.cpus)
 
-	def add_task(self, target, args):
+	def add_task(self, job):
 		self.pool.apply_async(
-			func = target,
-			args = args,
+			func = job,
 			callback = self.success,
 			error_callback = self.failure
 		)
@@ -49,61 +48,6 @@ class Workers(object):
 	def release(self):
 		self.pool.close()
 		self.pool.join()
-
-
-	#def run_task(self):
-	#	while 1:
-	#		if self.tasks < self.cpus:
-	#			try:
-	#				item = next(self.items)
-	#				self.add_task(item)
-	#			
-	#			except StopIteration:
-	#				break
-	#		else:
-	#			time.sleep(0.001)
-		
-	#	self.pool.close()
-	#	self.pool.join()
-
-class Task(object):
-	def __init__(self, target, args):
-		self.target = target
-		self.args = args
-		self.cpus = cpus
-
-		#start the task
-		self.run()
-
-	def run(self):
-		pass
-
-	def format_gff(self):
-		pass
-
-	def save_to_csv(self):
-		pass
-
-	def save_to_tsv(self):
-		pass
-
-	def save_to_gff(self):
-		pass
-
-	def save_result(fw, outfmt, rows):
-		if outfmt == 'csv':
-			writer = csv.writer(fw)
-		else:
-			writer = csv.writer(fw, delimiter='\t')
-
-		if outfmt == 'gff':
-			write_line = lambda x: writer.writerow(format_to_gff(ssr_type, x))
-		else:
-			write_line = lambda x: writer.writerow(x)
-
-		for row in rows:
-			write_line(row)
-
 
 def format_to_gff(feature, row):
 	cols = [row.sequence, 'Krait', feature, row.start, row.end, '.', '+', '.', []]
@@ -135,14 +79,29 @@ def search_ssr(name, seq, repeats, level):
 	ssrs = tandem.search_ssr(seq, repeats)
 	return [[name, motifs.standard(ssr[0])] + list(ssr) for ssr in ssrs]
 
-def search_cssr():
+def search_cssr(name, seq, repeats, dmax):
 	pass
 
-def search_issr():
+def search_issr(name, seq):
 	pass
 
-def search_vntr():
+def search_vntr(name, seq):
 	pass
+
+
+class Jobs(object):
+	def __init__(self, func, args):
+		self.func = func
+		self.args = args
+
+	def __iter__(self):
+		self.seqs = fasta.GzipFasta(args.infile)
+		return self
+
+	def __next__(self):
+		name, seq = next(self.seqs)
+		return functools.partial(self.func, name, seq, args.repeats, args.level)
+
 
 def search_parameters(seqs, args):
 	for name, seq in seqs:
@@ -199,13 +158,12 @@ def design_primer():
 if __name__ == '__main__':
 	mp.freeze_support()
 
-	description = '''
-	Search for microsatellite from large genome
+	description = '''Search for microsatellite from large genome
 
-	Cite:
-	    Du L, Zhang C, Liu Q, Zhang X, Yue B (2018) Krait: an
-	    ultrafast tool for genome-wide survey of microsatellites
-	    and primer design. Bioinformatics, 34(4):618-683.
+Cite:
+    Du L, Zhang C, Liu Q, Zhang X, Yue B (2018) Krait: an
+    ultrafast tool for genome-wide survey of microsatellites
+    and primer design. Bioinformatics, 34(4):618-683.
 	'''
 
 	parser = argparse.ArgumentParser(
@@ -232,7 +190,7 @@ if __name__ == '__main__':
 		help = "Search for simple tandem repeats",
 		formatter_class = argparse.ArgumentDefaultsHelpFormatter
 	)
-	parser_search.set_defaults(func=search_tandem)
+	parser_search.set_defaults(func=search_tandem, cmd='search')
 
 	parser_search.add_argument('-t', '--type',
 		dest = 'ssr_type',
@@ -392,7 +350,7 @@ if __name__ == '__main__':
 		help = "output file name"
 	)
 
-	parser_locate = subparsers.add_parser('mapping', help="mapping microsatellites or tandem repeats to gene (CDS, UTR etc.)")
+	parser_locate = subparsers.add_parser('mapping', help="mapping tandem repeats to gene (CDS, UTR etc.)")
 	parser_locate.add_argument('-i', '--in',
 		dest = 'infile',
 		metavar = 'tsv',
