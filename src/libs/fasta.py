@@ -14,18 +14,11 @@ class GzipFasta:
 		self.buff = {'name': None, 'seq': None}
 		self._read_index()
 
-	#def __enter__(self):
-	#	kseq.open_fasta(self.fasta_file)
-	#	return self
-
-	#def __exit__(self, exc_type, exc_value, exc_tb):
-	#	kseq.close_fasta()
-
-	def __iter__(self):
-		'''
-		open fasta file and enter loop
-		'''
+		#open fasta file
 		kseq.open_fasta(self.fasta_file)
+	
+	def __iter__(self):
+		
 		return self
 
 	def __next__(self):
@@ -34,8 +27,7 @@ class GzipFasta:
 			#end loop and close fasta
 			kseq.close_fasta()
 			raise StopIteration
-		else:
-			return seq
+		return seq
 
 	def __len__(self):
 		return len(self._index)

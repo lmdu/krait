@@ -26,9 +26,10 @@ class Workers(object):
 
 		self.pool = mp.Pool(self.cpus)
 
-	def add_task(self, job):
+	def add_task(self, job, args):
 		self.pool.apply_async(
 			func = job,
+			args = args,
 			callback = self.success,
 			error_callback = self.failure
 		)
@@ -90,17 +91,108 @@ def search_vntr(name, seq):
 
 
 class Jobs(object):
-	def __init__(self, func, args):
-		self.func = func
+	def __init__(self, args):
 		self.args = args
 
-	def __iter__(self):
+		#open fasta file
 		self.seqs = fasta.GzipFasta(args.infile)
-		return self
 
-	def __next__(self):
-		name, seq = next(self.seqs)
-		return functools.partial(self.func, name, seq, args.repeats, args.level)
+		#create multiple process pool
+		self.pool = Workers(self.args.cpus)
+
+		#start process job
+		self.run_jobs()
+
+		#result row number
+		self.row_num = 0
+
+		#save result to file or terminal
+		self.save_result()
+
+	def __getstate__(self):
+		self_dict = self.__dict__.copy()
+		del self_dict['pool']
+		return self_dict
+
+	def __setstate__(self, state):
+		self.__dict__.update(state)
+
+	def run_jobs(self):
+		target = self.process()
+		while 1:
+			if not self.pool.full():
+				job = self.get_job()
+
+				if job is None:
+					break
+				
+				self.pool.add_task(target, job)
+			else:
+				time.sleep(0.01)
+
+		self.pool.release()
+
+		self.save_result()
+	
+	def save_result(self):
+		if self.args.outfile == 'stdout':
+			fw = sys.stdout
+		else:
+			fw = open(self.args.outfile, 'w', newline='')
+
+		if self.args.outfmt == 'csv':
+			writer = csv.writer(fw)
+		else:
+			writer = csv.writer(fw, delimiter='\t')
+
+		if self.args.outfmt == 'gff':
+			write_line = lambda x: writer.writerow(format_gff(x))
+		else:
+			write_line = lambda x: writer.writerow(x)
+
+		for k in self.seqs.keys():
+			if k in self.pool.results:
+				for row in self.pool.results[k]:
+					write_line(row)
+
+		if self.args.outfile == 'stdout':
+			fw.flush()
+		else:
+			fw.close()
+
+	def process(self):
+		pass
+
+	def get_job(self):
+		pass
+
+	def format_gff(self, row):
+		pass
+
+class SSRSearchJob(Jobs):
+	target = search_ssr
+
+	def __init__(self, args):
+		super(SSRSearchJob, self).__init__(args)
+
+	def process(self):
+		return search_ssr
+
+	def get_job(self):
+		try:
+			name, seq = next(self.seqs)
+		except StopIteration:
+			return None
+		
+		return (name, seq, self.args.repeats, self.args.level)
+
+	def format_gff(self, row):
+		types = {1:'Mono', 2:'Di', 3:'Tri', 4:'Tetra', 5:'Penta', 6:'Hexa'}
+		self.row_num += 1
+		attrs = 'ID={};Motif={};Standard={};Type={};Repeat={};Length={}'.format(
+			self.row_num, row[2], row[1], types[row[3]], row[4], row[7])
+		fields = [row[0], 'Krait', self.args.ssr_type.upper(), row[5], row[6], '.', '.', '.', attrs]
+		return fields
 
 
 def search_parameters(seqs, args):
@@ -190,7 +282,7 @@ Cite:
 		help = "Search for simple tandem repeats",
 		formatter_class = argparse.ArgumentDefaultsHelpFormatter
 	)
-	parser_search.set_defaults(func=search_tandem, cmd='search')
+	parser_search.set_defaults(cmd='search')
 
 	parser_search.add_argument('-t', '--type',
 		dest = 'ssr_type',
@@ -409,4 +501,6 @@ Cite:
 
 	args = parser.parse_args()
 
-	args.func(args)
+	if args.cmd == 'search':
+		if args.ssr_type == 'ssr':
+			SSRSearchJob(args)
