@@ -118,7 +118,7 @@ class Jobs(object):
 		self.__dict__.update(state)
 
 	def run_jobs(self):
-		target = self.process()
+		target = self.get_func()
 		while 1:
 			if not self.pool.full():
 				job = self.get_job()
@@ -160,7 +160,7 @@ class Jobs(object):
 		else:
 			fw.close()
 
-	def process(self):
+	def get_func(self):
 		pass
 
 	def get_job(self):
@@ -170,12 +170,10 @@ class Jobs(object):
 		pass
 
 class SSRSearchJob(Jobs):
-	target = search_ssr
-
 	def __init__(self, args):
 		super(SSRSearchJob, self).__init__(args)
 
-	def process(self):
+	def get_func(self):
 		return search_ssr
 
 	def get_job(self):
