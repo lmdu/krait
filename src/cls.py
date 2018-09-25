@@ -80,8 +80,35 @@ def search_ssr(name, seq, repeats, level):
 	ssrs = tandem.search_ssr(seq, repeats)
 	return [[name, motifs.standard(ssr[0])] + list(ssr) for ssr in ssrs]
 
+def concatenate_cssr(cssrs):
+	seqname = cssrs[-1].sequence
+	start = cssrs[0].start
+	end = cssrs[-1].end
+	complexity = len(cssrs)
+	motif = "-".join([cssr[2] for cssr in cssrs])
+	length = sum(cssr[7] for cssr in cssrs)
+	gap = sum(cssr[5]-cssrs[idx][6]-1 for idx, cssr in enumerate(cssrs[1:]))
+	structure = "-".join(["(%s)%s" % (cssr[2], cssr[4]) for cssr in cssrs])	
+	return (None, seqname, start, end, motif, complexity, length, gap, structure)
+
 def search_cssr(name, seq, repeats, dmax):
-	pass
+	ssrs = tandem.search_ssr(seq, repeats)
+	res = []
+	cssrs = [ssr[0]]
+	for ssr in ssrs[1:]:
+		d = ssr[5] - cssrs[-1][6] - 1
+		if d <= dmax:
+			cssrs.append(ssr)
+		else:
+			if len(cssrs) > 1:
+				res.append(concatenate_cssr(cssrs))
+
+			cssrs = [cssr]
+
+	if len(cssrs) > 1:
+		res.append(concatenate_cssr(cssrs))
+
+	return res
 
 def search_issr(name, seq):
 	pass
