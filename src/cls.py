@@ -81,20 +81,20 @@ def search_ssr(name, seq, repeats, level):
 	return [[name, motifs.standard(ssr[0])] + list(ssr) for ssr in ssrs]
 
 def concatenate_cssr(cssrs):
-	seqname = cssrs[-1].sequence
-	start = cssrs[0].start
-	end = cssrs[-1].end
+	seqname = cssrs[-1][0]
+	start = cssrs[0][5]
+	end = cssrs[-1][6]
 	complexity = len(cssrs)
 	motif = "-".join([cssr[2] for cssr in cssrs])
 	length = sum(cssr[7] for cssr in cssrs)
 	gap = sum(cssr[5]-cssrs[idx][6]-1 for idx, cssr in enumerate(cssrs[1:]))
-	structure = "-".join(["(%s)%s" % (cssr[2], cssr[4]) for cssr in cssrs])	
-	return (None, seqname, start, end, motif, complexity, length, gap, structure)
+	structure = "-".join(["(%s)%s" % (cssr[2], cssr[4]) for cssr in cssrs])
+	return (seqname, start, end, motif, complexity, length, gap, structure)
 
 def search_cssr(name, seq, repeats, dmax):
 	ssrs = tandem.search_ssr(seq, repeats)
 	res = []
-	cssrs = [ssr[0]]
+	cssrs = [ssrs[0]]
 	for ssr in ssrs[1:]:
 		d = ssr[5] - cssrs[-1][6] - 1
 		if d <= dmax:
@@ -103,7 +103,7 @@ def search_cssr(name, seq, repeats, dmax):
 			if len(cssrs) > 1:
 				res.append(concatenate_cssr(cssrs))
 
-			cssrs = [cssr]
+			cssrs = [ssr]
 
 	if len(cssrs) > 1:
 		res.append(concatenate_cssr(cssrs))
@@ -219,20 +219,27 @@ class SSRSearchJob(Jobs):
 		fields = [row[0], 'Krait', self.args.ssr_type.upper(), row[5], row[6], '.', '.', '.', attrs]
 		return fields
 
+class CSSRSearchJob(Jobs):
+	def __init__(self, args):
+		super(CSSRSearchJob, self).__init__(args)
 
-def search_parameters(seqs, args):
-	for name, seq in seqs:
-		if args.ssr_type == 'ssr':
-			yield (name, seq, args.repeats, args.level)
+	def get_func(self):
+		return search_cssr
+
+	def get_job(self):
+		try:
+			name, seq = next(self.seqs)
+		except StopIteration:
+			return None
 		
-		elif args.ssr_type == 'cssr':
-			yield (name, seq, args.repeats, args.dmax)
+		return (name, seq, self.args.repeats, self.args.dmax)
 
-		elif args.ssr_type == 'issr':
-			pass
-
-		elif args.ssr_type == 'vntr':
-			pass
+	def format_gff(self, row):
+		self.row_num += 1
+		attrs = 'ID={};Motif={};Complexity={};Length={};Gap={};Structure={}'.format(
+			self.row_num, row[3], row[4], row[5], row[6], row[7])
+		fields = [row[0], 'Krait', self.args.ssr_type.upper(), row[1], row[2], '.', '.', '.', attrs]
+		return fields
 
 def search_tandem(args):
 	if args.ssr_type == 'ssr':
@@ -320,12 +327,14 @@ Cite:
 		dest = 'infile',
 		metavar = 'fasta',
 		required = False,
+		type = lambda x: os.path.normcase(x),
 		help = "input fasta file or gzipped fasta file"
 	)
 	parser_search.add_argument('-o', '--out',
 		dest = 'outfile',
 		default = 'stdout',
 		metavar = '',
+		type = lambda x: os.path.normcase(x),
 		help = "output file name"
 	)
 	parser_search.add_argument('-f', '--format',
@@ -529,3 +538,6 @@ Cite:
 	if args.cmd == 'search':
 		if args.ssr_type == 'ssr':
 			SSRSearchJob(args)
+		
+		elif args.ssr_type == 'cssr':
+			CSSRSearchJob(args)

@@ -12,13 +12,13 @@ class GzipFasta:
 		self.index_file = "%s.fidx" % fasta_file
 		self.rebuild = rebuild
 		self.buff = {'name': None, 'seq': None}
+		
 		self._read_index()
-
+		
 		#open fasta file
 		kseq.open_fasta(self.fasta_file)
 	
-	def __iter__(self):
-		
+	def __iter__(self):		
 		return self
 
 	def __next__(self):
