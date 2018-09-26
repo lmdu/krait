@@ -41,7 +41,7 @@ class Workers(object):
 			self.results[res[0][0]] = res
 
 	def failure(self, error):
-		print("Error occured: {}".format(error))
+		print(error)
 
 	def full(self):
 		return self.tasks >= self.cpus
@@ -80,15 +80,14 @@ def search_ssr(name, seq, repeats, level):
 	ssrs = tandem.search_ssr(seq, repeats)
 	return [[name, motifs.standard(ssr[0])] + list(ssr) for ssr in ssrs]
 
-def concatenate_cssr(cssrs):
-	seqname = cssrs[-1][0]
-	start = cssrs[0][5]
-	end = cssrs[-1][6]
+def concatenate_cssr(seqname, cssrs):
+	start = cssrs[0][3]
+	end = cssrs[-1][4]
 	complexity = len(cssrs)
-	motif = "-".join([cssr[2] for cssr in cssrs])
-	length = sum(cssr[7] for cssr in cssrs)
-	gap = sum(cssr[5]-cssrs[idx][6]-1 for idx, cssr in enumerate(cssrs[1:]))
-	structure = "-".join(["(%s)%s" % (cssr[2], cssr[4]) for cssr in cssrs])
+	motif = "-".join([cssr[0] for cssr in cssrs])
+	length = sum(cssr[5] for cssr in cssrs)
+	gap = sum(cssr[3]-cssrs[idx][4]-1 for idx, cssr in enumerate(cssrs[1:]))
+	structure = "-".join(["(%s)%s" % (cssr[0], cssr[2]) for cssr in cssrs])
 	return (seqname, start, end, motif, complexity, length, gap, structure)
 
 def search_cssr(name, seq, repeats, dmax):
@@ -96,26 +95,29 @@ def search_cssr(name, seq, repeats, dmax):
 	res = []
 	cssrs = [ssrs[0]]
 	for ssr in ssrs[1:]:
-		d = ssr[5] - cssrs[-1][6] - 1
+		d = ssr[3] - cssrs[-1][4] - 1
 		if d <= dmax:
 			cssrs.append(ssr)
+		
 		else:
 			if len(cssrs) > 1:
-				res.append(concatenate_cssr(cssrs))
+				res.append(concatenate_cssr(name, cssrs))
 
 			cssrs = [ssr]
 
 	if len(cssrs) > 1:
-		res.append(concatenate_cssr(cssrs))
+		res.append(concatenate_cssr(name, cssrs))
 
 	return res
 
-def search_issr(name, seq):
-	pass
+def search_issr(name, seq, level, min_srep, min_slen, max_edits, mis_penalty, gap_penalty, min_score):
+	motifs = motif.StandardMotif(level)
+	issrs = tandem.search_issr(seq, min_srep, min_slen, max_edits, mis_penalty, gap_penalty, min_score, 500)
+	return [[name, motifs.standard(ssr[0])] + list(ssr) for ssr in issrs]
 
-def search_vntr(name, seq):
-	pass
-
+def search_vntr(name, seq, min_mlen, max_mlen, min_rep):
+	vntrs = tandem.search_vntr(seq, min_mlen, max_mlen, min_rep)
+	return [[name] + list(vntr) for vntr in vntrs]
 
 class Jobs(object):
 	def __init__(self, args):
@@ -239,6 +241,52 @@ class CSSRSearchJob(Jobs):
 		attrs = 'ID={};Motif={};Complexity={};Length={};Gap={};Structure={}'.format(
 			self.row_num, row[3], row[4], row[5], row[6], row[7])
 		fields = [row[0], 'Krait', self.args.ssr_type.upper(), row[1], row[2], '.', '.', '.', attrs]
+		return fields
+
+class ISSRSearchJob(Jobs):
+	def __init__(self, args):
+		super(ISSRSearchJob, self).__init__(args)
+
+	def get_func(self):
+		return search_issr
+
+	def get_job(self):
+		try:
+			name, seq = next(self.seqs)
+		except StopIteration:
+			return None
+		
+		return (name, seq, self.args.level, self.args.min_seed_repeats, self.args.min_seed_length, 
+			self.args.max_consecutive_edits, self.args.mis_penalty, self.args.gap_penalty, self.args.min_required_score)
+
+	def format_gff(self, row):
+		types = {1:'Mono', 2:'Di', 3:'Tri', 4:'Tetra', 5:'Penta', 6:'Hexa'}
+		self.row_num += 1
+		attrs = 'ID={};Motif={};Standard={};Type={};Length={};Match={};Subsitution={};Insertion={};Deletion={};Score={}'.format(
+			self.row_num, row[2], row[1], types[row[3]], row[4], row[6], row[7], row[8], row[9], row[10], row[11])
+		fields = [row[0], 'Krait', self.args.ssr_type.upper(), row[4], row[5], '.', '.', '.', attrs]
+		return fields
+
+class VNTRSearchJob(Jobs):
+	def __init__(self, args):
+		super(VNTRSearchJob, self).__init__(args)
+
+	def get_func(self):
+		return search_vntr
+
+	def get_job(self):
+		try:
+			name, seq = next(self.seqs)
+		except StopIteration:
+			return None
+		
+		return (name, seq, self.args.min_motif_length, self.args.max_motif_length, self.args.min_repeats)
+
+	def format_gff(self, row):
+		self.row_num += 1
+		attrs = 'ID={};Motif={};Type={};Repeat={};Length={}'.format(
+			self.row_num, row[1], row[2], row[3], row[6])
+		fields = [row[0], 'Krait', self.args.ssr_type.upper(), row[4], row[5], '.', '.', '.', attrs]
 		return fields
 
 def search_tandem(args):
@@ -439,7 +487,7 @@ Cite:
 	)
 	vntr_group.add_argument('--min-rep',
 		dest = 'min_repeats',
-		default = 2,
+		default = 3,
 		metavar = '',
 		type = int,
 		help = "minimum repeats"
@@ -541,3 +589,11 @@ Cite:
 		
 		elif args.ssr_type == 'cssr':
 			CSSRSearchJob(args)
+
+		elif args.ssr_type == 'issr':
+			ISSRSearchJob(args)
+
+		elif args.ssr_type == 'vntr':
+			VNTRSearchJob(args)
+
+
