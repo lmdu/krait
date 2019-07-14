@@ -124,7 +124,10 @@ class PrimerDetail(Detail):
 		sql = "SELECT * FROM primer,primer_meta WHERE id=pid AND id=%s" % self.id
 		primer = self.db.get_row(sql)
 
-		table, tid = primer.target.split('-')
+		table = primer.category
+		tid = primer.target
+
+		#table, tid = primer.target.split('-')
 
 		sql = (
 			"SELECT f.path FROM fasta AS f, seq AS s, {0} AS t "

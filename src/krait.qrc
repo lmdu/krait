@@ -11,5 +11,6 @@
    <file>icons/report.png</file>
    <file>icons/ssr.png</file>
    <file>icons/vntr.png</file>
+   <file>icons/splash.png</file>
 </qresource>
 </RCC>

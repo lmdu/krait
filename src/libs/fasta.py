@@ -3,8 +3,8 @@ import os
 import gzip
 import mmap
 import collections
+
 from . import kseq
-from . import indexed_gzip as igzip
 
 class GzipFasta:
 	def __init__(self, fasta_file, rebuild=False):
@@ -13,12 +13,10 @@ class GzipFasta:
 		self.rebuild = rebuild
 		self.buff = {'name': None, 'seq': None}
 		
-		self._read_index()
-		
-		#open fasta file
-		kseq.open_fasta(self.fasta_file)
+		self._read_index()		
 	
-	def __iter__(self):		
+	def __iter__(self):
+		kseq.open_fasta(self.fasta_file)
 		return self
 
 	def __next__(self):
@@ -40,13 +38,14 @@ class GzipFasta:
 
 	def _read_fasta(self):
 		if self.fasta_file.endswith('.gz'):
-			idxfile = '{}.gzidx'.format(self.fasta_file)
-			if os.path.exists(idxfile):
-				handler = igzip.IndexedGzipFile(self.fasta_file, index_file=idxfile)
-			else:
-				handler = igzip.IndexedGzipFile(self.fasta_file)
+			#idxfile = '{}.gzidx'.format(self.fasta_file)
+			#if os.path.exists(idxfile):
+			#	handler = igzip.IndexedGzipFile(self.fasta_file, index_file=idxfile)
+			#else:
+			#	handler = igzip.IndexedGzipFile(self.fasta_file)
 				#handler.build_full_index()
 				#handler.export_index(idxfile)
+			return gzip.open(self.fasta_file, 'rb')
 		else:
 			f = open(self.fasta_file, 'rb')
 			handler = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)

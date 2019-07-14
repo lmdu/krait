@@ -6,7 +6,7 @@ import jinja2
 import requests
 import traceback
 import functools
-import multiprocessing
+#import multiprocessing
 
 from PySide2.QtCore import *
 
@@ -14,6 +14,7 @@ from PySide2.QtCore import *
 import motif
 from libs import *
 from db import *
+from gff import *
 from utils import *
 from config import *
 from statistics import *
@@ -474,21 +475,52 @@ class ExportTableWorker(Worker):
 		self.emit_message("Exporting to %s" % self.outfile)
 
 		table_name = self.model.tableName()
-		headers = self.model.columnNames()
+		#headers = self.model.columnNames()
 
 		whole_counts = self.db.get_one("SELECT COUNT(*) FROM %s LIMIT 1" % table_name)
 		total_counts = whole_counts
 
+		repeat_type = {'ssr':1, 'cssr':2, 'issr':3, 'vntr':4}.get(table_name)
+
 		if self.selected == 'whole' or len(self.model.selected) == whole_counts:
-			sql = "SELECT * FROM {}".format(table_name)
+			if self.db.is_empty('location'):
+				sql = "SELECT * FROM {}".format(table_name)
+			else:
+				sql = (
+					"select {0}.*,location.feature,gene.geneid,gene.genename,gene.biotype "
+					"from {0} left join location on (location.target=ssr.id) inner join gene "
+					"on (gene.id=location.gid) WHERE location.reptype={1}"
+				).format(table_name, repeat_type)
 		else:
 			ids = self.model.getSelectedRows()
 			total_counts = len(ids)
-			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+
+			if self.db.is_empty('location'):
+				sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+			else:
+				sql = (
+					"select {0}.*,location.feature,gene.geneid,gene.genename,gene.biotype "
+					"from {0} left join location on (location.target=ssr.id) inner join gene "
+					"on (gene.id=location.gid) WHERE location.reptype={1} AND ssr.id IN ({2})"
+				).format(table_name, repeat_type, ",".join(ids))
 
 		prev_progress = 0
 		progress = 0
 		current = 0
+
+		cursor = self.db.get_cursor()
+
+		if not self.db.is_empty('location'):
+			def convert_feat(cursor, x):
+				x = list(x)
+				x[-4] = {1:'CDS', 2:'exon', 3:'3UTR', 4:'intron', 5:'5UTR'}.get(x[-4], '')
+				return x
+
+			cursor.setrowtrace(convert_feat)
+
+		cursor.execute(sql)
+
+		headers = [field[0] for field in cursor.getdescription()]
 
 		with open(self.outfile, 'w', newline='') as outfh:
 			if self.outfile.endswith('.csv'):
@@ -504,7 +536,8 @@ class ExportTableWorker(Worker):
 				writer.writerow(headers)
 				write_line = lambda x: writer.writerow(x)
 
-			for row in self.db.query(sql):
+			#for row in self.db.query(sql):
+			for row in cursor:
 				write_line(row)
 				current += 1
 				process = int(current/total_counts*100)
@@ -654,96 +687,51 @@ class LocateWorker(Worker):
 
 	def process(self):
 		self.emit_message("Building interval tree for annotation...")
-		interval_forest = {}
 
-		f = check_gene_annot_format(self.annot_file)
+		_format = check_gene_annot_format(self.annot_file)
 
-		if f == 'GFF':
-			features = get_gff_coordinate(self.annot_file)
+		if _format == 'GTF':
+			mapper = GTFParser(self.annot_file)
 		else:
-			features = get_gtf_coordinate(self.annot_file)
+			mapper = GFFParser(self.annot_file)
 
-		locations = {}
-		locid = 0
-		prev_chrom = None
-		starts = []
-		ends = []
-		indexes = []
+		if not self.db.is_empty('gene'):
+			self.db.get_cursor().execute("DELETE FROM gene")
 
-		for feature in features:
-			locid += 1
-			locations[locid] = feature[3]
-
-			if feature[0] != prev_chrom:
-				if starts:
-					starts = numpy.array(starts, dtype=numpy.long)
-					ends = numpy.array(ends, dtype=numpy.long)
-					indexes = numpy.array(indexes, dtype=numpy.long)
-					interval_forest[prev_chrom] = ncls.NCLS(starts, ends, indexes)
-				
-				prev_chrom = feature[0]
-				starts = []
-				ends = []
-				indexes = []
-
-			starts.append(feature[1])
-			ends.append(feature[2])
-			indexes.append(locid)
-
-		if starts:
-			starts = numpy.array(starts, dtype=numpy.long)
-			ends = numpy.array(ends, dtype=numpy.long)
-			indexes = numpy.array(indexes, dtype=numpy.long)
-			interval_forest[prev_chrom] = ncls.NCLS(starts, ends, indexes)
-
-		if not interval_forest:
-			self.emit_finish("No feature found in annotation file.")
-			return
+		self.db.get_cursor().executemany("INSERT INTO gene VALUES (?,?,?,?,?,?,?)", mapper.gene_info)
 
 		#do mapping
-		total = self.db.get_one("SELECT COUNT(1) FROM %s LIMIT 1" % self.table)
+		total = self.db.get_one("SELECT COUNT(*) FROM %s LIMIT 1" % self.table)
 		current = 0
 		progress = 0
 		prev_progress = 0
-		#categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
-		#features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
-		#cat = categories[self.table]
-		cat = self.table
+		prev_seq = None
+
+		repeat_types = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+		recs = []
+
+		#remove previous results
+		self.db.get_cursor().execute("DELETE FROM location WHERE reptype=%s" % repeat_types[self.table])
+
 		for ssr in self.db.get_cursor().execute("SELECT * FROM %s" % self.table):
-			self.emit_message("Locating %ss in sequence %s" % (self.table.upper(), ssr.sequence))
+			if prev_seq != ssr.sequence:
+				self.emit_message("Mapping %ss in sequence %s" % (self.table.upper(), ssr.sequence))
+				prev_seq = ssr.sequence
+
+			locs = mapper.mapping(ssr.sequence, ssr.start, ssr.end)
+			if locs is None:
+				continue
+
+			rec = [None, repeat_types[self.table], ssr.id, locs[0], locs[1]]
+			recs.append(rec)
+
 			current += 1
 			progress = int(current/total*100)
 			if progress > prev_progress:
 				self.emit_progress(progress)
 				prev_progress = progress
 
-			if ssr.sequence not in interval_forest:
-				continue
-
-			res = set(interval_forest[ssr.sequence].find_overlap(ssr.start, ssr.end))
-			if not res:
-				continue
-
-			candidates = {'CDS', 'exon', 'intron', 'UTR', '5UTR', '3UTR'}
-			feats = [locations[fid[2]] for fid in res if locations[fid[2]].feature in candidates]
-			ssrfeats = set()
-			for feat in sorted(feats, key=lambda x:x.feature):
-				if feat.feature == 'exon':
-					checks = [(i, feat.gene_id, feat.gene_name) in ssrfeats for i in ['CDS', '5UTR', '3UTR', 'UTR']]
-					if any(checks):
-						continue
-				
-				if (feat.feature, feat.gene_id, feat.gene_name)	not in ssrfeats:
-					ssrfeats.add((feat.feature, feat.gene_id, feat.gene_name))
-
-			for ssrfeat in ssrfeats:
-				if cat == 'issr':
-					repeats = round(ssr.length/ssr.type, 2)
-				else:
-					repeats = ssr.repeat
-				record = [None, cat, ssr.id, ssr.motif, repeats, ssrfeat[0], ssrfeat[1], ssrfeat[2]]
-				self.db.get_cursor().execute("INSERT INTO feature VALUES (?,?,?,?,?,?,?,?)", record)
-
+		self.db.get_cursor().executemany("INSERT INTO location VALUES (?,?,?,?,?)", recs)
 		self.emit_finish("%s location completed." % self.table)
 
 class ExportFeatureWorker(Worker):

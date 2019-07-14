@@ -129,31 +129,7 @@ def format_fasta_sequence(sequence, length):
 	seqs.append('\n')
 	return "".join(seqs)
 
-def check_gene_annot_format(annot_file):
-	if annot_file.endswith('.gz'):
-		fh = gzip.open(annot_file, 'rt')
-	else:
-		fh = open(annot_file)
-
-	for line in fh:
-		if line[0] == '#':
-			continue
-
-		cols = line.strip().split('\t')
-
-		if len(cols) != 9:
-			raise Exception('The annotation file is not GTF or GFF format')
-		
-		if cols[-1].count('=') >= 2:
-			return 'GFF'
-
-		elif 'gene_id' in cols[-1]:
-			return 'GTF'
-
-		else:
-			raise Exception('The annotation file is not GTF or GFF format')
-
-
+'''
 def gff_gtf_parser(annot_file, _format='GFF'):
 	"""
 	parse GFF, GTF, comparessed gz annotation file
@@ -262,17 +238,19 @@ def get_gff_coordinate(gff_file):
 	parents = {}
 
 	for r in gff_gtf_parser(gff_file, 'GFF'):
-		if r.feature == 'GENE':
-			parents[r.attrs.ID] = r
-			continue
-		elif r.feature == 'MRNA':
-			try:
-				parents[r.attrs.ID] = parents[r.attrs.Parent]
-			except:
-				parents[r.attrs.ID] = r
+		if r.feature == 'REGION':
 			continue
 
-		if r.feature == 'CDS':
+		elif r.feature == 'GENE':
+			if 'ID' in r.attrs:
+				parents[r.attrs.ID] = r.attrs.ID
+			elif 'GENE' in r.attrs:
+				parents[r.attrs.GENE] = r.attrs.GENE
+				parents['gene-{}'.format(r.attrs.GENE)] = r.attrs.GENE
+			elif 'NAME' in r.attrs:
+				parents[r.attrs.NAME] = r.attrs.NAME
+
+		elif r.feature == 'CDS':
 			meta = Data(
 				feature = r.feature,
 				gene_id = parents[r.attrs.Parent].attrs.ID,
@@ -305,7 +283,10 @@ def get_gff_coordinate(gff_file):
 			yield (r.seqid, r.start, r.end, meta)
 		
 		elif r.feature == 'EXON':
-			mother = r.attrs.Parent
+			try:
+				mother = r.attrs.Parent
+			except AttributeError:
+				continue
 
 			meta = Data(
 				feature = 'exon',
@@ -337,7 +318,7 @@ def get_gff_coordinate(gff_file):
 				try:
 					parents[r.attrs.ID] = parents[r.attrs.Parent]
 				except:
-					parents[r.attrs.ID] = r
+					parents[r.attrs.ID] = r.attrs.ID
 
 	exons = sorted(exons, key=lambda x: x[2])
 	intron_chrom = exons[0][0]
@@ -351,7 +332,7 @@ def get_gff_coordinate(gff_file):
 			start = exon[2] + 1
 			end = exons[idx+1][1] - 1
 			yield (intron_chrom, start, end, intron_meta)
-
+'''
 
 def get_ssr_sequence(seq_file, seq_name, start, stop, flank):
 	'''

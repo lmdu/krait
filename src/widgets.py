@@ -326,38 +326,40 @@ class SSRMainWindow(QMainWindow):
 
 		#locate ssrs
 		self.locateAct = QAction(QIcon(":/icons/locate.png"), self.tr("Mapping"), self)
-		self.locateAct.setToolTip(self.tr("Mapping tandem repeats to gene regions"))
-		self.locateAct.setStatusTip(self.tr("Mapping tandem repeats to gene regions"))
-		self.locateAct.triggered.connect(self.LocateOrShowTandem)
+		self.locateAct.setToolTip(self.tr("Mapping tandem repeats to genic regions"))
+		self.locateAct.setStatusTip(self.tr("Mapping tandem repeats to genic regions"))
+		#self.locateAct.triggered.connect(self.LocateOrShowTandem)
+		self.locateAct.triggered.connect(self.locateTandem)
+		
 		self.locateToolAct = QAction(self.tr("Redo Mapping"), self)
 		self.locateToolAct.triggered.connect(self.locateTandem)
-		self.locateShowAct = QAction(self.tr("Show mapping reslult"), self)
-		self.locateShowAct.triggered.connect(self.showLocation)
+		#self.locateShowAct = QAction(self.tr("Show mapping reslult"), self)
+		#self.locateShowAct.triggered.connect(self.showLocation)
 
 		self.locateSetAct = QAction(self.tr("Import Annotation File"), self)
 		self.locateSetAct.triggered.connect(self.provideAnnotation)
 		self.removeLocateAct = QAction(self.tr("Remove mapping reslult"), self)
 		self.removeLocateAct.triggered.connect(self.removeMarker)
 		
-		#cds_icon = QPixmap(16, 16)
-		#cds_icon.fill(QColor(245, 183, 177))
-		#self.showCDSAct = QAction(QIcon(cds_icon), self.tr("Show SSRs in CDS"), self)
-		#self.showCDSAct.triggered.connect(self.showCDSMarker)
+		cds_icon = QPixmap(16, 16)
+		cds_icon.fill(QColor(245, 183, 177))
+		self.showCDSAct = QAction(QIcon(cds_icon), self.tr("Show repeats in CDS"), self)
+		self.showCDSAct.triggered.connect(self.showCDSMarker)
 
-		#exon_icon = QPixmap(16, 16)
-		#exon_icon.fill(QColor(169, 223, 191))
-		#self.showExonAct = QAction(QIcon(exon_icon), self.tr("Show SSRs in Exon"), self)
-		#self.showExonAct.triggered.connect(self.showExonMarker)
+		exon_icon = QPixmap(16, 16)
+		exon_icon.fill(QColor(169, 223, 191))
+		self.showExonAct = QAction(QIcon(exon_icon), self.tr("Show repeats in exon"), self)
+		self.showExonAct.triggered.connect(self.showExonMarker)
 
-		#utr_icon = QPixmap(16, 16)
-		#utr_icon.fill(QColor(250, 215, 160))
-		#self.showUTRAct = QAction(QIcon(utr_icon), self.tr("Show SSRs in UTR"), self)
-		#self.showUTRAct.triggered.connect(self.showUTRMarker)
+		utr_icon = QPixmap(16, 16)
+		utr_icon.fill(QColor(250, 215, 160))
+		self.showUTRAct = QAction(QIcon(utr_icon), self.tr("Show repeats in UTR"), self)
+		self.showUTRAct.triggered.connect(self.showUTRMarker)
 
-		#intron_icon = QPixmap(16, 16)
-		#intron_icon.fill(QColor(174, 214, 241))
-		#self.showIntronAct = QAction(QIcon(intron_icon), self.tr("Show SSRs in Intron"), self)
-		#self.showIntronAct.triggered.connect(self.showIntronMarker)
+		intron_icon = QPixmap(16, 16)
+		intron_icon.fill(QColor(174, 214, 241))
+		self.showIntronAct = QAction(QIcon(intron_icon), self.tr("Show repeats in intron"), self)
+		self.showIntronAct.triggered.connect(self.showIntronMarker)
 
 
 		#design primer
@@ -511,15 +513,16 @@ class SSRMainWindow(QMainWindow):
 		self.ISSRMenu.addAction(self.ISSRSetAct)
 
 		self.locateMenu = QMenu()
+		self.locateMenu.addAction(self.locateSetAct)
 		self.locateMenu.addAction(self.locateToolAct)
-		self.locateMenu.addAction(self.locateShowAct)
+		#self.locateMenu.addAction(self.locateShowAct)
 		self.locateMenu.addSeparator()
 		self.locateMenu.addAction(self.removeLocateAct)
-		#self.locateMenu.addSeparator()
-		#self.locateMenu.addAction(self.showCDSAct)
-		#self.locateMenu.addAction(self.showExonAct)
-		#self.locateMenu.addAction(self.showUTRAct)
-		#self.locateMenu.addAction(self.showIntronAct)
+		self.locateMenu.addSeparator()
+		self.locateMenu.addAction(self.showCDSAct)
+		self.locateMenu.addAction(self.showExonAct)
+		self.locateMenu.addAction(self.showUTRAct)
+		self.locateMenu.addAction(self.showIntronAct)
 
 		self.primerMenu = QMenu()
 		self.primerMenu.addAction(self.primerForceAct)
@@ -752,7 +755,8 @@ class SSRMainWindow(QMainWindow):
 		status = dialog.exec_()
 		if not status: return
 		acc, out = dialog.get()
-		if not acc or not out: return
+		if not acc or not out:
+			return
 		self.progressBar.setMaximum(0)
 		worker = EutilWorker(acc, out)
 		self.executeTask(worker, lambda: self.progressBar.setMaximum(100))
@@ -1114,19 +1118,23 @@ class SSRMainWindow(QMainWindow):
 		self.setStatusMessage("Import annotation file %s" % self.annot_file)
 
 
-	def LocateOrShowTandem(self):
-		if self.db.is_empty('feature'):
-			self.locateTandem()
-		else:
-			self.showLocation()
+	#def LocateOrShowTandem(self):
+	#	if self.db.is_empty('feature'):
+	#		self.locateTandem()
+	#	else:
+	#		self.showLocation()
 	
 	def locateTandem(self):
 		if not self.annot_file:
 			return QMessageBox.warning(self, "Warning", "Please provide gtf or gff well formated annotation file")
 
 		table = self.model.table
+		
 		if not table:
 			return QMessageBox.warning(self, "Warning", "You have not yet detected SSRs")
+
+		if table not in ['ssr', 'issr', 'cssr', 'vntr']:
+			return QMessageBox.warning(self, "Warning", "No SSRs displayed")
 
 		if self.db.is_empty(table):
 			return QMessageBox.warning(self, "warning", "No SSRs in table")
@@ -1137,42 +1145,49 @@ class SSRMainWindow(QMainWindow):
 		self.executeTask(worker, self.showLocation)
 
 	def showLocation(self):
-		self.model.setTable('feature')
-		self.model.select()
-		self.swichMainWidget('table')
+	#	self.model.setTable('feature')
+	#	self.model.select()
+	#	self.swichMainWidget('table')
+		self.model.beginResetModel()
+		self.model.endResetModel()
 
 	def removeMarker(self):
-		self.model.remove('feature')
+		self.model.remove('location')
 
-	#def showMarker(self, marker):
-	#	categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
-	#	features = {'CDS': 1, 'UTR': 2, 'EXON': 3, 'INTRON': 4}
-	#	table = self.model.table
-	#	if not table or table == 'primer':
-	#		return
-
-	#	sql = "SELECT target FROM location WHERE category=%s AND feature=%s" % (categories[table], features[marker])
-
-	#	data = self.db.get_column(sql)
-	#	if not data:
-	#		return QMessageBox.warning(self, "Warning", "No %ss located in %s region" % (table.upper(), marker))
+	def showMarker(self, marker):
+		repeat_types = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+		feature_maps = {'CDS': 1, 'exon': 2, 'UTR': 3, 'intron': 4}
 		
-	#	self.model.setFilter('id IN (%s)' % ",".join(map(str, data)))
+		table = self.model.table
 
-	#def showCDSMarker(self):
-	#	self.showMarker('CDS')
+		if table not in repeat_types:
+			return QMessageBox.warning(self, 'Warning', "No tandem repeats displayed")
+		
+		#if not table or table == 'primer':
+		#	return
 
-	#def showExonMarker(self):
-	#	self.showMarker('EXON')
+		if feature_maps[marker] == 3:
+			sql = "SELECT target FROM location WHERE reptype=%s AND (feature=3 OR feature=5)"
+		else:
+			sql = "SELECT target FROM location WHERE reptype=%s AND feature=%s" % (repeat_types[table], feature_maps[marker])
 
-	#def showUTRMarker(self):
-	#	self.showMarker('UTR')
+		#data = self.db.get_column(sql)
+		#if not data:
+		#	return QMessageBox.warning(self, "Warning", "No %ss located in %s region" % (table.upper(), marker))
+		
+		self.model.setFilter('id IN (%s)' % sql)
 
-	#def showIntronMarker(self):
-	#	self.showMarker('INTRON')
+	def showCDSMarker(self):
+		self.showMarker('CDS')
 
-	def estimateBestMaxDistance(self):
-		pass
+	def showExonMarker(self):
+		self.showMarker('exon')
+
+	def showUTRMarker(self):
+		self.showMarker('UTR')
+
+	def showIntronMarker(self):
+		self.showMarker('intron')
 
 	def filterTable(self):
 		filters = str(self.filter.text())
@@ -1461,6 +1476,9 @@ class TableModel(QAbstractTableModel):
 		#cache row (index, data)
 		self.cached_row = [-1, None]
 
+		#mapping
+		self.repeat_types = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
+
 	def getRowCounts(self):
 		return self.total_row_counts
 
@@ -1501,9 +1519,8 @@ class TableModel(QAbstractTableModel):
 		self.sel_row.emit(0)
 
 	def setTable(self, table):
-		categories = {'ssr': 1, 'cssr': 2, 'issr': 3, 'vntr': 4}
 		self.table = table
-		self.cat = categories.get(self.table, self.table)
+		self.repeat_type = self.repeat_types.get(self.table, 0)
 		self.headers = self.db.get_fields(self.table) or []
 		self.query = ["SELECT %s FROM {0}".format(self.table), '', '']
 
@@ -1513,7 +1530,7 @@ class TableModel(QAbstractTableModel):
 	def columnNames(self):
 		return self.headers
 
-	def setFilter(self, condition=''):
+	def setFilter(self, condition=None):
 		if condition:
 			self.query[1] = "WHERE %s" % condition
 			self.select()
@@ -1540,7 +1557,7 @@ class TableModel(QAbstractTableModel):
 		self.sql = " ".join(self.query)
 		self.selected = set()
 		self.cached_row = [-1, None]
-		self.total_row_counts = self.db.get_one(self.query[0] % "COUNT(1)" + " " + self.query[1] + " LIMIT 1")
+		self.total_row_counts = self.db.get_one(self.query[0] % "COUNT(*)" + " " + self.query[1] + " LIMIT 1")
 
 		self.beginResetModel()
 		self.displayed = self.db.get_column(self.sql % 'id' + " LIMIT 100")
@@ -1577,10 +1594,9 @@ class TableModel(QAbstractTableModel):
 		return self.displayed[row]
 		#return self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', row))
 
-	def value(self, row, col):
-		#row = index.row()
-		#col = index.column() - 1
-		col -= 1
+	def value(self, index):
+		row = index.row()
+		col = index.column() - 1
 		
 		if row == self.cached_row[0]:
 			return self.cached_row[1][col]
@@ -1592,22 +1608,24 @@ class TableModel(QAbstractTableModel):
 
 		return self.cached_row[1][col]
 
-	#def rowColor(self, index):
-		#ID = self.dataset[index.row()]
-	#	if self.table == 'primer' or self.db.is_empty('location'):
-	#		return QColor(255, 255, 255)
+	def rowColor(self, index):
+		ID = self.displayed[index.row()]
 
-	#	colors = {1: QColor(245, 183, 177), 2: QColor(250, 215, 160), 3: QColor(169, 223, 191), 4: QColor(174, 214, 241)}
+		if self.table == 'primer' or self.db.is_empty('location'):
+			return QColor(255, 255, 255)
 
-	#	ID = self.displayed[index.row()]
-	#	sql = "SELECT feature FROM location WHERE target=%s AND category=%s LIMIT 1" % (ID, self.cat)
+		colors = {
+			1: QColor(245, 183, 177), 
+			2: QColor(250, 215, 160), 
+			3: QColor(169, 223, 191),
+			4: QColor(174, 214, 241)
+		}
 		
-	#	feature = self.db.get_one(sql)
+		sql = "SELECT feature FROM location WHERE reptype=%s AND target=%s LIMIT 1"
+		
+		feature = self.db.get_one(sql % (self.repeat_type, ID))
 
-	#	if not feature:
-	#		return QColor(255, 255, 255)
-
-	#	return colors.get(feature, QColor(255, 255, 255))
+		return colors.get(feature, QColor(255, 255, 255))
 
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():
@@ -1633,7 +1651,7 @@ class TableModel(QAbstractTableModel):
 
 		elif role == Qt.DisplayRole:
 			if index.column() > 0:
-				return self.value(index.row(), index.column())
+				return self.value(index)
 			else:
 				return None
 
@@ -1647,6 +1665,9 @@ class TableModel(QAbstractTableModel):
 		#elif role == Qt.BackgroundRole:
 		#	if index.row() in self.selected:
 		#		return QColor(215, 242, 222)
+		elif role == Qt.BackgroundColorRole:
+			return self.rowColor(index)
+			#return QColor(215, 242, 222)
 
 		return None
 
@@ -2211,7 +2232,7 @@ class DownloadDialog(QDialog):
 		buttonBox.accepted.connect(self.accept)
 		buttonBox.rejected.connect(self.reject)
 
-		layout.addWidget(buttonBox, 4, 0, 1)
+		layout.addWidget(buttonBox, 4, 0, Qt.AlignLeft)
 
 		self.setLayout(layout)
 

@@ -4,9 +4,9 @@ import os
 import appdirs
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = '1.0'
+VERSION = '0.11.0'
 
-BUILD = '20180906'
+BUILD = '20190711'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -123,15 +123,22 @@ CREATE TABLE IF NOT EXISTS `primer_meta`(
 	length2 INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS `feature`(
+CREATE TABLE IF NOT EXISTS `gene`(
 	id INTEGER PRIMARY KEY,
-	category TEXT,
-	target INTEGER,
-	motif TEXT,
-	repeat REAL,
-	location TEXT,
+	sequence TEXT,
+	start INTEGER,
+	end INTEGER,
 	geneid TEXT,
-	genename TEXT
+	genename TEXT,
+	biotype TEXT
+);
+
+CREATE TABLE IF NOT EXISTS `location`(
+	id INTEGER PRIMARY KEY,
+	reptype INTEGER,
+	target INTEGER,
+	feature INTEGER,
+	gid INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS `option`(
@@ -144,7 +151,7 @@ CREATE TABLE IF NOT EXISTS `option`(
 
 STYLE_QSS = """
 *{
-	font-family: "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-family: roboto;
 }
 
 /* main windows */

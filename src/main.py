@@ -5,45 +5,44 @@ import sys
 #import multiprocessing
 #do not generate pyc file
 #sys.dont_write_bytecode = True
+import krait_rc
 
 from PySide2.QtCore import Qt, QCoreApplication
-from PySide2.QtGui import QPixmap
+from PySide2.QtGui import QPixmap, QFont, QFontDatabase
 from PySide2.QtWidgets import QApplication, QSplashScreen
 
 #create application and set properties
 
 if __name__ == '__main__':
 	QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-	#QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+	QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 
 	app = QApplication(sys.argv)
-	app.setOrganizationName('Chengdu University')
-	app.setOrganizationDomain('http://www.cdu.edu.cn')
+	app.setOrganizationName('Bioinformatics and Integrative Genomics')
+	app.setOrganizationDomain('http://big.cdu.edu.cn')
 	app.setApplicationName('Krait')
+
+	#set font family
+	QFontDatabase.addApplicationFont(":/fonts/roboto.ttf")
 
 	#support windows 7, 10 taskbar icon
 	import ctypes
 	if os.name == 'nt':
-		myappid = 'CDU.Krait.ssr.1.0'
+		myappid = 'BIG.Krait.ssr.1.0'
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
-	import splash_rc
 	splash_img = QPixmap(":/icons/splash.png")
 	splash = QSplashScreen(splash_img)
 	splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.SplashScreen | Qt.FramelessWindowHint)
-	splash.setStyleSheet('''
-		font-family:"Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
-		font-size: 14px;
-	''')
+	splash.setStyleSheet("font-family:roboto; font-size: 14px;")
 	splash.setEnabled(False)
 	splash.show()
 
 	def show_splash_msg(msg):
 		splash.showMessage(msg, Qt.AlignCenter | Qt.AlignBottom, Qt.white)
 		app.processEvents()
-
-	import krait_rc
-	show_splash_msg("Loading icon resources...")
+	
+	#show_splash_msg("Loading icon resources...")
 	import config
 	show_splash_msg("Loading configurations...")
 	from libs import *
