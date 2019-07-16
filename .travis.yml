@@ -9,7 +9,7 @@ matrix:
     #  sudo: required
     - os: osx
       language: generic
-      env: HOMEBREW_NO_AUTO_UPDATE=1 PYTHON=3.6.5 PYTHON_CONFIGURE_OPTS="--enable-framework --enable-shared"
+      env: HOMEBREW_NO_AUTO_UPDATE=1 PYTHON=3.6.5 PYTHON_CONFIGURE_OPTS="--enable-shared"
 
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
