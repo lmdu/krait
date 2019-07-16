@@ -12,25 +12,25 @@ matrix:
       sudo: required
       language: generic
 
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      brew install python3;
-    fi
+#before_install:
+#  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+#      brew install python3;
+#    fi
 
 install:
-  - pip install -r requirements.txt
+  - pip3 install -r requirements.txt
 
 script:
   - cd src/libs/src
-  - python setup.py build_ext --inplace
+  - python3 setup.py build_ext --inplace
   - mv *.so ..
   - cd ../../..
   - version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
   - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
-      pyinstaller mac.spec;
+      python3 -m pyinstaller mac.spec;
       tar -czvf Krait-v${version}-mac.tar.gz dist/Krait;
     else
-      pyinstaller linux.spec;
+      python3 -m pyinstaller linux.spec;
       tar -czvf Krait-v${version}-linux.tar.gz dist/Krait;
     fi
 
