@@ -7,7 +7,6 @@ matrix:
   include:
     - os: linux
       sudo: required
-
     - os: osx
       sudo: required
       language: generic
