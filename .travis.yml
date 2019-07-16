@@ -12,8 +12,8 @@ matrix:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      ls -l /Users/travis/.pyenv/versions;
       pyenv install 3.6.5;
+      pyenv rehash;
       pyenv local 3.6.5;
     fi
 
