@@ -3,11 +3,12 @@ language: python
 python:
   - "3.6"
 
-sudo: required
+sudo:
+  - true
 
-matrix:
-  - os: linux
-  - os: osx
+os:
+  - linux
+  - osx
 
 install:
   - pip install -r requirements.txt
