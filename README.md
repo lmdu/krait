@@ -1,5 +1,6 @@
 <p align="center"><img width="100" src="src/icons/krait_logo.png"></p>
 <p align="center">
+	[![Build Status](https://travis-ci.org/lmdu/krait.svg?branch=master)](https://travis-ci.org/lmdu/krait)
 	<img src="https://img.shields.io/github/downloads/lmdu/krait/total.svg">
 	<img src="https://img.shields.io/github/release/lmdu/krait.svg">
 	<img src="https://img.shields.io/github/license/lmdu/krait.svg">
