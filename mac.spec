@@ -4,10 +4,10 @@ block_cipher = None
 
 
 a = Analysis(['src/main.py'],
-             pathex=['/Users/travis/.pyenv/versions/3.6.5/lib/python3.6/site-packages/shiboken2'],
+             pathex=[],
              binaries=[],
              datas=[('src/primer3_config', 'primer3_config'), ('src/template', 'template'), ('example', 'example')],
-             hiddenimports=['shiboken2'],
+             hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
              excludes=['PyQt4', 'PyQt5', 'Tkinter', 'wx', 'pydoc', 'pkg_resources'],
