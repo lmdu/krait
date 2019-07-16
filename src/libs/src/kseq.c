@@ -203,7 +203,7 @@ static PyObject *fasta_next(FastaState *fstate){
 }
 
 PyTypeObject PyFasta_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyVarObject_HEAD_INIT(NULL, 0)
     "fasta",                        /* tp_name */
     sizeof(FastaState),             /* tp_basicsize */
     0,                              /* tp_itemsize */

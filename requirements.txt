@@ -1,0 +1,7 @@
+PySide2
+apsw
+numpy
+requests
+jinja2
+appdirs
+pyinstaller

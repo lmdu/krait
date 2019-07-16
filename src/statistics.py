@@ -95,13 +95,15 @@ class Statistics(object):
 		return round(lengths/self.transize, 2)
 
 	def region(self, table):
+		reptype = {'ssr':1, 'cssr':2, 'issr':3, 'vntr':4}.get(table)
+		featmap = {1:'CDS', 2:'exon', 3:"3'UTR", 4:'intron', 5:"5'UTR"}
 		total_counts = self.db.get_one("SELECT COUNT(*) FROM {} LIMIT 1".format(table))
-		total_annots = self.db.get_one("SELECT COUNT(DISTINCT target) FROM feature WHERE category='{}'".format(table))
-		sql = "SELECT location,COUNT(*) AS count FROM feature WHERE category='{}' GROUP BY location".format(table)
-		rows = [(row.location, row.count) for row in self.db.query(sql)]
+		total_annots = self.db.get_one("SELECT COUNT(*) FROM location WHERE reptype={}".format(reptype))
+		sql = "SELECT feature,COUNT(*) AS count FROM location WHERE reptype={} GROUP BY feature".format(reptype)
+		rows = [(featmap.get(row.feature), row.count) for row in self.db.query(sql)]
 
 		if rows:
-			rows.append(('Intergenic', total_counts-total_annots))
+			rows.append(('intergenic', total_counts-total_annots))
 		
 		return rows
 

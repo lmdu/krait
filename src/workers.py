@@ -404,6 +404,9 @@ class PrimerWorker(Worker):
 		progress = 0
 		prev_progress = 0
 
+		if not self.db.is_empty('primer'):
+			self.db.get_cursor().execute("DELETE FROM primer")
+
 		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		
 		self.db.begin()
@@ -611,18 +614,33 @@ class ExportPrimerWorker(Worker):
 		#get selected ids from table model
 		self.emit_message("Exporting to %s" % self.outfile)
 
-		table_name = self.model.tableName()
-		headers = self.model.columnNames()
+		#table_name = self.model.tableName()
+		#headers = self.model.columnNames()
+
+		table_name = self.db.get_one("SELECT category FROM primer LIMIT 1")
 
 		whole_counts = self.db.get_one("SELECT COUNT(*) FROM %s" % table_name)
 		total_counts = whole_counts
 
 		if self.selected == 'whole' or len(self.model.selected) == whole_counts:
-			sql = "SELECT * FROM {}".format(table_name)
+			sql = (
+				"SELECT primer.entry,primer.product,primer.forward,primer.tm1,"
+				"primer.gc1,primer.stability1,primer.reverse,primer.tm2,primer.gc2,"
+				"primer.stability2, {0}.* FROM primer left join {0} ON ({0}.id=primer.target) "
+				"WHERE category='{0}'"
+			).format(table_name)
 		else:
 			ids = self.model.getSelectedRows()
 			total_counts = len(ids)
-			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+
+			sql = (
+				"SELECT primer.entry,primer.product,primer.forward,primer.tm1,"
+				"primer.gc1,primer.stability1,primer.reverse,primer.tm2,primer.gc2,"
+				"primer.stability2, {0}.* FROM primer left join {0} ON ({0}.id=primer.target) "
+				"WHERE category='{0}' AND primer.id IN ({1})"
+			).format(table_name, ",".join(ids))
+
+			#sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
 
 		prev_progress = 0
 		progress = 0
@@ -634,19 +652,29 @@ class ExportPrimerWorker(Worker):
 			else:
 				writer = csv.writer(outfh, delimiter='\t')
 
-			ssr_table = self.db.get_one("SELECT category FROM primer LIMIT 1")
-			ssr_headers = self.db.get_fields(ssr_table)
-			writer.writerow(ssr_headers + headers[3:])
+			#ssr_table = self.db.get_one("SELECT category FROM primer LIMIT 1")
+			#ssr_headers = self.db.get_fields(ssr_table)
+			#writer.writerow(ssr_headers + headers[3:])
+			
+			cursor = self.db.get_cursor()
+			cursor.execute(sql)
 
-			for row in self.db.query(sql):
-				ssr = self.db.get_row("SELECT * FROM {} WHERE id={} LIMIT 1".format(row.category, row.target))
+			headers = [field[0] for field in cursor.getdescription()]
 
-				print(row.category, row.target)
+			writer.writerow(headers[10:]+headers[:10])
 
-				ssr_with_primer = list(ssr.getValues())
-				ssr_with_primer.extend(row.getValues()[3:])
+			#for row in self.db.query(sql):
+			#	ssr = self.db.get_row("SELECT * FROM {} WHERE id={} LIMIT 1".format(row.category, row.target))
 
-				writer.writerow(ssr_with_primer)
+			#	print(row.category, row.target)
+
+			#	ssr_with_primer = list(ssr.getValues())
+			#	ssr_with_primer.extend(row.getValues()[3:])
+
+			#	writer.writerow(ssr_with_primer)
+
+			for row in cursor:
+				writer.writerow(row[10:]+row[:10])
 				
 				current += 1
 				process = int(current/total_counts*100)

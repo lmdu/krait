@@ -1,0 +1,35 @@
+language: python
+
+python:
+  - "3.6"
+
+matrix:
+  - sudo: required
+  - os: osx
+
+install:
+  - pip install -r requirements.txt
+
+script:
+  - cd src/libs/src
+  - python setup.py build_ext --inplace
+  - mv *.so ..
+  - cd ../../..
+  - version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+      pyinstaller mac.spec;
+      tar -czvf Krait-v${version}-mac.tar.gz dist/Krait;
+    else
+      pyinstaller linux.spec;
+      tar -czvf Krait-v${version}-linux.tar.gz dist/Krait;
+    fi
+
+deploy:
+  provider: releases
+  api_key:
+    secure: "ZPr649XdJPsoFDKfGai20I8furV0n5IAQSrsCyVq/ZCf38j0jnmTpZGT3qodhrx6/pUs6kUyGRLyzS5p3Os2w++DZ89gZN4RLAwDVPkPR39Cqk2yoOknrUvSqVs9PrFVWFDcV8mu/9Yy/tSjMMYB9IYHrwUggA6jrKiZedSNK6KkjOV2vMMWmg72jSG3Yn/Kl7U+xnIcwTB4z5k6BN9V1S5GNTtnzcYGoooHbV08PRW+LaJE4298NtbCuXFBkGU3oQHL7Uu/VvRZUC9FURlIIDJamMTMdCcKiEj+sxxLjl+HAEAzEBgh6V9VC6A6l/XXZWbvF7IvetrEmPLMibg7rJPlEBf+Frb2Pmn5O10ppW1nkMno0H9IqUUh+JJSxYVsi+UuiDCklF6e67FuQGTQ+4Ua77rCjMDFnswyRvEaBjqyCX6iL/TQUHqsJK/WCgDAqmbVl9y748INwgY8gLa2vzOPARLis+7zVn0eCawOar7FO/UpkVlaNlP73F5hqIaz63NR8qtAVDel7wvjWc4Ulguv545/HxawLMxcwpDBxVPXUyp+EmRjdueJGwVeq+11pHccb2yp5qDQKFvZzI/yAZMZMPOaGuBpAPCECRl1neXv31vU7pfi7DIAOlg7nkU7CoCqKr9TebYdrl6V/qSncMeY1+5WYFi/SRwwc9JddSY="
+  file_glob: true
+  file: Krait-*.tar.gz
+  skip_cleanup: true
+  on:
+    tags: true
