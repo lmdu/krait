@@ -1,14 +1,16 @@
 language: python
 
+python:
+  - "3.6"
+
 matrix:
   include:
     - os: linux
       sudo: required
-      python: 3.6
 
     - os: osx
       sudo: required
-      python: 3.7
+      language: generic
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
