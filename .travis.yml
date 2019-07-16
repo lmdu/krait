@@ -3,8 +3,10 @@ language: python
 python:
   - "3.6"
 
+sudo: required
+
 matrix:
-  - sudo: required
+  - os: linux
   - os: osx
 
 install:
