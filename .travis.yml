@@ -5,15 +5,15 @@ python:
 
 matrix:
   include:
-    - os: linux
-      sudo: required
+    #- os: linux
+    #  sudo: required
     - os: osx
       sudo: required
       language: generic
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      pyenv versions;
+      pyenv install --list;
     fi
 
 install:
