@@ -10,8 +10,8 @@ environment:
 #    PYTHON_ARCH: 64
 
 install:
-  - appveyor DownloadFile https://github.com/rogerbinns/apsw/releases/download/3.28.0-r1/apsw-3.28.0-r1.win-amd64-py3.6.exe
-  - start "" /wait "apsw-3.28.0-r1.win-amd64-py3.6.exe" /S
+  #- appveyor DownloadFile https://github.com/rogerbinns/apsw/releases/download/3.28.0-r1/apsw-3.28.0-r1.win-amd64-py3.6.exe
+  #- start "" /wait "apsw-3.28.0-r1.win-amd64-py3.6.exe" /S
   - appveyor DownloadFile https://github.com/lmdu/mingw64/raw/master/i686-8.1.0-release-posix-dwarf-rt_v6-rev0.7z -FileName mw32.7z
   - 7z x -oC:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0 mw32.7z > NUL
   - SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
@@ -19,6 +19,7 @@ install:
   - SET PATH=%PATH%;"C:\Program Files (x86)\Inno Setup 5"
   - gendef %PYTHON%\vcruntime140.dll
   - dlltool -D %PYTHON%\vcruntime140.dll -d vcruntime140.def -l %PYTHON%\libs\libvcruntime140.a
+  - python -m pip install apsw-wheels
   - python -m pip install -r requirements.txt
   - python ci\fix_compiler_error.py %PYTHON%
 
