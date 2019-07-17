@@ -23,7 +23,7 @@ install:
   - python -m pip install pywin32
   - python -m pip install -r requirements.txt
   - python ci\fix_compiler_error.py %PYTHON%
-  - cp %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2\
+  - copy /y %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2
 
 build_script:
   - cd src\libs\src
@@ -31,6 +31,8 @@ build_script:
   - move /y *.pyd ..
   - cd ..\..\..
   - pyinstaller win.spec
+  - copy /y %PYTHON%\lib\site-packages\PySide2\QtWebEngineProcess.exe dist\Krait\PySide2
+  - copy /y %PYTHON%\lib\site-packages\PySide2\resources\* dist\Krait\PySide2
   - cd setup
   - iscc win.iss
   - cd ..

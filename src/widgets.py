@@ -40,6 +40,7 @@ class SSRMainWindow(QMainWindow):
 		self.createTableModel()
 
 		self.browser = QWebEngineView(self)
+		#self.browser = BrowserWidget(self)
 
 		
 		self.main_widget.addWidget(self.table)
@@ -690,7 +691,7 @@ class SSRMainWindow(QMainWindow):
 		self.browser.setHtml('')
 		self.changed_rows = self.db.changes()
 
-	def importFasta(self, fasta):
+	def importFasta(self, fasta=None):
 		'''
 		Import a fasta file from a directory
 		'''
@@ -2248,6 +2249,7 @@ class DownloadDialog(QDialog):
 
 
 class BrowserWidget(QWebEngineView):
+#class BrowserWidget(QWebView):
 	def __init__(self, parent):
 		super(BrowserWidget, self).__init__(parent)
 		self.parent = parent
