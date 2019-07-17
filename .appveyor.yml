@@ -1,11 +1,13 @@
 environment:
   global:
     MINGW_64: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64
-
-matrix:
-  - PYTHON: C:\Python36
+    PYTHON: C:\Python36-x64
     PYTHON_VERSION: 3.6
-    PYTHON_ARCH: 64
+
+#matrix:
+#  - PYTHON: C:\Python36-x64
+#    PYTHON_VERSION: 3.6
+#    PYTHON_ARCH: 64
 
 install:
   - appveyor DownloadFile https://github.com/rogerbinns/apsw/releases/download/3.28.0-r1/apsw-3.28.0-r1.win-amd64-py3.6.exe
