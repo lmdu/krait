@@ -24,6 +24,8 @@ install:
   - python -m pip install -r requirements.txt
   - python ci\fix_compiler_error.py %PYTHON%
   - copy /y %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2
+  - appveyor DownloadFile https://github.com/upx/upx/releases/download/v3.95/upx-3.95-win64.zip
+  - 7z e upx-3.95-win64.zip *.exe -r
 
 build_script:
   - cd src\libs\src

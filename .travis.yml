@@ -17,6 +17,7 @@ matrix:
 
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    brew install upx
     brew install pyenv-virtualenv
     pyenv install $PYTHON
     export PYENV_VERSION=$PYTHON
@@ -46,6 +47,9 @@ script:
       cd dist;
       tar -czvf Krait-v${version}-mac.tar.gz Krait;
     else
+      wget https://github.com/upx/upx/releases/download/v3.95/upx-3.95-amd64_linux.tar.xz;
+      tar xJvf upx-3.95-amd64_linux.tar.xz;
+      sudo mv upx-3.95-amd64_linux/upx /usr/bin;
       pyinstaller linux.spec;
       cp ${PYTHON_PACKAGES}/PySide2/QtWebEngineProcess* dist/Krait/PySide2;
       cp ${PYTHON_PACKAGES}/PySide2/resources/* dist/Krait/PySide2;
