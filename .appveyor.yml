@@ -22,6 +22,7 @@ install:
   - python -m pip install apsw-wheels
   - python -m pip install -r requirements.txt
   - python ci\fix_compiler_error.py %PYTHON%
+  - cp %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2\
 
 build_script:
   - cd src\libs\src

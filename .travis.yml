@@ -28,7 +28,9 @@ before_install: |
 install:
   - pip install apsw
   - pip install -r requirements.txt
-  - cp /Users/travis/.pyenv/versions/3.6.5/lib/python3.6/site-packages/shiboken2/libshiboken2.abi3.5.13.dylib /Users/travis/.pyenv/versions/3.6.5/lib/python3.6/site-packages/PySide2/
+  - if [ "TRAVIS_OS_NAME" == "osx" ]; then
+      cp /Users/travis/.pyenv/versions/3.6.5/lib/python3.6/site-packages/shiboken2/libshiboken2.abi3.5.13.dylib /Users/travis/.pyenv/versions/3.6.5/lib/python3.6/site-packages/PySide2/
+    fi
 
 script:
   - cd src/libs/src
