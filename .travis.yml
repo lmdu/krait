@@ -3,13 +3,16 @@ language: python
 python:
   - "3.6"
 
+#disable homebrew update
+#HOMEBREW_NO_AUTO_UPDATE=1
+
 matrix:
   include:
     - os: linux
       sudo: required
     - os: osx
       language: generic
-      env: HOMEBREW_NO_AUTO_UPDATE=1 PYTHON=3.6.5 PYTHON_CONFIGURE_OPTS="--enable-shared"
+      env: PYTHON=3.6.5 PYTHON_CONFIGURE_OPTS="--enable-shared"
 
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
@@ -23,6 +26,7 @@ before_install: |
   fi
 
 install:
+  - pip install apsw
   - pip install -r requirements.txt
   - cp /Users/travis/.pyenv/versions/3.6.5/lib/python3.6/site-packages/shiboken2/libshiboken2.abi3.5.13.dylib /Users/travis/.pyenv/versions/3.6.5/lib/python3.6/site-packages/PySide2/
 
