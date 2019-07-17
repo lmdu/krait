@@ -4,8 +4,8 @@ environment:
 
 matrix:
   - PYTHON: C:\Python36
-  PYTHON_VERSION: 3.6
-  PYTHON_ARCH: 64
+    PYTHON_VERSION: 3.6
+    PYTHON_ARCH: 64
 
 install:
   - appveyor DownloadFile https://github.com/rogerbinns/apsw/releases/download/3.28.0-r1/apsw-3.28.0-r1.win-amd64-py3.6.exe
