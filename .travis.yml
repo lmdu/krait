@@ -53,7 +53,6 @@ script:
       pyinstaller linux.spec;
       ls -l /home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/PySide2;
       cp ${PYTHON_PACKAGES}/PySide2/Qt/libexec/QtWebEngineProcess* dist/Krait/PySide2/Qt/libexec;
-      cp ${PYTHON_PACKAGES}/PySide2/resources/* dist/Krait/PySide2;
       cd dist;
       tar -czvf Krait-v${version}-linux.tar.gz Krait;
     fi
