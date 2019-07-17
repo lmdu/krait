@@ -20,6 +20,7 @@ install:
   - gendef %PYTHON%\vcruntime140.dll
   - dlltool -D %PYTHON%\vcruntime140.dll -d vcruntime140.def -l %PYTHON%\libs\libvcruntime140.a
   - python -m pip install apsw-wheels
+  - python -m pip install pywin32
   - python -m pip install -r requirements.txt
   - python ci\fix_compiler_error.py %PYTHON%
   - cp %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2\
