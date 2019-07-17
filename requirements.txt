@@ -1,6 +1,5 @@
 PySide2
 Cython
-apsw
 numpy
 requests
 jinja2
