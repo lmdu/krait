@@ -28,9 +28,11 @@ build_script:
   - pyinstaller win.spec
   - cd setup
   - iscc win.iss
+  - cd ..
 
 artifacts:
-  - path: *.exe
+  - path: "setup\\*.exe"
+    name: Krait
 
 deploy:
   description: 'krait installer'
