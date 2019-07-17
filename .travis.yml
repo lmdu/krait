@@ -51,6 +51,7 @@ script:
       tar xJvf upx-3.95-amd64_linux.tar.xz;
       sudo mv upx-3.95-amd64_linux/upx /usr/bin;
       pyinstaller linux.spec;
+      ls -l /home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/PySide2;
       cp ${PYTHON_PACKAGES}/PySide2/QtWebEngineProcess* dist/Krait/PySide2;
       cp ${PYTHON_PACKAGES}/PySide2/resources/* dist/Krait/PySide2;
       cd dist;
