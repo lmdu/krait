@@ -30,9 +30,9 @@ before_install: |
 install:
   - pip install apsw
   - pip install -r requirements.txt
-  - if [ "TRAVIS_OS_NAME" == "osx" ]; then
-      cp ${PYTHON_PACKAGES}/shiboken2/libshiboken2.*.dylib ${PYTHON_PACKAGES}/PySide2/;
-    fi
+  #- if [ "TRAVIS_OS_NAME" == "osx" ]; then
+  #    cp ${PYTHON_PACKAGES}/shiboken2/libshiboken2.*.dylib ${PYTHON_PACKAGES}/PySide2/;
+  #  fi
 
 script:
   - cd src/libs/src
@@ -42,8 +42,8 @@ script:
   - version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
   - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
       pyinstaller mac.spec;
-      cp ${PYTHON_PACKAGES}/PySide2/QtWebEngineProcess* dist/Krait/PySide2;
-      cp ${PYTHON_PACKAGES}/PySide2/resources/* dist/Krait/PySide2;
+      #cp ${PYTHON_PACKAGES}/PySide2/QtWebEngineProcess* dist/Krait/PySide2;
+      #cp ${PYTHON_PACKAGES}/PySide2/resources/* dist/Krait/PySide2;
       cd dist;
       tar -czvf Krait-v${version}-mac.tar.gz Krait;
     else
@@ -51,8 +51,8 @@ script:
       tar xJvf upx-3.95-amd64_linux.tar.xz;
       sudo mv upx-3.95-amd64_linux/upx /usr/bin;
       pyinstaller linux.spec;
-      ls -l /home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/PySide2;
-      cp ${PYTHON_PACKAGES}/PySide2/Qt/libexec/QtWebEngineProcess* dist/Krait/PySide2/Qt/libexec;
+      #ls -l /home/travis/virtualenv/python3.6.3/lib/python3.6/site-packages/PySide2;
+      #cp ${PYTHON_PACKAGES}/PySide2/Qt/libexec/QtWebEngineProcess* dist/Krait/PySide2/Qt/libexec;
       cd dist;
       tar -czvf Krait-v${version}-linux.tar.gz Krait;
     fi

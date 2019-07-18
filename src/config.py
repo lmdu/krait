@@ -4,7 +4,7 @@ import os
 import appdirs
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = "0.11.1"
+VERSION = "0.11.2"
 
 BUILD = '20190717'
 
@@ -151,7 +151,8 @@ CREATE TABLE IF NOT EXISTS `option`(
 
 STYLE_QSS = """
 *{
-	font-family: roboto;
+	font-family: Roboto;
+	font-size: 15px;
 }
 
 /* main windows */
@@ -169,7 +170,7 @@ QHeaderView::section {
     background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                       stop: 0 #fefefe, stop: 0.5 #fbfbfb,
                                       stop: 0.6 #f8f8f8, stop: 1 #f2f3f3);
-    padding-left: 4px;
+    padding: 5px 0;
     border:none;
     border-right: 1px solid #d8d8d8;
     border-bottom: 1px solid #afb0b1;

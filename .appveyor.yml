@@ -21,9 +21,11 @@ install:
   - dlltool -D %PYTHON%\vcruntime140.dll -d vcruntime140.def -l %PYTHON%\libs\libvcruntime140.a
   - python -m pip install apsw-wheels
   - python -m pip install pywin32
+  - appveyor DownloadFile https://download.lfd.uci.edu/pythonlibs/n5jyqt7p/PySide-1.2.4-cp36-cp36m-win_amd64.whl
+  - python -m pip install PySide-1.2.4-cp36-cp36m-win_amd64.whl
   - python -m pip install -r requirements.txt
   - python ci\fix_compiler_error.py %PYTHON%
-  - copy /y %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2
+  #- copy /y %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2
   - appveyor DownloadFile https://github.com/upx/upx/releases/download/v3.95/upx-3.95-win64.zip
   - 7z e upx-3.95-win64.zip *.exe -r
 
@@ -33,8 +35,8 @@ build_script:
   - move /y *.pyd ..
   - cd ..\..\..
   - pyinstaller win.spec
-  - copy /y %PYTHON%\lib\site-packages\PySide2\QtWebEngineProcess.exe dist\Krait\PySide2
-  - copy /y %PYTHON%\lib\site-packages\PySide2\resources\* dist\Krait\PySide2
+  #- copy /y %PYTHON%\lib\site-packages\PySide2\QtWebEngineProcess.exe dist\Krait\PySide2
+  #- copy /y %PYTHON%\lib\site-packages\PySide2\resources\* dist\Krait\PySide2
   - cd setup
   - iscc win.iss
   - cd ..

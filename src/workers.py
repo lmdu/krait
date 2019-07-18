@@ -8,7 +8,8 @@ import traceback
 import functools
 #import multiprocessing
 
-from PySide2.QtCore import *
+#from PySide2.QtCore import *
+from PySide.QtCore import *
 
 #import plot
 import motif
