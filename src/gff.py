@@ -235,6 +235,7 @@ class GFFParser(AnnotParser):
 
 				if father == mother:
 					exons.append((r.seqid, r.start, r.end, 'exon', parents[r.attrs.PARENT]))
+				
 				else:
 					if exons:
 						exons = sorted(exons, key=lambda x: x[2])

@@ -1183,9 +1183,9 @@ class SSRMainWindow(QMainWindow):
 		#	return
 
 		if feature_maps[marker] == 3:
-			sql = "SELECT target FROM location WHERE reptype=%s AND (feature=3 OR feature=5)"
+			sql = "SELECT target FROM location WHERE reptype={} AND (feature=3 OR feature=5)".format(repeat_types[table])
 		else:
-			sql = "SELECT target FROM location WHERE reptype=%s AND feature=%s" % (repeat_types[table], feature_maps[marker])
+			sql = "SELECT target FROM location WHERE reptype={} AND feature={}".format(repeat_types[table], feature_maps[marker])
 
 		#data = self.db.get_column(sql)
 		#if not data:
