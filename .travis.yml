@@ -4,7 +4,6 @@ python:
   - "3.4"
 
 #disable homebrew update
-#HOMEBREW_NO_AUTO_UPDATE=1
 
 matrix:
   include:
@@ -12,12 +11,13 @@ matrix:
       sudo: required
     - os: osx
       language: generic
-      env: PYTHON=3.4.10 PYTHON_CONFIGURE_OPTS="--enable-shared"
+      env: PYTHON=3.4.10 PYTHON_CONFIGURE_OPTS="--enable-shared" HOMEBREW_NO_AUTO_UPDATE=1
 
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     brew install upx
     brew install pyenv-virtualenv
+    brew install qt
     pyenv install -l
     pyenv install $PYTHON
     export PYENV_VERSION=$PYTHON
