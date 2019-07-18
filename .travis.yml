@@ -11,7 +11,7 @@ matrix:
       sudo: required
     - os: osx
       language: generic
-      env: PYTHON=3.4.10 PYTHON_CONFIGURE_OPTS="--enable-shared" HOMEBREW_NO_AUTO_UPDATE=1
+      env: PYTHON=3.4.8 PYTHON_CONFIGURE_OPTS="--enable-shared" HOMEBREW_NO_AUTO_UPDATE=1
 
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
@@ -20,6 +20,7 @@ before_install: |
     brew tap cartr/qt4
     brew tap-pin cartr/qt4
     brew install qt@4
+    brew install qt-webkit@2.3
     pyenv install -l
     pyenv install $PYTHON
     export PYENV_VERSION=$PYTHON
