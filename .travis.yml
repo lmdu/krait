@@ -32,6 +32,9 @@ before_install: |
 
 install:
   - pip install apsw
+  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+      pip install PySide==1.2.2
+    fi
   - pip install -r requirements.txt
 
 script:
