@@ -4,9 +4,9 @@ import os
 import appdirs
 from jinja2 import Environment, FileSystemLoader
 
-VERSION = "0.11.2"
+VERSION = "0.11.5"
 
-BUILD = '20190718'
+BUILD = '20190831'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 

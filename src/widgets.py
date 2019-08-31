@@ -1335,7 +1335,7 @@ class SSRMainWindow(QMainWindow):
 			<p>Krait is a robust and ultrafast tool that provides a user-friendly GUI for no computationally
 			skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs from fasta
 			formatted DNA sequences; and design primers; and perform statistical analysis.</p>
-			<p><a href="https://wiki.qt.io/Qt_for_Python">PySide2</a> for GUI. 
+			<p><a href="https://wiki.qt.io/Qt_for_Python">PySide</a> for GUI. 
 			<a href="http://lh3lh3.users.sourceforge.net/kseq.shtml">Kseq.h</a> for parsing fasta.
 			<a href="https://github.com/libnano/primer3-py">primer3-py</a> and 
 			<a href="http://primer3.sourceforge.net/">primer3</a> for primer design. 
@@ -1507,24 +1507,30 @@ class TableModel(QAbstractTableModel):
 	def selectRow(self, row):
 		if row not in self.selected:
 			self.beginResetModel()
-			self.selected.add(row)
+			self.selected.add(self.getCellId(row))
 			self.endResetModel()
 			self.sel_row.emit(len(self.selected))
 
 	def deselectRow(self, row):
 		if row in self.selected:
 			self.beginResetModel()
-			self.selected.remove(row)
+			self.selected.remove(self.getCellId(row))
 			self.endResetModel()
 			self.sel_row.emit(len(self.selected))
 
 	def selectAll(self):
 		self.beginResetModel()
 		sql = self.query[0] % 'COUNT(1)' + ' ' + self.query[1]
-		if self.db.get_one(sql) == self.total_row_counts:
-			self.selected = set(range(self.total_row_counts))
+		if self.query[1]:
+			self.selected = set(self.db.get_column(self.sql % 'id'))
 		else:
-			self.selected = set(range(len(self.displayed)))
+			self.selected = set(range(1, self.total_row_counts+1))
+
+		#if self.db.get_one(sql) == self.total_row_counts:
+			#self.selected = set(range(self.total_row_counts))
+		#else:
+			#self.selected = set(range(len(self.displayed)))
+
 		self.endResetModel()
 		self.sel_row.emit(len(self.selected))
 
@@ -1603,12 +1609,15 @@ class TableModel(QAbstractTableModel):
 		self.db.clear(table)
 
 
-	def getSelectedRows(self):
-		return [str(self.displayed[i]) for i in sorted(self.selected)]
+	#def getSelectedRows(self):
+	#	if self.total_row_counts == len(self.selected):
+	#		return 'whole'
+	#	else:
+	#		return [str(self.displayed[i]) for i in sorted(self.selected)]
 
 	def getCellId(self, row):
-		return self.displayed[row]
-		#return self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', row))
+		#return self.displayed[row]
+		return self.db.get_one("%s LIMIT %s,1" % (self.sql % 'id', row))
 
 	def value(self, index):
 		row = index.row()
@@ -1673,7 +1682,7 @@ class TableModel(QAbstractTableModel):
 
 		elif role == Qt.CheckStateRole:
 			if index.column() == 0:
-				if index.row() in self.selected:
+				if self.displayed[index.row()] in self.selected:
 					return Qt.Checked
 				else:
 					return Qt.Unchecked
@@ -1706,7 +1715,7 @@ class TableModel(QAbstractTableModel):
 			#return self.value(section, 1)
 			if role == Qt.CheckStateRole:
 				if index.column() == 0:
-					if index.row() in self.selected:
+					if self.displayed[index.row()] in self.selected:
 						return Qt.ItemIsUserCheckable
 					else:
 						return Qt.ItemIsUserCheckable
@@ -1725,12 +1734,14 @@ class TableModel(QAbstractTableModel):
 		if index.column() != 0:
 			return False
 
+		_id = self.getCellId(index.row())
+
 		if role == Qt.CheckStateRole:
 			if value == Qt.Checked:
-				self.selected.add(index.row())
+				self.selected.add(_id)
 			else:
-				if index.row() in self.selected:
-					self.selected.remove(index.row())
+				if _id in self.selected:
+					self.selected.remove(_id)
 			
 			self.dataChanged.emit(index, index)
 			self.sel_row.emit(len(self.selected))

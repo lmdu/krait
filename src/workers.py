@@ -3,6 +3,7 @@ import time
 import json
 import numpy
 import jinja2
+import pyfastx
 import requests
 import traceback
 import functools
@@ -45,14 +46,14 @@ class Worker(QObject):
 		@para fasta_path str, the file path of fasta
 		@return Fasta object
 		'''
-		seqs = fasta.GzipFasta(fasta_path)
+		seqs = pyfastx.Fasta(fasta_path)
 		
 		#get sequence detail information
 		sql = "SELECT * FROM seq INNER JOIN fasta ON (seq.fid=fasta.id) WHERE fasta.path='{}' LIMIT 1".format(fasta_path)
 		if not self.db.get_one(sql):
 			rows = []
 			for name in seqs.keys():
-				row = (None, name, fasta_id, seqs.get_len(name), seqs.get_gc(name), seqs.get_ns(name))
+				row = (None, name, fasta_id, len(seqs[name]), seqs[name].gc_content, seqs[name].composition['N'])
 				rows.append(row)
 			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
 		
@@ -119,7 +120,7 @@ class SSRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.get_total_length()
+			total_bases = seqs.size
 
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
@@ -127,7 +128,7 @@ class SSRWorker(Worker):
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += seqs.get_len(name)
+				current_bases += len(seqs[name])
 				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search perfect SSRs from %s" % name)
@@ -184,14 +185,14 @@ class ISSRWorker(Worker):
 			self.emit_message("Building fasta index for %s" % fasta_file)
 
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.get_total_length()
+			total_bases = seqs.size
 			#insert ssr to database
 			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += seqs.get_len(name)
+				current_bases += len(seqs[name])
 				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search imperfect SSRs from %s" % name)
@@ -289,14 +290,14 @@ class VNTRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.get_total_length()
+			total_bases = seqs.size
 			#insert ssr to database
 			sql = "INSERT INTO vntr VALUES (?,?,?,?,?,?,?,?)"
 
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += seqs.get_len(name)
+				current_bases += len(seqs[name])
 				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search VNTRs from %s" % name)
@@ -376,7 +377,7 @@ class PrimerWorker(Worker):
 	def process(self):
 		self.emit_message("Designing primers...")
 		table = self.model.tableName()
-		selected = self.model.getSelectedRows()
+		selected = sorted(self.model.selected)
 
 		primerdesign.loadThermoParams(PRIMER3_CONFIG)
 		primerdesign.setGlobals(self.primer3_settings, None, None)
@@ -389,15 +390,15 @@ class PrimerWorker(Worker):
 		else:
 			sql = "SELECT * FROM %s WHERE id IN (%s) ORDER BY id" % (table, ",".join(map(str, selected)))
 
-		def iter_ssrs():
-			if total_ssrs == total_select:
-				sql = "SELECT * FROM %s" % table
-				for ssr in self.db.query(sql):
-					yield ssr
-			else:
-				for sid in sorted(selected):
-					sql = "SELECT * FROM %s WHERE id=%s" % (table, sid)
-					yield self.db.get_row(sql)
+		#def iter_ssrs():
+		#	if total_ssrs == total_select:
+		#		sql = "SELECT * FROM %s" % table
+		#		for ssr in self.db.query(sql):
+		#			yield ssr
+		#	else:
+		#		for sid in sorted(selected):
+		#			sql = "SELECT * FROM %s WHERE id=%s" % (table, sid)
+		#			yield self.db.get_row(sql)
 
 		current = 0
 		seqs = None
@@ -411,24 +412,26 @@ class PrimerWorker(Worker):
 		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		
 		self.db.begin()
-		for item in iter_ssrs():
+		for item in self.db.query(sql):
 			if seqs is None or item.sequence not in seqs:
 				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 				seqfile = self.db.get_one(sql)
-				seqs = fasta.GzipFasta(seqfile)
+				seqs = pyfastx.Fasta(seqfile)
 			
 			start = item.start - self.flank
+
 			if start < 1:
 				start = 1
 			end = item.end + self.flank
 			
 			target = dict(
 				SEQUENCE_ID = "%s-%s" % (table, item.id),
-				SEQUENCE_TEMPLATE = seqs.get_seq_by_loci(item.sequence, start, end),
+				#SEQUENCE_TEMPLATE = seqs.fetch(item.sequence, (start, end)),
+				SEQUENCE_TEMPLATE = seqs[item.sequence][start-1:end].seq,
 				SEQUENCE_TARGET = [item.start-start, item.length],
 				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item.start-start, item.length]
 			)
-
+			
 			primerdesign.setSeqArgs(target)
 			res = primerdesign.runDesign(False)
 			current += 1
@@ -496,7 +499,7 @@ class ExportTableWorker(Worker):
 					"on (gene.id=location.gid) WHERE location.reptype={1}"
 				).format(table_name, repeat_type)
 		else:
-			ids = self.model.getSelectedRows()
+			ids = sorted(self.model.selected)
 			total_counts = len(ids)
 
 			if self.db.is_empty('location'):
@@ -572,7 +575,7 @@ class ExportFastaWorker(Worker):
 		if self.selected == 'whole' or len(self.model.selected) == whole_ssrs:
 			sql = "SELECT * FROM {}".format(table_name)
 		else:
-			ids = self.model.getSelectedRows()
+			ids = sorted(self.model.selected)
 			total_ssrs = len(ids)
 			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
 
@@ -586,13 +589,13 @@ class ExportFastaWorker(Worker):
 				if seqs is None or item.sequence not in seqs:
 					sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 					seqfile = self.db.get_one(sql)
-					seqs = fasta.GzipFasta(seqfile)
+					seqs = pyfastx.Fasta(seqfile)
 				
 				start = item.start - self.flank
 				if start < 1:
 					start = 1
 				end = item.end + self.flank
-				ssr = seqs.get_seq_by_loci(item.sequence, start, end)
+				ssr = seqs.fetch(item.sequence, (start, end))
 				name = ">{}{} {}:{}-{}|motif:{}".format(table_name.upper(), item.id, item.sequence, item.start, item.end, item.motif)
 				fp.write("{}\n{}".format(name, format_fasta_sequence(ssr, 70)))
 				
@@ -631,7 +634,7 @@ class ExportPrimerWorker(Worker):
 				"WHERE category='{0}'"
 			).format(table_name)
 		else:
-			ids = self.model.getSelectedRows()
+			ids = sorted(self.model.selected)
 			total_counts = len(ids)
 
 			sql = (
@@ -783,7 +786,7 @@ class ExportFeatureWorker(Worker):
 		if self.selected == 'whole' or len(self.model.selected) == whole_counts:
 			sql = "SELECT * FROM {}".format(table_name)
 		else:
-			ids = self.model.getSelectedRows()
+			ids = sorted(self.model.selected)
 			total_counts = len(ids)
 			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
 
