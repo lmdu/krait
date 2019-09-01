@@ -17,8 +17,8 @@ install:
   - SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
   - SET PATH=%MINGW_64%\bin;%PATH%
   - SET PATH=%PATH%;"C:\Program Files (x86)\Inno Setup 5"
-  - gendef %PYTHON%\vcruntime140.dll
-  - dlltool -D %PYTHON%\vcruntime140.dll -d vcruntime140.def -l %PYTHON%\libs\libvcruntime140.a
+  #- gendef %PYTHON%\vcruntime140.dll
+ # - dlltool -D %PYTHON%\vcruntime140.dll -d vcruntime140.def -l %PYTHON%\libs\libvcruntime140.a
   - python -m pip install apsw-wheels
   - python -m pip install pywin32
   #- appveyor DownloadFile https://download.lfd.uci.edu/pythonlibs/n5jyqt7p/PySide-1.2.4-cp36-cp36m-win_amd64.whl
