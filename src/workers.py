@@ -3,7 +3,6 @@ import time
 import json
 import numpy
 import jinja2
-import pyfastx
 import requests
 import traceback
 import functools
@@ -46,14 +45,14 @@ class Worker(QObject):
 		@para fasta_path str, the file path of fasta
 		@return Fasta object
 		'''
-		seqs = pyfastx.Fasta(fasta_path)
+		seqs = fasta.GzipFasta(fasta_path)
 		
 		#get sequence detail information
 		sql = "SELECT * FROM seq INNER JOIN fasta ON (seq.fid=fasta.id) WHERE fasta.path='{}' LIMIT 1".format(fasta_path)
 		if not self.db.get_one(sql):
 			rows = []
 			for name in seqs.keys():
-				row = (None, name, fasta_id, len(seqs[name]), seqs[name].gc_content, seqs[name].composition['N'])
+				row = (None, name, fasta_id, seqs.get_len(name), seqs.get_gc(name), seqs.get_ns(name))
 				rows.append(row)
 			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
 		
@@ -120,7 +119,7 @@ class SSRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.size
+			total_bases = seqs.get_total_length()
 
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
@@ -128,7 +127,7 @@ class SSRWorker(Worker):
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += len(seqs[name])
+				current_bases += seqs.get_len(name)
 				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search perfect SSRs from %s" % name)
@@ -185,14 +184,14 @@ class ISSRWorker(Worker):
 			self.emit_message("Building fasta index for %s" % fasta_file)
 
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.size
+			total_bases = seqs.get_total_length()
 			#insert ssr to database
 			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += len(seqs[name])
+				current_bases += seqs.get_len(name)
 				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search imperfect SSRs from %s" % name)
@@ -290,14 +289,14 @@ class VNTRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.size
+			total_bases = seqs.get_total_length()
 			#insert ssr to database
 			sql = "INSERT INTO vntr VALUES (?,?,?,?,?,?,?,?)"
 
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += len(seqs[name])
+				current_bases += seqs.get_len(name)
 				seq_progress = current_bases/total_bases
 
 				self.emit_message("Search VNTRs from %s" % name)
@@ -416,7 +415,7 @@ class PrimerWorker(Worker):
 			if seqs is None or item.sequence not in seqs:
 				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 				seqfile = self.db.get_one(sql)
-				seqs = pyfastx.Fasta(seqfile)
+				seqs = fasta.GzipFasta(seqfile)
 			
 			start = item.start - self.flank
 
@@ -426,8 +425,7 @@ class PrimerWorker(Worker):
 			
 			target = dict(
 				SEQUENCE_ID = "%s-%s" % (table, item.id),
-				#SEQUENCE_TEMPLATE = seqs.fetch(item.sequence, (start, end)),
-				SEQUENCE_TEMPLATE = seqs[item.sequence][start-1:end].seq,
+				SEQUENCE_TEMPLATE = seqs.get_seq_by_loci(item.sequence, start, end),
 				SEQUENCE_TARGET = [item.start-start, item.length],
 				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item.start-start, item.length]
 			)
@@ -589,13 +587,13 @@ class ExportFastaWorker(Worker):
 				if seqs is None or item.sequence not in seqs:
 					sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 					seqfile = self.db.get_one(sql)
-					seqs = pyfastx.Fasta(seqfile)
+					seqs = fasta.GzipFasta(seqfile)
 				
 				start = item.start - self.flank
 				if start < 1:
 					start = 1
 				end = item.end + self.flank
-				ssr = seqs.fetch(item.sequence, (start, end))
+				ssr = seqs.get_seq_by_loci(item.sequence, start, end)
 				name = ">{}{} {}:{}-{}|motif:{}".format(table_name.upper(), item.id, item.sequence, item.start, item.end, item.motif)
 				fp.write("{}\n{}".format(name, format_fasta_sequence(ssr, 70)))
 				

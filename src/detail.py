@@ -20,29 +20,14 @@ class Detail(object):
 		@para end int, the 1-based end location of TR
 		@return tuple, (left flank, self, right flank)
 		'''
-		sequence = self.fasta.fetch(chrom, (start, end))
-		left_start = start - self.flank
+		sequence = self.fasta[chrom][start-1:end]
+		left_start = start - self.flank - 1
 		
-		if left_start < 1:
-			left_start = 1
+		if left_start < 0:
+			left_start = 0
 
-		left_end = start - 1
-
-		if left_start <= left_end:
-			lflank = self.fasta.fetch(chrom, (left_start, left_end))
-		else:
-			lflank = ''
-
-		right_start = end + 1
-		right_end = end + self.flank
-
-		if right_end > len(self.fasta[chrom]):
-			right_end = len(self.fasta[chrom])
-
-		if right_start <= len(self.fasta[chrom]):
-			rflank = self.fasta.fetch(chrom, (right_start, right_end))
-		else:
-			rflank = ''
+		lflank = self.fasta[chrom][left_start:start-1]
+		rflank = self.fasta[chrom][end:end+self.flank]
 
 		return sequence, lflank, rflank
 
@@ -80,7 +65,7 @@ class SequenceDetail(Detail):
 			"WHERE f.id=s.fid AND t.sequence=s.name AND t.id={1}"
 		)
 		fasta_file = self.db.get_one(sql.format(self.table, self.id))
-		self.fasta = pyfastx.Fasta(fasta_file)
+		self.fasta = fasta.GzipFasta(fasta_file)
 
 		sql = "SELECT * FROM %s WHERE id=%s" % (self.table, self.id)
 		ssr = self.db.get_row(sql)
@@ -117,7 +102,7 @@ class ISSRSeqDetail(Detail):
 			"WHERE f.id=s.fid AND t.sequence=s.name AND t.id={1}"
 		)
 		fasta_file = self.db.get_one(sql.format(self.table, self.id))
-		self.fasta = pyfastx.Fasta(fasta_file)
+		self.fasta = fasta.GzipFasta(fasta_file)
 
 		sql = "SELECT * FROM %s WHERE id=%s" % (self.table, self.id)
 		ssr = self.db.get_row(sql)
@@ -152,7 +137,7 @@ class PrimerDetail(Detail):
 		)
 
 		fasta_file = self.db.get_one(sql.format(table, tid))
-		self.fasta = pyfastx.Fasta(fasta_file)
+		self.fasta = fasta.GzipFasta(fasta_file)
 
 		sql = "SELECT * FROM %s WHERE id=%s" % (table, tid)
 		ssr = self.db.get_row(sql)
