@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import pyfaidx
 
 def initial_matrix(size):
 	matrix = []
