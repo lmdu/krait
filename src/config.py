@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 import os
 import appdirs
-from jinja2 import Environment, FileSystemLoader
 
-VERSION = "0.11.6"
+VERSION = "1.0.0"
 
-BUILD = '20190901'
+BUILD = '20190902'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 

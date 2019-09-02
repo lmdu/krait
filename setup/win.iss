@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Krait"
-#define MyAppVersion "0.11.6"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "Lianming Du"
 #define MyAppURL "https://github.com/lmdu/krait"
 #define MyAppExeName "Krait.exe"

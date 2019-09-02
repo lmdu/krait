@@ -501,13 +501,13 @@ class ExportTableWorker(Worker):
 			total_counts = len(ids)
 
 			if self.db.is_empty('location'):
-				sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+				sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(map(str,ids)))
 			else:
 				sql = (
 					"select {0}.*,location.feature,gene.geneid,gene.genename,gene.biotype "
 					"from {0} left join location on (location.target=ssr.id) inner join gene "
 					"on (gene.id=location.gid) WHERE location.reptype={1} AND ssr.id IN ({2})"
-				).format(table_name, repeat_type, ",".join(ids))
+				).format(table_name, repeat_type, ",".join(map(str,ids)))
 
 		prev_progress = 0
 		progress = 0
@@ -575,7 +575,7 @@ class ExportFastaWorker(Worker):
 		else:
 			ids = sorted(self.model.selected)
 			total_ssrs = len(ids)
-			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(map(str,ids)))
 
 		current = 0
 		progress = 0
@@ -640,9 +640,9 @@ class ExportPrimerWorker(Worker):
 				"primer.gc1,primer.stability1,primer.reverse,primer.tm2,primer.gc2,"
 				"primer.stability2, {0}.* FROM primer left join {0} ON ({0}.id=primer.target) "
 				"WHERE category='{0}' AND primer.id IN ({1})"
-			).format(table_name, ",".join(ids))
+			).format(table_name, ",".join(map(str,ids)))
 
-			#sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+			#sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(map(str,ids)))
 
 		prev_progress = 0
 		progress = 0
@@ -786,7 +786,7 @@ class ExportFeatureWorker(Worker):
 		else:
 			ids = sorted(self.model.selected)
 			total_counts = len(ids)
-			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(ids))
+			sql = "SELECT * FROM {} WHERE id IN ({})".format(table_name, ",".join(map(str,ids)))
 
 		prev_progress = 0
 		progress = 0

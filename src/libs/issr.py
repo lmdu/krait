@@ -17,7 +17,7 @@ def initial_matrix(size):
 
 def print_matrix(matrix):
 	for i in range(len(matrix)):
-		print "\t".join(map(str,matrix[i]))
+		print("\t".join(map(str,matrix[i])))
 		
 def build_left_matrix(seq, motif, matrix, start, size, max_error):
 	ref1 = None
@@ -260,7 +260,7 @@ def search_issr(seq, seed_repeats, seed_minlen, max_errors, mis_penalty, gap_pen
 				
 				if score >= required_score:
 					res = (motif, j, start, end, length, matches, substitution, insertion, deletion, score)
-					print "%s\t%s" % (",".join(map(str, res)), seq[start-1:end])
+					print("%s\t%s" % (",".join(map(str, res)), seq[start-1:end]))
 					i = end
 					j = 0
 				else:
@@ -415,8 +415,8 @@ if __name__ == '__main__':
 	#seq = "AAAAAAAAATCATTT"
 	#seq = "TCATCATCAAAATCGCCAT"
 	o, c = generate_alignment(seq, 3, 8, 3, 50)
-	print "".join(o)
-	print "".join(c)
+	print("".join(o))
+	print("".join(c))
 	#seq = "GTTGTTGTTGATTG"
 	#search_issr(seq, 3, 8, 3, 2, 5, 3, 20)
 

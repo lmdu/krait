@@ -12,8 +12,8 @@ environment:
 install:
   #- appveyor DownloadFile https://github.com/rogerbinns/apsw/releases/download/3.28.0-r1/apsw-3.28.0-r1.win-amd64-py3.6.exe
   #- start "" /wait "apsw-3.28.0-r1.win-amd64-py3.6.exe" /S
-  - appveyor DownloadFile https://github.com/lmdu/mingw64/raw/master/i686-8.1.0-release-posix-dwarf-rt_v6-rev0.7z -FileName mw32.7z
-  - 7z x -oC:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0 mw32.7z > NUL
+  #- appveyor DownloadFile https://github.com/lmdu/mingw64/raw/master/i686-8.1.0-release-posix-dwarf-rt_v6-rev0.7z -FileName mw32.7z
+  #- 7z x -oC:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0 mw32.7z > NUL
   - SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
   - SET PATH=%MINGW_64%\bin;%PATH%
   - SET PATH=%PATH%;"C:\Program Files (x86)\Inno Setup 5"
@@ -26,8 +26,8 @@ install:
   - python -m pip install -r requirements.txt
   - python ci\fix_compiler_error.py %PYTHON%
   #- copy /y %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2
-  - appveyor DownloadFile https://github.com/upx/upx/releases/download/v3.95/upx-3.95-win64.zip
-  - 7z e upx-3.95-win64.zip *.exe -r
+  #- appveyor DownloadFile https://github.com/upx/upx/releases/download/v3.95/upx-3.95-win64.zip
+  #- 7z e upx-3.95-win64.zip *.exe -r
 
 build_script:
   - cd src\libs\src
