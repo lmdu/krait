@@ -45,7 +45,7 @@ class Detail(object):
 	def formatPrimer(self, flank, start, length):
 		res = []
 		for i, b in enumerate(flank):
-			if start <= i+1 <= start+length-1:
+			if start <= i < start+length:
 				res.append(self.formatBase(b, True))
 			else:
 				res.append(self.formatBase(b))
