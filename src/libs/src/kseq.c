@@ -56,39 +56,6 @@ static PyObject *clean_seq(PyObject *self, PyObject *args){
 	return Py_BuildValue("s", seq);
 }
 
-static PyObject *sub_seq(PyObject *self, PyObject *args){
-	char *seq;
-	int start;
-	int end;
-
-	if (!PyArg_ParseTuple(args, "sii", &seq, &start, &end)){
-		return NULL;
-	}
-	int i;
-	int j = 0;
-	int real_pos = 0;
-	int flag;
-	for(i=0; seq[i]; i++){
-		flag = isspace(seq[i]);
-
-		if(!flag){
-			real_pos++;
-		}
-
-		if(real_pos > end){
-			break;
-		}
-
-		if(real_pos >= start){
-			if(!flag){
-				seq[j++] = upper(seq[i]);
-			}
-		}
-	}
-	seq[j] = '\0';
-	return Py_BuildValue("s", seq);
-}
-
 static PyObject *iter_seq(PyObject *self, PyObject *args){
 	int l;
 	while((l=kseq_read(SEQ))>=0){
@@ -154,123 +121,41 @@ static PyObject *build_index(PyObject *self, PyObject *args){
 	return result;
 }
 
-//make sequence iterator
-typedef struct {
-	PyObject_HEAD
-	gzFile fp;
-	kseq_t *sequence;
-} FastaState;
-
-static PyObject *fasta_new(PyTypeObject *type, PyObject *args, PyObject *kwargs){
+static PyObject *extract_seq(PyObject *self, PyObject *args){
 	char *fasta_path;
-	if (!PyArg_ParseTuple(args, "s", &fasta_path)){
+	int start;
+	if (!PyArg_ParseTuple(args, "si", &fasta_path, &start)){
 		return NULL;
 	}
 	gzFile fp;
-	kseq_t *sequence;
-
-	fp = gzopen(fasta_path, "rb");
-	sequence = kseq_init(fp);
-	
-	FastaState *fstate = (FastaState *)type->tp_alloc(type, 0);
-	if (!fstate){
-		return NULL;
-	}
-	fstate->fp = fp;
-	fstate->sequence = sequence;
-
-	return (PyObject *)fstate;
-}
-
-static void fasta_dealloc(FastaState *fstate){
-	kseq_destroy(fstate->sequence);
-	gzclose(fstate->fp);
-	Py_TYPE(fstate)->tp_free(fstate);
-}
-
-static PyObject *fasta_next(FastaState *fstate){
 	int l;
-	//if((l=kseq_read(fstate->sequence))>=0){
-	//	upper_string(fstate->sequence->seq.s);
-	//	return Py_BuildValue("(ss)", fstate->sequence->name.s, fstate->sequence->seq.s);
-	//}
-	if((l=kseq_read(fstate->sequence))>=0){
-		upper_string(fstate->sequence->seq.s);
-		return Py_BuildValue("(ss)", fstate->sequence->name.s, fstate->sequence->seq.s);
+	kseq_t *seq;
+	PyObject *retval;
+	fp = gzopen(fasta_path, "rb");
+	seq = kseq_init(fp);
+	gzseek(fp, start, SEEK_SET);
+	while((l=kseq_read(seq))>=0){
+		retval = Py_BuildValue("s", seq->seq.s);
+		break;
 	}
-
-	return NULL;
+	gzclose(fp);
+	return retval;
 }
 
-PyTypeObject PyFasta_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-    "fasta",                        /* tp_name */
-    sizeof(FastaState),             /* tp_basicsize */
-    0,                              /* tp_itemsize */
-    (destructor)fasta_dealloc,      /* tp_dealloc */
-    0,                              /* tp_print */
-    0,                              /* tp_getattr */
-    0,                              /* tp_setattr */
-    0,                              /* tp_reserved */
-    0,                              /* tp_repr */
-    0,                              /* tp_as_number */
-    0,                              /* tp_as_sequence */
-    0,                              /* tp_as_mapping */
-    0,                              /* tp_hash */
-    0,                              /* tp_call */
-    0,                              /* tp_str */
-    0,                              /* tp_getattro */
-    0,                              /* tp_setattro */
-    0,                              /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,             /* tp_flags */
-    0,                              /* tp_doc */
-    0,                              /* tp_traverse */
-    0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
-    0,                              /* tp_weaklistoffset */
-    PyObject_SelfIter,              /* tp_iter */
-    (iternextfunc)fasta_next,       /* tp_iternext */
-    0,                              /* tp_methods */
-    0,                              /* tp_members */
-    0,                              /* tp_getset */
-    0,                              /* tp_base */
-    0,                              /* tp_dict */
-    0,                              /* tp_descr_get */
-    0,                              /* tp_descr_set */
-    0,                              /* tp_dictoffset */
-    0,                              /* tp_init */
-    PyType_GenericAlloc,            /* tp_alloc */
-    fasta_new,                      /* tp_new */
-};
-
-static PyMethodDef kseq_methods[] = {
+static PyMethodDef add_methods[] = {
 	{"build_index", build_index, METH_VARARGS},
 	{"open_fasta", open_fasta, METH_VARARGS},
 	{"close_fasta", close_fasta, METH_VARARGS},
 	{"iter_seq", iter_seq, METH_VARARGS},
+	{"extract_seq", extract_seq, METH_VARARGS},
 	{"clean_seq", clean_seq, METH_VARARGS},
-	{"sub_seq", sub_seq, METH_VARARGS},
 	{NULL, NULL, 0, NULL}
 };
 
-static struct PyModuleDef kseq_definition = {
-	PyModuleDef_HEAD_INIT,
-	"kseq",
-	"",
-	-1,
-	kseq_methods,
-};
-
-PyMODINIT_FUNC PyInit_kseq(void){
-    PyObject *module = PyModule_Create(&kseq_definition);
-    if(!module){
-    	return NULL;
-    }
-
-    if(PyType_Ready(&PyFasta_Type) < 0){
-    	return NULL;
-    }
-    Py_INCREF((PyObject *)&PyFasta_Type);
-    PyModule_AddObject(module, "fasta", (PyObject *)&PyFasta_Type);
-    return module;
+void initkseq(){
+	PyObject *m;
+	m = Py_InitModule("kseq", add_methods);
+	if(m == NULL){
+		return;
+	}
 }
