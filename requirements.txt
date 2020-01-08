@@ -4,4 +4,5 @@ numpy
 requests
 jinja2
 appdirs
+pyfastx
 pyinstaller

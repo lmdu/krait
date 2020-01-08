@@ -1,3 +1,0 @@
-LIBRARY ncls.pyd
-EXPORTS
-initncls

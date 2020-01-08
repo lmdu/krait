@@ -46,6 +46,7 @@ static PyObject *search_ssr(PyObject *self, PyObject *args)
 		{
 			start = i;
 			length = j;
+
 			while(start+length<len && seq[i]==seq[i+j] && seq[i]!=78){
 				i++;
 				length++;
@@ -148,7 +149,7 @@ static PyObject *search_vntr(PyObject *self, PyObject *args)
 //	}
 //}
 
-static int min(int a, int b, int c){
+static int min_three(int a, int b, int c){
 	int d;
 	d = a<b?a:b;
 	return d<c?d:c;
@@ -186,7 +187,7 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 	int y = 0;
 	int last_x = 0;
 	int last_y = 0;
-	int mlen = strlen(motif); //motif length
+	size_t mlen = strlen(motif); //motif length
 	int error = 0; //consective errors
 	int smaller;
 	
@@ -202,7 +203,7 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 				if(ref1 == motif[(mlen-i%mlen)%mlen]){
 					matrix[i][y] = matrix[i-1][y-1];
 				}else{
-					matrix[i][y] = min(matrix[i-1][y-1], matrix[i-1][y], matrix[i][y-1]) + 1;
+					matrix[i][y] = min_three(matrix[i-1][y-1], matrix[i-1][y], matrix[i][y-1]) + 1;
 				}
 			}
 		}
@@ -212,7 +213,7 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 				if(ref2 == seq[start-j]){
 					matrix[x][j] = matrix[x-1][j-1];
 				}else{
-					matrix[x][j] = min(matrix[x-1][j-1], matrix[x-1][j], matrix[x][j-1]) + 1;
+					matrix[x][j] = min_three(matrix[x-1][j-1], matrix[x-1][j], matrix[x][j-1]) + 1;
 				}
 			}
 		}
@@ -235,10 +236,10 @@ static int* build_left_matrix(char *seq, char *motif, int **matrix, int start, i
 				break;
 			}
 			
-			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
+			matrix[x][y] = min_three(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
 		}
 		
-		smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
+		smaller = min_three(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
 		if(smaller != matrix[x][y]){
 			if(matrix[x-1][y] != matrix[x][y-1]){
 				if(smaller == matrix[x][y-1]){
@@ -269,7 +270,7 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 	int y = 0;
 	int last_x = 0;
 	int last_y = 0;
-	int mlen = strlen(motif); //motif length
+	size_t mlen = strlen(motif); //motif length
 	int error = 0; //consective errors
 	int smaller;
 	
@@ -285,7 +286,7 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 				if(ref1 == motif[(i-1)%mlen]){
 					matrix[i][y] = matrix[i-1][y-1];
 				}else{
-					matrix[i][y] = min(matrix[i-1][y-1], matrix[i-1][y], matrix[i][y-1]) + 1;
+					matrix[i][y] = min_three(matrix[i-1][y-1], matrix[i-1][y], matrix[i][y-1]) + 1;
 				}
 			}
 		}
@@ -295,7 +296,7 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 				if(ref2 == seq[start+j]){
 					matrix[x][j] = matrix[x-1][j-1];
 				}else{
-					matrix[x][j] = min(matrix[x-1][j-1], matrix[x-1][j], matrix[x][j-1]) + 1;
+					matrix[x][j] = min_three(matrix[x-1][j-1], matrix[x-1][j], matrix[x][j-1]) + 1;
 				}
 			}
 		}
@@ -318,10 +319,10 @@ static int* build_right_matrix(char *seq, char *motif, int **matrix, int start, 
 				break;
 			}
 			
-			matrix[x][y] = min(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
+			matrix[x][y] = min_three(matrix[x-1][y-1], matrix[x-1][y], matrix[x][y-1]) + 1;
 		}
 
-		smaller = min(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
+		smaller = min_three(matrix[x][y], matrix[x-1][y], matrix[x][y-1]);
 		if(smaller != matrix[x][y]){
 			if(matrix[x-1][y] != matrix[x][y-1]){
 				if(smaller == matrix[x][y-1]){
@@ -350,7 +351,7 @@ static int backtrace_matrix(int **matrix, int *diagonal, int *mat, int *sub, int
 	int r = j;
 
 	while(i>0 && j>0){
-		cost = min(matrix[i-1][j-1], matrix[i-1][j], matrix[i][j-1]);
+		cost = min_three(matrix[i-1][j-1], matrix[i-1][j], matrix[i][j-1]);
 		if(cost == matrix[i-1][j-1]){
 			if(cost == matrix[i][j]){
 				*mat += 1;
@@ -396,8 +397,8 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 	int start;
 	int end;
 	int extend_start;
-	int extend_len;
-	int extend_max_len;
+	size_t extend_len;
+	size_t extend_max_len;
 	int *extend_end;
 	int length;
 	int matches;
@@ -499,21 +500,24 @@ static PyObject *search_issr(PyObject *self, PyObject *args)
 
 	release_matrix(matrix, size);
 	return result;
-};
+}
 
-static PyMethodDef add_methods[] = {
+static PyMethodDef tandem_methods[] = {
 	{"search_ssr", search_ssr, METH_VARARGS},
 	{"search_vntr", search_vntr, METH_VARARGS},
 	{"search_issr", search_issr, METH_VARARGS},
 	{NULL, NULL, 0, NULL}
 };
 
+static struct PyModuleDef tandem_definition = {
+	PyModuleDef_HEAD_INIT,
+	"tandem",
+	"Search perfect or imperfect tandem repeats from sequence",
+	-1,
+	tandem_methods
+};
 
-void inittandem()
-{
-	PyObject *m;
-	m = Py_InitModule("tandem", add_methods);
-	if(m == NULL){
-		return;
-	}
+PyMODINIT_FUNC PyInit_tandem(void){
+	Py_Initialize();
+	return PyModule_Create(&tandem_definition);
 }

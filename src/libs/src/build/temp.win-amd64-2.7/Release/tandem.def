@@ -1,3 +1,0 @@
-LIBRARY tandem.pyd
-EXPORTS
-inittandem
