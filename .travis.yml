@@ -3,6 +3,8 @@ language: python
 python:
   - "3.4"
 
+cache: pip
+
 #disable homebrew update
 
 matrix:
@@ -15,6 +17,7 @@ matrix:
 
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    brew install openssl readline
     brew install cmake
     brew install pyenv-virtualenv
     brew tap cartr/qt4
