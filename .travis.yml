@@ -13,23 +13,22 @@ matrix:
       sudo: required
     - os: osx
       language: generic
-      env: PYTHON=3.4.8 PYTHON_CONFIGURE_OPTS="--enable-shared" HOMEBREW_NO_AUTO_UPDATE=1
+      env: PYTHON=3.4.8 PYTHON_CONFIGURE_OPTS="--enable-shared"
 
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    brew install openssl readline
+    brew update
+
+    brew outdated pyenv || brew upgrade pyenv
+
+    pyenv install "$PYTHON"
+    eval "$(pyenv init -)"
+    pyenv global "$PYTHON"
     brew install cmake
-    brew install pyenv-virtualenv
     brew tap cartr/qt4
     brew tap-pin cartr/qt4
     brew install qt@4
     brew install qt-webkit@2.3
-    pyenv install -l
-    pyenv install $PYTHON
-    export PYENV_VERSION=$PYTHON
-    export PATH="/Users/travis/.pyenv/shims:${PATH}"
-    pyenv-virtualenv venv
-    source venv/bin/activate
     python --version
   fi
 
