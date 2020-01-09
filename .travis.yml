@@ -5,8 +5,6 @@ python:
 
 cache: pip
 
-#disable homebrew update
-
 matrix:
   include:
     - os: linux
