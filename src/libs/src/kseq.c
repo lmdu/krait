@@ -188,6 +188,12 @@ static void fasta_dealloc(FastaState *fstate){
 	Py_TYPE(fstate)->tp_free(fstate);
 }
 
+static PyObject *fasta_iter(FastaState *fstate) {
+	kseq_rewind(fstate->sequence);
+	Py_INCREF(fstate);
+	return (PyObject *)fstate;
+}
+
 static PyObject *fasta_next(FastaState *fstate){
 	int l;
 	//if((l=kseq_read(fstate->sequence))>=0){
@@ -203,7 +209,7 @@ static PyObject *fasta_next(FastaState *fstate){
 }
 
 PyTypeObject PyFasta_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL) 0,
     "fasta",                        /* tp_name */
     sizeof(FastaState),             /* tp_basicsize */
     0,                              /* tp_itemsize */
@@ -228,7 +234,7 @@ PyTypeObject PyFasta_Type = {
     0,                              /* tp_clear */
     0,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
-    PyObject_SelfIter,              /* tp_iter */
+    (getiterfunc)fasta_iter,              /* tp_iter */
     (iternextfunc)fasta_next,       /* tp_iternext */
     0,                              /* tp_methods */
     0,                              /* tp_members */
@@ -253,24 +259,17 @@ static PyMethodDef kseq_methods[] = {
 	{NULL, NULL, 0, NULL}
 };
 
-static struct PyModuleDef kseq_definition = {
-	PyModuleDef_HEAD_INIT,
-	"kseq",
-	"",
-	-1,
-	kseq_methods,
-};
+PyMODINIT_FUNC initkseq(){
+    PyObject *module;
 
-PyMODINIT_FUNC PyInit_kseq(void){
-    PyObject *module = PyModule_Create(&kseq_definition);
+    module = Py_InitModule("kseq", kseq_methods);
     if(!module){
-    	return NULL;
+    	return;
     }
 
     if(PyType_Ready(&PyFasta_Type) < 0){
-    	return NULL;
+    	return;
     }
     Py_INCREF((PyObject *)&PyFasta_Type);
     PyModule_AddObject(module, "fasta", (PyObject *)&PyFasta_Type);
-    return module;
 }

@@ -1,7 +1,7 @@
 language: python
 
 python:
-  - "3.4"
+  - "2.7"
 
 cache: pip
 
@@ -13,18 +13,10 @@ matrix:
       sudo: required
     - os: osx
       language: generic
-      env: PYTHON=3.4.8 PYTHON_CONFIGURE_OPTS="--enable-shared"
+      env: HOMEBREW_NO_AUTO_UPDATE=1
 
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    brew update
-    brew outdated pyenv || brew upgrade pyenv
-    brew install openssl readline
-    CFLAGS="-I$(brew --prefix openssl)/include"
-    LDFLAGS="-L$(brew --prefix openssl)/lib"
-    pyenv install -v "$PYTHON"
-    eval "$(pyenv init -)"
-    pyenv global "$PYTHON"
     brew install cmake
     brew tap cartr/qt4
     brew tap-pin cartr/qt4

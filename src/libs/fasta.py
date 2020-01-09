@@ -19,7 +19,7 @@ class GzipFasta:
 		kseq.open_fasta(self.fasta_file)
 		return self
 
-	def __next__(self):
+	def next(self):
 		seq = kseq.iter_seq()
 		if seq is None:
 			#end loop and close fasta
