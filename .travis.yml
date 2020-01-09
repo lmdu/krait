@@ -23,6 +23,9 @@ before_install: |
     brew install qt@4
     brew install qt-webkit@2.3
     python --version
+  else
+    sudo yum install epel-release
+    sudo yum install cmake qt-devel qt-webkit
   fi
 
 install:
