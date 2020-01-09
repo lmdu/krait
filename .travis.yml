@@ -24,8 +24,9 @@ before_install: |
     brew install qt-webkit@2.3
     python --version
   else
-    sudo yum install epel-release
-    sudo yum install cmake qt-devel qt-webkit
+    sudo add-apt-repository ppa:pyside
+    sudo apt-get update
+    sudo apt-get install python-pyside
   fi
 
 install:
