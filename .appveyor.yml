@@ -23,6 +23,7 @@ install:
   - python -m pip install pywin32
   #- appveyor DownloadFile https://download.lfd.uci.edu/pythonlibs/r3aykn4w/PySide-1.2.4-cp36-cp36m-win_amd64.whl
   #- python -m pip install ci\PySide-1.2.4-cp36-cp36m-win_amd64.whl
+  - python -m pip install PySide
   - python -m pip install -r requirements.txt
   - python ci\fix_compiler_error.py %PYTHON%
   #- copy /y %PYTHON%\lib\site-packages\shiboken2\shiboken2.abi3.dll %PYTHON%\lib\site-packages\PySide2
