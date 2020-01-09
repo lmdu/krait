@@ -18,10 +18,11 @@ matrix:
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     brew update
-
     brew outdated pyenv || brew upgrade pyenv
-
-    pyenv install "$PYTHON"
+    brew install openssl readline
+    CFLAGS="-I$(brew --prefix openssl)/include"
+    LDFLAGS="-L$(brew --prefix openssl)/lib"
+    pyenv install -v "$PYTHON"
     eval "$(pyenv init -)"
     pyenv global "$PYTHON"
     brew install cmake
