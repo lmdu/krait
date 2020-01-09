@@ -1,3 +1,4 @@
+PySide
 Cython
 numpy
 requests
