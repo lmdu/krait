@@ -24,7 +24,7 @@ before_install: |
     brew install qt-webkit@2.3
     python --version
   else
-    sudo add-apt-repository ppa:pyside
+    sudo add-apt-repository -y ppa:pyside
     sudo apt-get update
     sudo apt-get install python-pyside
   fi
