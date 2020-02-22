@@ -11,19 +11,19 @@ matrix:
       sudo: required
     - os: osx
       language: generic
-      env: PYTHON=3.7.6 PYTHON_CONFIGURE_OPTS="--enable-shared" HOMEBREW_NO_AUTO_UPDATE=1
+      #env: PYTHON=3.7.5 PYTHON_CONFIGURE_OPTS="--enable-shared" HOMEBREW_NO_AUTO_UPDATE=1
 
-before_install: |
-  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    brew install pyenv-virtualenv
-    pyenv install -l
-    pyenv install $PYTHON
-    export PYENV_VERSION=$PYTHON
-    export PATH="/Users/travis/.pyenv/shims:${PATH}"
-    pyenv-virtualenv venv
-    source venv/bin/activate
-    python --version
-  fi
+#before_install: |
+#  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+#    brew install pyenv-virtualenv
+#    pyenv install -l
+#    pyenv install $PYTHON
+#    export PYENV_VERSION=$PYTHON
+#    export PATH="/Users/travis/.pyenv/shims:${PATH}"
+#    pyenv-virtualenv venv
+#    source venv/bin/activate
+#    python --version
+#  fi
 
 install:
   - pip3 install apsw
