@@ -1,7 +1,7 @@
 language: python
 
 python:
-  - "2.7"
+  - "3.7"
 
 cache: pip
 
@@ -13,30 +13,13 @@ matrix:
       language: generic
       env: HOMEBREW_NO_AUTO_UPDATE=1
 
-before_install: |
-  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    brew install cmake
-    brew tap cartr/qt4
-    brew tap-pin cartr/qt4
-    brew install qt@4
-    brew install qt-webkit@2.3
-    python --version
-  else
-    sudo apt-get install build-essential git cmake libqt4-dev libphonon-dev python2.7-dev libxml2-dev libxslt1-dev libqtwebkit-dev
-  fi
-
 install:
   - pip install apsw
-  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
-      pip install PySide==1.2.2;
-      curl -O https://raw.githubusercontent.com/PySide/pyside-setup/1.2.2/pyside_postinstall.py;
-      pyside_postinstall.py -install;
-    fi
   - pip install -r requirements.txt
 
 script:
   - cd src/libs/src
-  - python setup.py build_ext --inplace
+  - python3 setup.py build_ext --inplace
   - mv *.so ..
   - cd ../../..
   - version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`

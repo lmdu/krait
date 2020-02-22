@@ -1,7 +1,8 @@
-PySide
+PySide2
 Cython
 numpy
 requests
 jinja2
+pyfastx
 appdirs
 pyinstaller

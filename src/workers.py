@@ -3,13 +3,14 @@ import time
 import json
 import numpy
 import jinja2
+import pyfastx
 import requests
 import traceback
 import functools
 #import multiprocessing
 
-#from PySide2.QtCore import *
-from PySide.QtCore import *
+from PySide2.QtCore import *
+#from PySide.QtCore import *
 
 #import plot
 import motif
@@ -45,18 +46,22 @@ class Worker(QObject):
 		@para fasta_path str, the file path of fasta
 		@return Fasta object
 		'''
-		seqs = fasta.GzipFasta(fasta_path)
+		#seqs = fasta.GzipFasta(fasta_path)
+		seqs = pyfastx.Fasta(fasta_path, full_index=True)
 		
 		#get sequence detail information
 		sql = "SELECT * FROM seq INNER JOIN fasta ON (seq.fid=fasta.id) WHERE fasta.path='{}' LIMIT 1".format(fasta_path)
 		if not self.db.get_one(sql):
 			rows = []
-			for name in seqs.keys():
-				row = (None, name, fasta_id, seqs.get_len(name), seqs.get_gc(name), seqs.get_ns(name))
+			for seq in seqs:
+				compos = seq.composition
+				ns = sum(compos[b] for b in compos if b not in ['A', 'T', 'G', 'C'])
+				row = (None, seq.name, fasta_id, len(seq), seq.gc_content, ns)
 				rows.append(row)
 			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
-		
-		return seqs
+
+		self.total_bases = seqs.size
+		return pyfastx.Fasta(fasta_path, build_index=False)
 
 	def emit_progress(self, percent):
 		self.update_progress.emit(percent)
@@ -119,7 +124,7 @@ class SSRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.get_total_length()
+			#total_bases = seqs.get_total_length()
 
 			#insert ssr to database
 			sql = "INSERT INTO ssr VALUES (?,?,?,?,?,?,?,?,?)"
@@ -127,8 +132,8 @@ class SSRWorker(Worker):
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += seqs.get_len(name)
-				seq_progress = current_bases/total_bases
+				current_bases += len(name)
+				seq_progress = current_bases/self.total_bases
 
 				self.emit_message("Search perfect SSRs from %s" % name)
 				ssrs = tandem.search_ssr(seq, self.min_repeats)
@@ -184,15 +189,15 @@ class ISSRWorker(Worker):
 			self.emit_message("Building fasta index for %s" % fasta_file)
 
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.get_total_length()
+			#total_bases = seqs.get_total_length()
 			#insert ssr to database
 			sql = "INSERT INTO issr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += seqs.get_len(name)
-				seq_progress = current_bases/total_bases
+				current_bases += len(name)
+				seq_progress = current_bases/self.total_bases
 
 				self.emit_message("Search imperfect SSRs from %s" % name)
 
@@ -289,15 +294,15 @@ class VNTRWorker(Worker):
 			#use fasta and create fasta file index
 			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
-			total_bases = seqs.get_total_length()
+			#total_bases = seqs.get_total_length()
 			#insert ssr to database
 			sql = "INSERT INTO vntr VALUES (?,?,?,?,?,?,?,?)"
 
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += seqs.get_len(name)
-				seq_progress = current_bases/total_bases
+				current_bases += len(name)
+				seq_progress = current_bases/self.total_bases
 
 				self.emit_message("Search VNTRs from %s" % name)
 				vntrs = tandem.search_vntr(seq, self.min_motif, self.max_motif, self.repeats)
@@ -415,7 +420,8 @@ class PrimerWorker(Worker):
 			if seqs is None or item.sequence not in seqs:
 				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 				seqfile = self.db.get_one(sql)
-				seqs = fasta.GzipFasta(seqfile)
+				#seqs = fasta.GzipFasta(seqfile)
+				seqs = pyfastx.Fasta(seqfile)
 			
 			start = item.start - self.flank
 
@@ -425,7 +431,7 @@ class PrimerWorker(Worker):
 			
 			target = dict(
 				SEQUENCE_ID = "%s-%s" % (table, item.id),
-				SEQUENCE_TEMPLATE = seqs.get_seq_by_loci(item.sequence, start, end),
+				SEQUENCE_TEMPLATE = seqs.fetch(item.sequence, (start, end)),
 				SEQUENCE_TARGET = [item.start-start, item.length],
 				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item.start-start, item.length]
 			)

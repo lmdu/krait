@@ -7,17 +7,17 @@ import sys
 #sys.dont_write_bytecode = True
 import krait_rc
 
+from PySide2.QtCore import Qt, QCoreApplication
+from PySide2.QtGui import QPixmap, QFont, QFontDatabase
+from PySide2.QtWidgets import QApplication, QSplashScreen
 #from PySide2.QtCore import Qt, QCoreApplication
-#from PySide2.QtGui import QPixmap, QFont, QFontDatabase
-#from PySide2.QtWidgets import QApplication, QSplashScreen
-from PySide.QtCore import Qt, QCoreApplication
-from PySide.QtGui import QPixmap, QFont, QFontDatabase, QApplication, QSplashScreen
+#from PySide2.QtGui import QPixmap, QFont, QFontDatabase, QApplication, QSplashScreen
 
 #create application and set properties
 
 if __name__ == '__main__':
-	#QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-	#QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+	QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+	QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 
 	app = QApplication(sys.argv)
 	app.setOrganizationName('Bioinformatics and Integrative Genomics')

@@ -509,11 +509,15 @@ static PyMethodDef tandem_methods[] = {
 	{NULL, NULL, 0, NULL}
 };
 
-PyMODINIT_FUNC inittandem(){
-	PyObject* module;
+static struct PyModuleDef tandem_definition = {
+	PyModuleDef_HEAD_INIT,
+	"tandem",
+	"Search perfect or imperfect tandem repeats from sequence",
+	-1,
+	tandem_methods
+};
 
-	module = Py_InitModule("tandem", tandem_methods);
-	if (!module) {
-		return;
-	}
+PyMODINIT_FUNC PyInit_tandem(void){
+	Py_Initialize();
+	return PyModule_Create(&tandem_definition);
 }

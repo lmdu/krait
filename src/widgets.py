@@ -10,17 +10,17 @@ import json
 import shutil
 import requests
 import platform
-'''
+
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtSql import *
 from PySide2.QtWebEngineWidgets import *
 from PySide2.QtWidgets import *
 from PySide2.QtPrintSupport import *
-'''
-from PySide.QtCore import *
-from PySide.QtGui import *
-from PySide.QtWebKit import *
+
+#from PySide.QtCore import *
+#from PySide.QtGui import *
+#from PySide.QtWebKit import *
 
 from db import *
 from utils import *
@@ -43,9 +43,9 @@ class SSRMainWindow(QMainWindow):
 		self.table = SSRTableView(self)
 		self.createTableModel()
 
-		#self.browser = QWebEngineView(self)
-		self.browser = BrowserWidget(self)
-		QWebSettings.globalSettings().setAttribute(QWebSettings.DeveloperExtrasEnabled, True);
+		self.browser = QWebEngineView(self)
+		#self.browser = BrowserWidget(self)
+		#QWebSettings.globalSettings().setAttribute(QWebSettings.DeveloperExtrasEnabled, True);
 
 		
 		self.main_widget.addWidget(self.table)
@@ -860,21 +860,20 @@ class SSRMainWindow(QMainWindow):
 
 		if pdfname.endswith('.pdf'):
 			#page_layout = QPageLayout(
-
 			#)
-			#self.browser.page().printToPdf(pdfname, QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(32,32,32,32)))
-			printer = QPrinter(QPrinter.HighResolution)
-			printer.setPageSize(QPrinter.A4)
-			printer.setColorMode(QPrinter.Color)
-			printer.setOutputFormat(QPrinter.PdfFormat)
-			printer.setOutputFileName(pdfname)
-			self.browser.print_(printer)
+			self.browser.page().printToPdf(pdfname, QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(32,32,32,32)))
+			#printer = QPrinter(QPrinter.HighResolution)
+			#printer.setPageSize(QPrinter.A4)
+			#printer.setColorMode(QPrinter.Color)
+			#printer.setOutputFormat(QPrinter.PdfFormat)
+			#printer.setOutputFileName(pdfname)
+			#self.browser.print_(printer)
 
 		elif pdfname.endswith('.html'):
-			#content = self.browser.page().save(pdfname, QWebEngineDownloadItem.SingleHtmlSaveFormat)
-			content = self.browser.page().mainFrame().toHtml()
-			with open(pdfname, 'w') as fw:
-				fw.write(content)
+			content = self.browser.page().save(pdfname, QWebEngineDownloadItem.SingleHtmlSaveFormat)
+			#content = self.browser.page().mainFrame().toHtml()
+			#with open(pdfname, 'w') as fw:
+			#	fw.write(content)
 
 		self.setStatusMessage("Statistical report was successfully save to %s" % pdfname)
 
@@ -1336,7 +1335,7 @@ class SSRMainWindow(QMainWindow):
 			skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs from fasta
 			formatted DNA sequences; and design primers; and perform statistical analysis.</p>
 			<p><a href="https://wiki.qt.io/Qt_for_Python">PySide</a> for GUI. 
-			<a href="http://lh3lh3.users.sourceforge.net/kseq.shtml">Kseq.h</a> for parsing fasta.
+			<a href="https://github.com/lmdu/pyfastx">pyfastx</a> for parsing fasta.
 			<a href="https://github.com/libnano/primer3-py">primer3-py</a> and 
 			<a href="http://primer3.sourceforge.net/">primer3</a> for primer design. 
 			<a href="https://github.com/hunt-genes/ncls">NCLS</a> for mapping SSRs.
@@ -2218,8 +2217,8 @@ class SSRDetailDialog(QDialog):
 	def __init__(self, parent=None, title=None, content=None):
 		super(SSRDetailDialog, self).__init__(parent)
 		self.setWindowTitle(title)
-		#self.viewer = QWebEngineView(self)
-		self.viewer = QWebView(self)
+		self.viewer = QWebEngineView(self)
+		#self.viewer = QWebView(self)
 		self.viewer.setHtml(content, QUrl("qrc:/"))
 
 		#buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
@@ -2275,8 +2274,8 @@ class DownloadDialog(QDialog):
 		return acc, out
 
 
-#class BrowserWidget(QWebEngineView):
-class BrowserWidget(QWebView):
+class BrowserWidget(QWebEngineView):
+#class BrowserWidget(QWebView):
 	def __init__(self, parent):
 		super(BrowserWidget, self).__init__(parent)
 		self.parent = parent
