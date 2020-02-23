@@ -11,7 +11,7 @@ import functools
 
 from PySide2.QtCore import *
 #from PySide.QtCore import *
-
+from primer3 import primerdesign
 #import plot
 import motif
 from libs import *
@@ -221,16 +221,16 @@ class CSSRWorker(Worker):
 		self.dmax = dmax
 		parameters = Data(dmax = dmax)
 		self.db.set_option('cssr_parameters', json.dumps(parameters))
+		self.sql = "INSERT INTO cssr VALUES (?,?,?,?,?,?,?,?,?,?)"
 
 	def process(self):
 		self.db.set_option('cssr_start_time', int(time.time()))
 		ssrs = self.db.query("SELECT * FROM ssr")
 		total = self.db.get_one("SELECT COUNT(1) FROM ssr LIMIT 1")
-		self.db.begin()
 		self.emit_message("Concatenate compound SSRs...")
-		cssrs = [ssrs.__next__()]
+		cssrs = [next(ssrs)]
 		prev_progress = 0
-
+		self.db.begin()
 		for ssr in ssrs:
 			d = ssr.start - cssrs[-1].end - 1
 			if ssr.sequence == cssrs[-1].sequence and d <= self.dmax:
@@ -261,8 +261,7 @@ class CSSRWorker(Worker):
 		length = sum(cssr.length for cssr in cssrs)
 		gap = sum(cssr.start-cssrs[idx].end-1 for idx, cssr in enumerate(cssrs[1:]))
 		structure = "-".join(["(%s)%s" % (cssr.motif, cssr.repeat) for cssr in cssrs])
-		sql = "INSERT INTO cssr VALUES (?,?,?,?,?,?,?,?,?,?)"
-		self.db.get_cursor().execute(sql,
+		self.db.get_cursor().execute(self.sql,
 			(None, seqname, start, end, motif, complexity, length, gap, component, structure)
 		)
 
@@ -385,6 +384,7 @@ class PrimerWorker(Worker):
 
 		primerdesign.loadThermoParams(PRIMER3_CONFIG)
 		primerdesign.setGlobals(self.primer3_settings, None, None)
+		#primer3.bindings.setP3Globals(self.primer3_settings)
 		#total ssr counts in a table
 		total_ssrs = self.db.get_one("SELECT COUNT(1) FROM %s" % table)
 		total_select = len(selected)
@@ -436,9 +436,15 @@ class PrimerWorker(Worker):
 				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item.start-start, item.length]
 			)
 			
+			#primer3.bindings.setP3SeqArgs(target)
+			#res = primer3.bindings.runP3Design(True)
 			primerdesign.setSeqArgs(target)
 			res = primerdesign.runDesign(False)
+			
 			current += 1
+			
+			if res is None:
+				continue
 
 			primer_count = res['PRIMER_PAIR_NUM_RETURNED']
 			

@@ -32,12 +32,12 @@ extensions = [
 	#	extra_compile_args=['-DMS_WIN64'],
 	#	extra_link_args=['-lz', '-DMS_WIN64']
 	#),
-	Extension('primerdesign',
-		sources=[os.path.join('primer3','src','primerdesign_py.c')] + libprimer3_paths,
-		include_dirs=[LIBPRIMER3_PATH, KLIB_PATH],
-		extra_compile_args=['-DMS_WIN64'],
-		extra_link_args=['-DMS_WIN64']
-	),
+	#Extension('primerdesign',
+	#	sources=[os.path.join('primer3','src','primerdesign_py.c')] + libprimer3_paths,
+	#	include_dirs=[LIBPRIMER3_PATH, KLIB_PATH],
+	#	extra_compile_args=['-DMS_WIN64'],
+	#	extra_link_args=['-DMS_WIN64']
+	#),
 	Extension('ncls', ['ncls/src/ncls.pyx', 'ncls/src/intervaldb.c'],
 		include_dirs = ['.'],
 		extra_compile_args=['-DMS_WIN64'],

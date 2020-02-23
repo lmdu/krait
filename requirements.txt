@@ -6,3 +6,4 @@ jinja2
 pyfastx
 appdirs
 pyinstaller
+primer3-py
