@@ -1,3 +1,4 @@
+#-*- coding: utf-8 -*-
 import csv
 import gzip
 import time
@@ -62,8 +63,6 @@ def used_format(dt):
 		res.append("%ss" % seconds)
 
 	return " ".join(res)
-
-
 
 env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 env.filters['time_format'] = time_format

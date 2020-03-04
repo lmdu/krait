@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 import csv
 import time
 import json
 import numpy
-import jinja2
 import pyfastx
 import requests
 import traceback
