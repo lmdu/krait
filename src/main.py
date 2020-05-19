@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-#import multiprocessing
+import multiprocessing
 #do not generate pyc file
 #sys.dont_write_bytecode = True
 import krait_rc
@@ -16,9 +16,9 @@ from PySide2.QtWidgets import QApplication, QSplashScreen
 os.environ['PRIMER3HOME'] = os.getcwd()
 
 if __name__ == '__main__':
-	QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-	QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-
+	#QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+	#QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+	multiprocessing.freeze_support()
 	app = QApplication(sys.argv)
 	app.setOrganizationName('Bioinformatics and Integrative Genomics')
 	app.setOrganizationDomain('http://big.cdu.edu.cn')
@@ -26,6 +26,7 @@ if __name__ == '__main__':
 
 	#set font family
 	QFontDatabase.addApplicationFont(":/fonts/roboto.ttf")
+	QFontDatabase.addApplicationFont(":/fonts/robotomono.ttf")
 
 	#support windows 7, 10 taskbar icon
 	import ctypes
@@ -36,7 +37,7 @@ if __name__ == '__main__':
 	splash_img = QPixmap(":/icons/splash.png")
 	splash = QSplashScreen(splash_img)
 	splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.SplashScreen | Qt.FramelessWindowHint)
-	splash.setStyleSheet("font-family:roboto; font-size: 14px;")
+	splash.setStyleSheet("font-family:Roboto; font-size: 14px;")
 	splash.setEnabled(False)
 	splash.show()
 
@@ -78,5 +79,4 @@ if __name__ == '__main__':
 	splash.finish(win)
 
 	#start the main loop
-	#multiprocessing.freeze_support()
 	sys.exit(app.exec_())

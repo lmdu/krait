@@ -13,9 +13,9 @@ import platform
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtSql import *
-from PySide2.QtWebEngineWidgets import *
+#from PySide2.QtWebEngineWidgets import *
 from PySide2.QtWidgets import *
-from PySide2.QtPrintSupport import *
+#from PySide2.QtPrintSupport import *
 
 #from PySide.QtCore import *
 #from PySide.QtGui import *
@@ -42,13 +42,13 @@ class SSRMainWindow(QMainWindow):
 		self.table = SSRTableView(self)
 		self.createTableModel()
 
-		self.browser = QWebEngineView(self)
+		#self.browser = QWebEngineView(self)
 		#self.browser = BrowserWidget(self)
 		#QWebSettings.globalSettings().setAttribute(QWebSettings.DeveloperExtrasEnabled, True);
-
+		#self.browser = QTextBrowser(self)
 		
 		self.main_widget.addWidget(self.table)
-		self.main_widget.addWidget(self.browser)
+		#self.main_widget.addWidget(self.browser)
 
 		#search text input
 		self.filter = SSRFilterInput(self)
@@ -56,6 +56,9 @@ class SSRMainWindow(QMainWindow):
 
 		#create fasta table
 		#self.fasta_table = FastaTable()
+
+		#status message
+		self.status_message = None
 
 		self.createActions()
 		self.createMenus()
@@ -73,6 +76,7 @@ class SSRMainWindow(QMainWindow):
 
 		#statistical results
 		self.statis_result = None
+		self.statis_outfile = None
 
 		#changed rows in database
 		self.changed_rows = 0
@@ -92,7 +96,7 @@ class SSRMainWindow(QMainWindow):
 	def swichMainWidget(self, widget):
 		if widget == 'table':
 			self.exportTableAct.setEnabled(True)
-			self.exportStatsAct.setDisabled(True)
+			#self.exportStatsAct.setDisabled(True)
 			self.main_widget.setCurrentIndex(0)
 			if self.model.tableName() in ('ssr', 'issr', 'cssr', 'vntr'):
 				self.exportFastaAct.setEnabled(True)
@@ -103,15 +107,15 @@ class SSRMainWindow(QMainWindow):
 
 		else:
 			self.exportTableAct.setDisabled(True)
-			self.exportStatsAct.setEnabled(True)
+			#self.exportStatsAct.setEnabled(True)
 			self.main_widget.setCurrentIndex(1)
 			self.exportFastaAct.setDisabled(True)
 			self.exportGFFAct.setDisabled(True)
 
-	def homepage(self):
+	#def homepage(self):
 		#content = template_render('index.html')
 		#self.browser.setHtml(content, QUrl("qrc:/"))
-		self.browser.load(QUrl('https://github.com/lmdu/krait'))
+		#self.browser.load(QUrl('https://github.com/lmdu/krait'))
 
 	def createTableModel(self):
 		self.model = TableModel()
@@ -233,7 +237,7 @@ class SSRMainWindow(QMainWindow):
 		self.exportGFFAct.setDisabled(True)
 		self.exportStatsAct = QAction(self.tr("Export Statistical Report"), self)
 		self.exportStatsAct.setShortcut(QKeySequence(Qt.CTRL+Qt.Key_P))
-		self.exportStatsAct.setDisabled(True)
+		#self.exportStatsAct.setDisabled(True)
 		self.exportStatsAct.triggered.connect(self.exportStatisResult)
 		
 		#exit action
@@ -383,14 +387,15 @@ class SSRMainWindow(QMainWindow):
 
 		#statistics report
 		self.statisticsAct = QAction(QIcon(":/icons/report.png"), self.tr("Statistics"), self)
-		self.statisticsAct.triggered.connect(self.doOrShowStatistics)
+		self.statisticsAct.triggered.connect(self.exportStatisResult)
+		#self.statisticsAct.triggered.connect(self.doOrShowStatistics)
 		self.statisticsAct.setStatusTip(self.tr("Generate Statistical Report"))
-		self.statisticsForceAct = QAction(self.tr("Redo Statistical Analysis"), self)
+		self.statisticsForceAct = QAction(self.tr("Refresh Statistical Analysis"), self)
 		self.statisticsForceAct.triggered.connect(self.performStatistics)
-		self.statisticsShowAct = QAction(self.tr("Show Statistical Result"), self)
-		self.statisticsShowAct.triggered.connect(self.showStatistics)
-		self.statisticsRemoveAct = QAction(self.tr("Remove Statistical Result"), self)
-		self.statisticsRemoveAct.triggered.connect(self.removeStatistics)
+		#self.statisticsShowAct = QAction(self.tr("Show Statistical Result"), self)
+		#self.statisticsShowAct.triggered.connect(self.showStatistics)
+		#self.statisticsRemoveAct = QAction(self.tr("Remove Statistical Result"), self)
+		#self.statisticsRemoveAct.triggered.connect(self.removeStatistics)
 
 		#tool action
 		self.downloadNCBIAct = QAction(self.tr("Download sequence from NCBI"), self)
@@ -469,7 +474,7 @@ class SSRMainWindow(QMainWindow):
 		#self.toolMenu.addAction(self.bestDmaxAct)
 		self.toolMenu.addAction(self.primerForceAct)
 		self.toolMenu.addAction(self.locateToolAct)
-		self.toolMenu.addAction(self.statisticsForceAct)
+		#self.toolMenu.addAction(self.statisticsForceAct)
 		self.toolMenu.addSeparator()
 		self.toolMenu.addAction(self.downloadNCBIAct)
 
@@ -539,9 +544,10 @@ class SSRMainWindow(QMainWindow):
 
 		self.statisticsMenu = QMenu()
 		self.statisticsMenu.addAction(self.statisticsForceAct)
-		self.statisticsMenu.addAction(self.statisticsShowAct)
-		self.statisticsMenu.addSeparator()
-		self.statisticsMenu.addAction(self.statisticsRemoveAct)
+		#self.statisticsMenu.addAction(self.statisticsShowAct)
+		#self.statisticsMenu.addSeparator()
+		#self.statisticsMenu.addAction(self.statisticsRemoveAct)
+		self.statisticsMenu.addAction(self.exportStatsAct)
 		
 
 	def createToolBars(self):
@@ -580,7 +586,9 @@ class SSRMainWindow(QMainWindow):
 
 	def createStatusBar(self):
 		self.statusBar = self.statusBar()
-		self.statusBar.showMessage("Genome-wide microsatellites analysis tool.")
+		self.statusBar.messageChanged.connect(self.resetStatusMessage)
+		#self.statusBar.showMessage("Genome-wide microsatellites analysis tool.")
+		self.setStatusMessage("Genome-wide microsatellites analysis tool.")
 		
 		#add row and column counts widget
 		self.rowCounts = QLabel("Row: 0", self)
@@ -692,7 +700,7 @@ class SSRMainWindow(QMainWindow):
 		
 		self.db.drop_tables()
 		self.createTableModel()
-		self.browser.setHtml('')
+		#self.browser.setHtml('')
 		self.changed_rows = self.db.changes()
 
 	def importFasta(self, fasta=None):
@@ -853,29 +861,15 @@ class SSRMainWindow(QMainWindow):
 		)
 
 	def exportStatisResult(self):
-		pdfname, _ = QFileDialog.getSaveFileName(self, filter="HTML Report (*.html);; PDF Report (*.pdf)")
-		
-		if not pdfname: return
+		htmlfile, _ = QFileDialog.getSaveFileName(self, filter="HTML Report (*.html)")
+		if not htmlfile: return
 
-		if pdfname.endswith('.pdf'):
-			#page_layout = QPageLayout(
-			#)
-			self.browser.page().printToPdf(pdfname, QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(32,32,32,32)))
-			#printer = QPrinter(QPrinter.HighResolution)
-			#printer.setPageSize(QPrinter.A4)
-			#printer.setColorMode(QPrinter.Color)
-			#printer.setOutputFormat(QPrinter.PdfFormat)
-			#printer.setOutputFileName(pdfname)
-			#self.browser.print_(printer)
+		self.statis_outfile = htmlfile
 
-		elif pdfname.endswith('.html'):
-			content = self.browser.page().save(pdfname, QWebEngineDownloadItem.SingleHtmlSaveFormat)
-			#content = self.browser.page().mainFrame().toHtml()
-			#with open(pdfname, 'w') as fw:
-			#	fw.write(content)
-
-		self.setStatusMessage("Statistical report was successfully save to %s" % pdfname)
-
+		if not self.statis_result:
+		 self.performStatistics()
+		else:
+			self.showStatistics()
 
 	def doCopy(self):
 		focus = QApplication.focusWidget()
@@ -1221,12 +1215,12 @@ class SSRMainWindow(QMainWindow):
 		self.progressBar.setMaximum(0)
 		self.executeTask(worker, self.showStatistics)
 
-	def doOrShowStatistics(self):
-		if self.statis_result:
-			self.swichMainWidget('browser')
-			self.browser.setHtml(self.statis_result, QUrl("qrc:/"))
-		else:
-			self.performStatistics()
+	#def doOrShowStatistics(self):
+	#	if self.statis_result:
+	#		self.swichMainWidget('browser')
+	#		self.browser.setHtml(self.statis_result, QUrl("qrc:/"))
+	#	else:
+	#		self.performStatistics()
 
 	def showStatistics(self):
 		seq_statis = None
@@ -1263,15 +1257,16 @@ class SSRMainWindow(QMainWindow):
 			vntr = vntr_statis
 		)
 
-		self.swichMainWidget('browser')
-		self.browser.setHtml(self.statis_result, QUrl("qrc:/"))
+		with open(self.statis_outfile, 'w', encoding='utf-8') as fw:
+			fw.write(self.statis_result)
 
 		self.progressBar.setMaximum(100)
+		return QMessageBox.information(self, "Information", "Statistical report was successfully save to %s" % self.statis_outfile)
 
 	def removeStatistics(self):
 		if self.statis_result:
 			self.statis_result = None
-			self.browser.setHtml('')
+			#self.browser.setHtml('')
 
 	def showSSRSequence(self, index):
 		'''
@@ -1322,7 +1317,12 @@ class SSRMainWindow(QMainWindow):
 		self.progressBar.setValue(percent)
 
 	def setStatusMessage(self, msg):
+		self.status_message = msg
 		self.statusBar.showMessage(msg)
+
+	def resetStatusMessage(self, msg):
+		if not msg:
+			self.statusBar.showMessage(self.status_message)
 
 	def openAboutMessage(self):
 		#system_info = "%s%s %s" % (platform.system(), platform.release(), platform.architecture()[0])
@@ -1333,12 +1333,15 @@ class SSRMainWindow(QMainWindow):
 			<p>Krait is a robust and ultrafast tool that provides a user-friendly GUI for no computationally
 			skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs from fasta
 			formatted DNA sequences; and design primers; and perform statistical analysis.</p>
-			<p><a href="https://wiki.qt.io/Qt_for_Python">PySide</a> for GUI. 
+			<p><b>Acknowledgements:</b><br><a href="https://wiki.qt.io/Qt_for_Python">PySide2</a> for rendering GUI.
 			<a href="https://github.com/lmdu/pyfastx">pyfastx</a> for parsing fasta.
 			<a href="https://github.com/libnano/primer3-py">primer3-py</a> and 
 			<a href="http://primer3.sourceforge.net/">primer3</a> for primer design. 
 			<a href="https://github.com/hunt-genes/ncls">NCLS</a> for mapping SSRs.
-			<a href="http://www.chartjs.org/">Chartjs</a> for plotting.
+			<a href="https://plotly.com/javascript/">plotly.js</a> for plotting.
+			<a href="https://datatables.net/">DataTables</a> for statistical tables.
+			<a href="https://jinja.palletsprojects.com/">jinja2</a> for generating statistical report.
+			<a href="https://github.com/rogerbinns/apsw">apsw</a> for storing data.
 			</p>
 			<p><b>Citation:</b><br>Du L, Zhang C, Liu Q, Zhang X, Yue B (2018) Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design. Bioinformatics. 34(4):681-683.</p>
 			<p><b>Contact:</b><br>dulianming@cdu.edu.cn</p>
@@ -1373,6 +1376,7 @@ class SSRTableView(QTableView):
 		self.parent = parent
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
+		self.horizontalHeader().setStretchLastSection(True)
 		#self.horizontalHeader().setDefaultSectionSize(150)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -2224,9 +2228,12 @@ class SSRDetailDialog(QDialog):
 	def __init__(self, parent=None, title=None, content=None):
 		super(SSRDetailDialog, self).__init__(parent)
 		self.setWindowTitle(title)
-		self.viewer = QWebEngineView(self)
+		#self.viewer = QWebEngineView(self)
 		#self.viewer = QWebView(self)
-		self.viewer.setHtml(content, QUrl("qrc:/"))
+		self.viewer = QTextBrowser(self)
+		#self.viewer.setStyleSheet("font-family:robotomono");
+		#self.viewer.setHtml(content, QUrl("qrc:/"))
+		self.viewer.setHtml(content)
 
 		#buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
 		#buttonBox.accepted.connect(self.accept)
@@ -2281,12 +2288,12 @@ class DownloadDialog(QDialog):
 		return acc, out
 
 
-class BrowserWidget(QWebEngineView):
+#class BrowserWidget(QWebEngineView):
 #class BrowserWidget(QWebView):
-	def __init__(self, parent):
-		super(BrowserWidget, self).__init__(parent)
-		self.parent = parent
-		self.db = Database()
+	#def __init__(self, parent):
+		#super(BrowserWidget, self).__init__(parent)
+		#self.parent = parent
+		#self.db = Database()
 
 		#self.pageAction(QWebEnginePage.DownloadImageToDisk).triggered.connect(self.saveImage)
 		#self.pageAction(QWebEnginePage.OpenImageInNewWindow).triggered.connect(self.openImage)

@@ -31,9 +31,9 @@ class Detail(object):
 
 	def formatBase(self, b, target=False):
 		if target:
-			return '<div class="base {0}">{0}</div>'.format(b)
+			return '<span class="base {0}">{0}</span>'.format(b)
 		else:
-			return '<div class="base">%s</div>' % b
+			return '<span class="base">%s</span>' % b
 
 	def formatTarget(self, bases):
 		return "".join(self.formatBase(b, True) for b in bases)
@@ -90,7 +90,7 @@ class ISSRSeqDetail(Detail):
 				align = '|'
 			else:
 				align = ''
-			alignment.append('<div class="base"><span class="{0}">{0}</span><br><span>{1}<span><br><span>{2}<span></div>'.format(origin[i], align, copy[i]))
+			alignment.append('<span class="base"><span class="{0}">{0}</span><br><span>{1}<span><br><span>{2}<span></span>'.format(origin[i], align, copy[i]))
 		
 		return "".join(alignment)
 

@@ -1,33 +1,9 @@
 
 
 #include <stdint.h>
-#include "intervaldb.h"
+#include "fintervaldb.h"
 
 int C_int_max=INT_MAX; /* KLUDGE TO LET PYREX CODE ACCESS VALUE OF INT_MAX MACRO */
-
-
-/* IntervalMap *read_intervals(int n,FILE *ifile) */
-/* { */
-/*   int i=0; */
-/*   IntervalMap *im=NULL; */
-/*   CALLOC(im,n,IntervalMap); /\* ALLOCATE THE WHOLE ARRAY *\/ */
-/*   while (i<n && fscanf(ifile," %d %d %d %d %d",&im[i].start,&im[i].end, */
-/* 		       &im[i].target_id,&im[i].target_start, */
-/* 		       &im[i].target_end)==5) { */
-/*     im[i].sublist= -1; /\* DEFAULT: NO SUBLIST *\/ */
-/*     i++; */
-/*   } */
-/*   if (i!=n) { */
-/*     fprintf(stderr,"WARNING: number of records read %d does not match allocation %d\n",i,n); */
-/*   } */
-/*   return im; */
-/*  handle_malloc_failure: */
-/*   return NULL; /\* NO CLEANUP ACTIONS REQUIRED *\/ */
-/* } */
-
-
-
-
 
 
 int imstart_qsort_cmp(const void *void_a,const void *void_b)
@@ -332,9 +308,9 @@ IntervalMap *interval_map_alloc(int n)
 
 
 
-inline int64_t find_overlap_start(int64_t start,int64_t end,IntervalMap im[],int n)
+inline int64_t find_overlap_start(double start,double end,IntervalMap im[],int n)
 {
-  int64_t l=0,mid,r;
+  int64_t l=0, mid, r;
 
   r=n-1;
   while (l<r) {
@@ -370,7 +346,7 @@ int find_index_start(int start,int end,IntervalIndex im[],int n)
 
 
 
-inline int find_suboverlap_start(int start,int end,int isub,IntervalMap im[],
+inline double find_suboverlap_start(double start,double end, int64_t isub, IntervalMap im[],
                                  SublistHeader subheader[])
 {
   int i;
@@ -427,7 +403,7 @@ void reorient_intervals(int n,IntervalMap im[],int ori_sign)
 }
 
 
-int64_t find_intervals(IntervalIterator *it0, int64_t start, int64_t end,
+double find_intervals(IntervalIterator *it0, double start, double end,
                    IntervalMap im[],int n,
                    SublistHeader subheader[], int nlists,
                    IntervalMap buf[], int nbuf,

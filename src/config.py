@@ -2,9 +2,9 @@
 import os
 import appdirs
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
-BUILD = '20200223'
+BUILD = '20200519'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS `option`(
 
 STYLE_QSS = """
 *{
-	font-family: Roboto;
+	font-family: "Roboto";
 	font-size: 15px;
 }
 
@@ -176,6 +176,7 @@ QHeaderView::section {
 
 QTextBrowser{
 	border: 0;
+	font-family: "Roboto Mono";
 }
 
 /* tool bar */

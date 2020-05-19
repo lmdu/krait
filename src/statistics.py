@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import division
 import os
 import json
 import collections
@@ -13,7 +11,7 @@ class Statistics(object):
 	_db = None
 	_total_gc = 0
 	_total_bases = 0
-	_total_unknown = 0
+	_total_unknown = None
 	_total_sequences = 0
 	_bases = {}
 	unit = None
@@ -52,7 +50,7 @@ class Statistics(object):
 
 	@property
 	def ns(self):
-		if not self._total_unknown:
+		if self._total_unknown is None:
 			self._total_unknown = self.db.get_one("SELECT SUM(ns) FROM seq LIMIT 1")
 
 		return self._total_unknown
@@ -148,6 +146,7 @@ class SSRStatistics(Statistics):
 		super(SSRStatistics, self).__init__()
 		self.type = self.motifTypeStatis()
 		self.category = self.motifCategoryStatis()
+		self.repeats = self.motifRepeatsStatis()
 		self.repeat = self.motifRepeatStatis()
 		self.ssrlen = self.SSRLengthStatis()
 		self.location = self.region('ssr')
@@ -191,14 +190,25 @@ class SSRStatistics(Statistics):
 		return rows
 
 	def motifCategoryStatis(self):
-		sql = "SELECT standard, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY standard ORDER BY type,standard"
-		rows = [('Motif', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
+		sql = "SELECT standard, type, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY standard ORDER BY type,standard"
+		rows = [('Motif', 'Type', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
 		for row in self.db.query(sql):
 			percent = round(row.count/self.count*100, 2)
 			average = round(row.length/row.count, 2)
 			frequency = self.ra(row.count)
 			density = self.rd(row.length)
-			rows.append((row.standard, row.count, row.length, percent, average, frequency, density))
+			rows.append((row.standard, row.type, row.count, row.length, percent, average, frequency, density))
+		return rows
+
+	def motifRepeatsStatis(self):
+		sql = "SELECT repeat, SUM(length) AS length, COUNT(1) AS count FROM ssr GROUP BY repeat ORDER BY repeat"
+		rows = [('Repeat', 'Counts', 'Length (bp)', 'Percent (%)', 'Average Length (bp)', 'Relative Abundance (loci/%s)' % self.unit, 'Relative Density (bp/%s)' % self.unit)]
+		for row in self.db.query(sql):
+			percent = round(row.count/self.count*100, 2)
+			average = round(row.length/row.count, 2)
+			frequency = self.ra(row.count)
+			density = self.rd(row.length)
+			rows.append((row.repeat, row.count, row.length, percent, average, frequency, density))
 		return rows
 
 	def motifRepeatStatis(self):
@@ -240,10 +250,10 @@ class SSRStatistics(Statistics):
 			data = self.columnval(self.location, 1)
 		)
 		
-		rows = sorted(self.category[1:], key=lambda x:x[5], reverse=True)[:50]
+		rows = sorted(self.category[1:], key=lambda x:x[6], reverse=True)[:50]
 		bar1 = Data(
 			labels = self.rownames(rows),
-			data = self.columnval(rows, 5)
+			data = self.columnval(rows, 6)
 		)
 
 		labels1 = set()
@@ -290,6 +300,7 @@ class SSRStatistics(Statistics):
 			type = self.type,
 			category = self.category,
 			repeat = self.repeat,
+			repeats = self.repeats,
 			ssrlen = self.ssrlen,
 			location = self.location,
 			plot = self.plot,

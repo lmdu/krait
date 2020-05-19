@@ -7,7 +7,7 @@ import pyfastx
 import requests
 import traceback
 import functools
-#import multiprocessing
+import multiprocessing
 
 from PySide2.QtCore import *
 #from PySide.QtCore import *
@@ -47,7 +47,12 @@ class Worker(QObject):
 		@return Fasta object
 		'''
 		#seqs = fasta.GzipFasta(fasta_path)
-		seqs = pyfastx.Fasta(fasta_path, full_index=True)
+		self.emit_message("Building fasta index for %s" % fasta_path)
+
+		with multiprocessing.Pool() as pool:
+			pool.apply_async(lambda fafile: pyfastx.Fasta(fafile, full_index=True), (fasta_path,))
+
+		seqs = pyfastx.Fasta(fasta_path)
 		
 		#get sequence detail information
 		sql = "SELECT * FROM seq INNER JOIN fasta ON (seq.fid=fasta.id) WHERE fasta.path='{}' LIMIT 1".format(fasta_path)
@@ -56,12 +61,13 @@ class Worker(QObject):
 			for seq in seqs:
 				compos = seq.composition
 				ns = sum(compos[b] for b in compos if b not in ['A', 'T', 'G', 'C'])
-				row = (None, seq.name, fasta_id, len(seq), seq.gc_content, ns)
+				row = (None, seq.name, fasta_id, len(seq), compos['G']+compos['C'], ns)
 				rows.append(row)
 			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
 
 		self.total_bases = seqs.size
-		return pyfastx.Fasta(fasta_path, build_index=False)
+		seqs = pyfastx.Fasta(fasta_path, build_index=False)
+		return seqs
 
 	def emit_progress(self, percent):
 		self.update_progress.emit(percent)
@@ -122,7 +128,6 @@ class SSRWorker(Worker):
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
-			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
 			#total_bases = seqs.get_total_length()
 
@@ -131,21 +136,25 @@ class SSRWorker(Worker):
 
 			current_bases = 0
 			#start search perfect microsatellites
-			for name, seq in seqs:
-				current_bases += len(name)
-				seq_progress = current_bases/self.total_bases
+			with multiprocessing.Pool() as pool:
+				for name, seq in seqs:
+					current_bases += len(seq)
+					seq_progress = current_bases/self.total_bases
 
-				self.emit_message("Search perfect SSRs from %s" % name)
-				ssrs = tandem.search_ssr(seq, self.min_repeats)
+					self.emit_message("Searching for perfect SSRs from %s" % name)
+					#ssrs = tandem.search_ssr(seq, self.min_repeats)
 
-				def values():
-					for ssr in ssrs:
-						row = [None, name, self.motifs.standard(ssr[0])]
-						row.extend(ssr)
-						yield row
+					res = pool.apply_async(tandem.search_ssr, (seq, self.min_repeats))
+					ssrs = res.get()
 
-				self.db.insert(sql, values())
-				self.emit_progress(int(seq_progress*fasta_progress*100))
+					def values():
+						for ssr in ssrs:
+							row = [None, name, self.motifs.standard(ssr[0])]
+							row.extend(ssr)
+							yield row
+
+					self.db.insert(sql, values())
+					self.emit_progress(int(seq_progress*fasta_progress*100))
 
 		self.db.set_option('ssr_end_time', int(time.time()))
 		self.emit_finish('Perfect SSRs search completed')
@@ -186,8 +195,6 @@ class ISSRWorker(Worker):
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
-			self.emit_message("Building fasta index for %s" % fasta_file)
-
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
 			#total_bases = seqs.get_total_length()
 			#insert ssr to database
@@ -196,7 +203,7 @@ class ISSRWorker(Worker):
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += len(name)
+				current_bases += len(seq)
 				seq_progress = current_bases/self.total_bases
 
 				self.emit_message("Search imperfect SSRs from %s" % name)
@@ -291,7 +298,6 @@ class VNTRWorker(Worker):
 			fasta_progress = current_fastas/self.fasta_counts
 			
 			#use fasta and create fasta file index
-			self.emit_message("Building fasta index for %s" % fasta_file)
 			seqs = self.build_fasta_index(fasta_id, fasta_file)
 			#total_bases = seqs.get_total_length()
 			#insert ssr to database
@@ -300,7 +306,7 @@ class VNTRWorker(Worker):
 			current_bases = 0
 			#start search perfect microsatellites
 			for name, seq in seqs:
-				current_bases += len(name)
+				current_bases += len(seq)
 				seq_progress = current_bases/self.total_bases
 
 				self.emit_message("Search VNTRs from %s" % name)
@@ -308,7 +314,7 @@ class VNTRWorker(Worker):
 				
 				def values():
 					for vntr in vntrs:
-						row = [None, name]
+						row = [None, seq.name]
 						row.extend(vntr)
 						yield row
 
@@ -405,7 +411,8 @@ class PrimerWorker(Worker):
 		#			yield self.db.get_row(sql)
 
 		current = 0
-		seqs = None
+		current_seq = None
+		current_name = None
 		succeeded = 0
 		progress = 0
 		prev_progress = 0
@@ -417,11 +424,13 @@ class PrimerWorker(Worker):
 		
 		self.db.begin()
 		for item in self.db.query(sql):
-			if seqs is None or item.sequence not in seqs:
+			if item.sequence != current_name:
 				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 				seqfile = self.db.get_one(sql)
 				#seqs = fasta.GzipFasta(seqfile)
 				seqs = pyfastx.Fasta(seqfile)
+				current_seq = seqs[item.sequence].seq
+				current_name = item.sequence
 			
 			start = item.start - self.flank
 
@@ -431,7 +440,7 @@ class PrimerWorker(Worker):
 			
 			target = dict(
 				SEQUENCE_ID = "%s-%s" % (table, item.id),
-				SEQUENCE_TEMPLATE = seqs.fetch(item.sequence, (start, end)),
+				SEQUENCE_TEMPLATE = current_seq[start-1:end],
 				SEQUENCE_TARGET = [item.start-start, item.length],
 				SEQUENCE_INTERNAL_EXCLUDED_REGION = [item.start-start, item.length]
 			)
@@ -592,20 +601,24 @@ class ExportFastaWorker(Worker):
 		current = 0
 		progress = 0
 		prev_progress = 0
-		seqs = None
+		current_seq = None
+		current_name = None
 
 		with open(self.outfile, 'wt') as fp:
 			for item in self.db.query(sql):
-				if seqs is None or item.sequence not in seqs:
+				if item.sequence != current_name:
 					sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
 					seqfile = self.db.get_one(sql)
-					seqs = fasta.GzipFasta(seqfile)
+					seqs = pyfastx.Fasta(seqfile)
+					current_seq = seqs[item.sequence].seq
+					current_name = item.sequence
 				
 				start = item.start - self.flank
 				if start < 1:
 					start = 1
 				end = item.end + self.flank
-				ssr = seqs.get_seq_by_loci(item.sequence, start, end)
+				#ssr = seqs.fetch(item.sequence, (start, end))
+				ssr = current_seq[start-1:end]
 				name = ">{}{} {}:{}-{}|motif:{}".format(table_name.upper(), item.id, item.sequence, item.start, item.end, item.motif)
 				fp.write("{}\n{}".format(name, format_fasta_sequence(ssr, 70)))
 				

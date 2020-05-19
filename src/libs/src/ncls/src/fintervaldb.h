@@ -9,8 +9,8 @@
 extern int C_int_max;
 
 typedef struct {
-  int64_t start;
-  int64_t end;
+  double start;
+  double end;
   int64_t target_id;
   /* int target_start; */
   /* int target_end; */
@@ -19,8 +19,8 @@ typedef struct {
 
 
 typedef struct {
-  int64_t start;
-  int64_t end;
+  double start;
+  double end;
 } IntervalIndex;
 
 typedef struct {
@@ -77,8 +77,7 @@ typedef struct {
 
 extern int *alloc_array(int n);
 
-extern int64_t find_overlap_start(int64_t start,int64_t end,IntervalMap im[],int n);
-extern int find_suboverlap_start(int start,int end,int isub,IntervalMap im[],SublistHeader subheader[]);
+extern int64_t find_overlap_start(double start,double end,IntervalMap im[],int n);
 extern int imstart_qsort_cmp(const void *void_a,const void *void_b);
 extern int target_qsort_cmp(const void *void_a,const void *void_b);
 extern IntervalMap *read_intervals(int n,FILE *ifile);
@@ -91,7 +90,7 @@ extern IntervalDB *build_interval_db(IntervalMap im[],int n);
 extern IntervalIterator *interval_iterator_alloc(void);
 extern int free_interval_iterator(IntervalIterator *it);
 extern IntervalIterator *reset_interval_iterator(IntervalIterator *it);
-extern int64_t find_intervals(IntervalIterator *it0,int64_t start,int64_t end,IntervalMap im[],int n,SublistHeader subheader[],int nlists,IntervalMap buf[],int nbuf,int *p_nreturn,IntervalIterator **it_return);
+extern double find_intervals(IntervalIterator *it0,double start,double end,IntervalMap im[],int n,SublistHeader subheader[],int nlists,IntervalMap buf[],int nbuf,int *p_nreturn,IntervalIterator **it_return);
 extern int read_imdiv(FILE *ifile,IntervalMap imdiv[],int div,int i_div,int ntop);
 extern IntervalMap *read_sublist(FILE *ifile,SublistHeader *subheader,IntervalMap *im);
 extern int find_file_intervals(IntervalIterator *it0,int start,int end,
@@ -167,7 +166,7 @@ extern void reorient_intervals(int n,IntervalMap im[],int ori_sign);
 }
 
 #define HAS_OVERLAP_POSITIVE(IM,START,END) (((IM).start>=0) ? \
-    ((IM).start<=(START) && (END)<=(IM).end) \
+    ((IM).start<(END) && (START)<(IM).end) \
   : (-((IM).end)<(END) && (START) < -((IM).start)))
  /* ????? MERGE_INTERVAL_ORIENTATIONS ??????? */
 
@@ -175,7 +174,7 @@ extern void reorient_intervals(int n,IntervalMap im[],int ori_sign);
 /* STANDARD MACROS */
 #define START_POSITIVE(IM) ((IM).start)
 #define END_POSITIVE(IM) ((IM).end)
-#define HAS_OVERLAP_POSITIVE(IM,START,END) ((IM).start<=(START) && (END)<=(IM).end)
+#define HAS_OVERLAP_POSITIVE(IM,START,END) ((IM).start<(END) && (START)<(IM).end)
 
 #endif
 

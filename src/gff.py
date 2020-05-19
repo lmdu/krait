@@ -104,10 +104,10 @@ class AnnotParser(object):
 
 			if feature[0] != prev_chrom:
 				if starts:
-					starts = numpy.array(starts, dtype=numpy.long)
-					ends = numpy.array(ends, dtype=numpy.long)
-					indexes = numpy.array(indexes, dtype=numpy.long)
-					self.interval_forest[prev_chrom] = ncls.NCLS(starts, ends, indexes)
+					starts = numpy.array(starts, dtype=numpy.int32)
+					ends = numpy.array(ends, dtype=numpy.int32)
+					indexes = numpy.array(indexes, dtype=numpy.int32)
+					self.interval_forest[prev_chrom] = ncls.NCLS32(starts, ends, indexes)
 
 				prev_chrom = feature[0]
 				starts = []
@@ -119,10 +119,10 @@ class AnnotParser(object):
 			indexes.append(feat_id)
 
 		if starts:
-			starts = numpy.array(starts, dtype=numpy.long)
-			ends = numpy.array(ends, dtype=numpy.long)
-			indexes = numpy.array(indexes, dtype=numpy.long)
-			self.interval_forest[prev_chrom] = ncls.NCLS(starts, ends, indexes)
+			starts = numpy.array(starts, dtype=numpy.int32)
+			ends = numpy.array(ends, dtype=numpy.int32)
+			indexes = numpy.array(indexes, dtype=numpy.int32)
+			self.interval_forest[prev_chrom] = ncls.NCLS32(starts, ends, indexes)
 
 	def mapping(self, chrom, start, end):
 		if chrom not in self.interval_forest:
@@ -166,7 +166,7 @@ class GFFParser(AnnotParser):
 				gene_id = row.attrs.NAME
 
 			else:
-				raise Exception(row)
+				continue
 
 			if 'NAME' in row.attrs:
 				gene_name = row.attrs.NAME
@@ -181,7 +181,7 @@ class GFFParser(AnnotParser):
 				gene_name = row.attrs.ID
 
 			else:
-				raise Exception(row)
+				continue
 
 			biotype = row.attrs.get('GENE_BIOTYPE', row.feature)
 
