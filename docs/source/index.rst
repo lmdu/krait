@@ -9,8 +9,8 @@
 
 .. rst-class:: wy-text-center
 
-Microsatellites Investigation and Primer Design
-===============================================
+Krait - Microsatellites Investigation and Primer Design
+=======================================================
 
 **Du L, Zhang C, Liu Q, Zhang X, Yue B (2018) Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design. Bioinformatics. 34(4):681-683.** `10.1093/bioinformatics/btx665 <https://doi.org/10.1093/bioinformatics/btx665>`_
 
@@ -429,12 +429,12 @@ Start Mapping Repeats
 
 1. Search SSRs, cSSRs, iSSRs or VNTRs (See 3 Search for Repeats )
 2. Go to **Mapping (toolbar) -> Import Annotation File** to select a GTF or GFF file corresponding to the imported sequence file.
-3. Click the locate button |mapping| to start locating.
+3. Click the mapping button |mapping| to start mapping.
 
 Locating Results
 ----------------
 
-If locating task finished, the repeats located in gene exon, intron, CDS or UTRs will be marked as different colors in table. An example was shown in Figure 9.
+If mapping task finished, the repeats mapped in gene exon, intron, CDS or UTRs will be marked as different colors in table. An example was shown in Figure 9.
 
 .. rst-class:: wy-text-center
 
@@ -442,7 +442,7 @@ If locating task finished, the repeats located in gene exon, intron, CDS or UTRs
 
 .. rst-class:: wy-text-center
 
-Figure 9: An example for locating result
+Figure 9: An example for mapping result
 
 Select by Color
 ---------------

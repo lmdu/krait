@@ -2232,7 +2232,7 @@ class SSRDetailDialog(QDialog):
 		#self.viewer = QWebView(self)
 		self.viewer = QTextBrowser(self)
 		#self.viewer.setStyleSheet("font-family:robotomono");
-		#self.viewer.setHtml(content, QUrl("qrc:/"))
+		#self.viewer.setSource(QUrl('https://www.baidu.com'))
 		self.viewer.setHtml(content)
 
 		#buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)

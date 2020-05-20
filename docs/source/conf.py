@@ -26,11 +26,8 @@ with open(os.path.join(os.path.abspath('../..'), 'src', 'config.py')) as fh:
 		if line.startswith('VERSION'):
 			__version__ = line.strip().split()[-1].strip('"')
 
-		if line.startswith('BUILD'):
-			__build__ = line.strip().split()[-1].strip('"')
-
 version = __version__
-release = __build__
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 

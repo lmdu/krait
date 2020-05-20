@@ -84,13 +84,18 @@ class ISSRSeqDetail(Detail):
 		self.error = error
 
 	def format_align(self, origin, copy):
-		alignment = []
+		alignment = ['<tr>']
 		for i in range(len(origin)):
 			if origin[i] == copy[i]:
 				align = '|'
 			else:
 				align = ''
-			alignment.append('<span class="base"><span class="{0}">{0}</span><br><span>{1}<span><br><span>{2}<span></span>'.format(origin[i], align, copy[i]))
+			alignment.append('<td class="base"><span class="{0}">{0}</span>\n<span>{1}</span>\n<span>{2}</span></td>'.format(origin[i], align, copy[i]))
+
+			if (i+1) % 55 == 0:
+				alignment.append('</tr><tr>')
+
+		alignment.append('</tr>')
 		
 		return "".join(alignment)
 
@@ -110,7 +115,7 @@ class ISSRSeqDetail(Detail):
 
 		tandem = "%s%s%s" % (self.formatFlank(left), self.formatTarget(seq), self.formatFlank(right))
 		alignment = self.format_align(origin, copy)
-		result = '<p class="tandem">%s</p><p><strong>Alignment:</strong></p><p class="alignment">%s</p>' % (tandem, alignment)
+		result = '<p class="tandem">{}</p><p><strong>Alignment:</strong></p><p class="alignment">{}</p>'.format(tandem, alignment)
 		return template_render("sequence.html", tandem=result, ssr=ssr, table=self.table)
 
 class PrimerDetail(Detail):
