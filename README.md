@@ -2,6 +2,7 @@
 <p align="center">
 	<a href="https://travis-ci.org/lmdu/krait"><img src="https://travis-ci.org/lmdu/krait.svg?branch=master"></a>
 	<a href="https://ci.appveyor.com/project/lmdu/krait"><img src="https://ci.appveyor.com/api/projects/status/9yl44rnhmavyfe90?svg=true"></a>
+	<a href="https://kraitms.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/kraitms/badge/?version=latest"></a>
 	<img src="https://img.shields.io/github/downloads/lmdu/krait/total.svg">
 	<img src="https://img.shields.io/github/release/lmdu/krait.svg">
 	<img src="https://img.shields.io/github/license/lmdu/krait.svg">

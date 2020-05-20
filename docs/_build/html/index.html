@@ -1,0 +1,904 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Microsatellites Investigation and Primer Design &mdash; krait &#39;20200519&#39; documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home"> krait
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Microsatellites Investigation and Primer Design</a></li>
+<li><a class="reference internal" href="#preface">Preface</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#license">License</a></li>
+<li><a class="reference internal" href="#requirements">Requirements</a></li>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#user-interface">User Interface</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#import-sequences">Import Sequences</a><ul>
+<li><a class="reference internal" href="#import-one-fasat-file">Import One FASAT File</a></li>
+<li><a class="reference internal" href="#import-multiple-fasta-files">Import Multiple FASTA Files</a></li>
+<li><a class="reference internal" href="#import-fasta-from-ncbi">Import Fasta from NCBI</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#search-for-tandem-repeats">Search for Tandem Repeats</a><ul>
+<li><a class="reference internal" href="#search-for-ssrs">Search for SSRs</a><ul>
+<li><a class="reference internal" href="#start-ssr-search">Start SSR Search</a></li>
+<li><a class="reference internal" href="#ssr-search-results">SSR Search Results</a></li>
+<li><a class="reference internal" href="#show-ssr-results">Show SSR Results</a></li>
+<li><a class="reference internal" href="#remove-ssr-results">Remove SSR Results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#search-for-cssrs">Search for cSSRs</a><ul>
+<li><a class="reference internal" href="#start-cssr-search">Start cSSR Search</a></li>
+<li><a class="reference internal" href="#cssr-seach-results">cSSR Seach Results</a></li>
+<li><a class="reference internal" href="#show-cssr-results">Show cSSR Results</a></li>
+<li><a class="reference internal" href="#remove-cssr-results">Remove cSSR Results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#search-for-issrs">Search for iSSRs</a><ul>
+<li><a class="reference internal" href="#start-issr-search">Start iSSR Search</a></li>
+<li><a class="reference internal" href="#issr-search-results">iSSR Search Results</a></li>
+<li><a class="reference internal" href="#show-issr-results">Show iSSR Results</a></li>
+<li><a class="reference internal" href="#remove-issr-results">Remove iSSR Results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#search-for-vntrs">Search for VNTRs</a><ul>
+<li><a class="reference internal" href="#start-vntr-search">Start VNTR Search</a></li>
+<li><a class="reference internal" href="#vntr-search-results">VNTR Search Results</a></li>
+<li><a class="reference internal" href="#show-vntr-results">Show VNTR Results</a></li>
+<li><a class="reference internal" href="#remove-vntr-results">Remove VNTR Results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#settings-for-search">Settings for Search</a><ul>
+<li><a class="reference internal" href="#motif-standardization">Motif Standardization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#mapping-repeats-in-genes">Mapping Repeats in Genes</a><ul>
+<li><a class="reference internal" href="#start-mapping-repeats">Start Mapping Repeats</a></li>
+<li><a class="reference internal" href="#locating-results">Locating Results</a></li>
+<li><a class="reference internal" href="#select-by-color">Select by Color</a></li>
+<li><a class="reference internal" href="#remove-mapping-results">Remove Mapping Results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#primer-design">Primer Design</a><ul>
+<li><a class="reference internal" href="#start-primer-design">Start Primer Design</a></li>
+<li><a class="reference internal" href="#primer-design-results">Primer Design Results</a></li>
+<li><a class="reference internal" href="#show-or-remove-primer-design-results">Show or Remove Primer Design Results</a></li>
+<li><a class="reference internal" href="#settings-for-primer-design">Settings for Primer Design</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#filter-data-in-table">Filter Data in Table</a><ul>
+<li><a class="reference internal" href="#start-filter-data">Start Filter Data</a></li>
+<li><a class="reference internal" href="#construct-filter-conditions">Construct Filter Conditions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#statistical-analysis">Statistical Analysis</a><ul>
+<li><a class="reference internal" href="#perform-statistical-analysis">Perform statistical Analysis</a></li>
+<li><a class="reference internal" href="#statistical-analysis-results">Statistical Analysis Results</a></li>
+<li><a class="reference internal" href="#refresh-statistical-results">Refresh Statistical Results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#export-output-files">Export Output Files</a><ul>
+<li><a class="reference internal" href="#export-table">Export Table</a></li>
+<li><a class="reference internal" href="#export-fasta">Export FASTA</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#feedback">Feedback</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">krait</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>Microsatellites Investigation and Primer Design</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <p class="wy-text-center"><img alt="logo" src="_images/logo.png" /></p>
+<div class="wy-text-center section" id="microsatellites-investigation-and-primer-design">
+<h1>Microsatellites Investigation and Primer Design<a class="headerlink" href="#microsatellites-investigation-and-primer-design" title="Permalink to this headline">¶</a></h1>
+<p><strong>Du L, Zhang C, Liu Q, Zhang X, Yue B (2018) Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design. Bioinformatics. 34(4):681-683.</strong> <a class="reference external" href="https://doi.org/10.1093/bioinformatics/btx665">10.1093/bioinformatics/btx665</a></p>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+<div class="section" id="preface">
+<h1>Preface<a class="headerlink" href="#preface" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>Krait is a robust and ultrafast tool with a user-friendly graphic interface for genome-wide investigation of microsatellites, which attempts to overcome the limitations of the currently available tools. Krait is written in Python and can be run as a standalone desktop application on Windows, Linux or Mac systems without dependencies. The microsatellite search engine is written in C and compiled as Python modules for import into Krait. Krait has many features: 1) Identification of perfect SSRs, imperfect SSRs (iSSRs), compound SSRs (cSSRs) and VNTRs from extremely large genome. 2) Locating the SSRs in gene coding region. 3) Design primer for microsatellite 4) Statistical analysis and plotting. 5) Supporting gzip compressed fasta as input file. 6) Supporting export FASTA, GFF3 or CSV. 7) Downloading DNA sequence from NCBI database.</p>
+</div>
+<div class="section" id="license">
+<h2>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
+<p>Krait is distributed under a license called GNU General Public License, version 2 (GPL2).</p>
+</div>
+<div class="section" id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<p>Krait is an operating system independent application and works on Windows, Linux and Mac systems. We recommend at least 1GB of RAM and 5GB of available hard disk space. In order to process very large genomes, a faster processor (64 bit) and larger amount of physical memory will be needed.</p>
+</div>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>On windows, the preferred way to install Krait is to download the installer directly from <a class="reference external" href="https://github.com/lmdu/krait/releases">https://github.com/lmdu/krait/releases</a> Then double click the downloaded installer to install the program following the on-screen instructions.</p>
+<p>On Linux or Mac, download the latest version of Krait for your operating system from the following URL: <a class="reference external" href="https://github.com/lmdu/krait/releases">https://github.com/lmdu/krait/releases</a> and then decompress the downloaded file. Just simply double click krait to run the program not required installation.</p>
+</div>
+<div class="section" id="user-interface">
+<h2>User Interface<a class="headerlink" href="#user-interface" title="Permalink to this headline">¶</a></h2>
+<p>The general components of the Krait main user interface are shown in
+Figure 1.</p>
+<p class="wy-text-center"><img alt="overview" src="_images/overview.png" /></p>
+<p class="wy-text-center">Figure 1: Krait main user interface</p>
+<ol class="arabic simple">
+<li><p>Search for perfect microsatellites or show results if you have searched.</p></li>
+<li><p>Search for compound microsatellites or show results if you have searched.</p></li>
+<li><p>Search for imperfect microsatellites or show results if you have searched.</p></li>
+<li><p>Search for VNTRs or show results if you have searched.</p></li>
+<li><p>Mapping perfect, compound, imperfect microsatellites or VNTRs to coding region of genes.</p></li>
+<li><p>Design primers for microsatellites screened from results.</p></li>
+<li><p>Perform statistical analysis and save to file.</p></li>
+<li><p>Filter results using user inputted conditions.</p></li>
+<li><p>Display the result of analysis in table.</p></li>
+<li><p>The number of table rows.</p></li>
+<li><p>The number of table columns.</p></li>
+<li><p>The number of selected rows.</p></li>
+<li><p>The task progressing.</p></li>
+</ol>
+</div>
+</div>
+<div class="section" id="import-sequences">
+<h1>Import Sequences<a class="headerlink" href="#import-sequences" title="Permalink to this headline">¶</a></h1>
+<p>To start a new analysis you just have to import your sequence data from
+files into Krait. The application accepts text or gzip compressed files
+containing one or more DNA sequences in FASTA format (Figure 2). These
+files may have the extension .fasta, .fna, .fa, .txt, .fasta.gz,
+.fna.gz, .fa.gz. A sequence in FASTA format begins with a single-line
+description or header starting with a “<strong>&gt;</strong>” character. The rest of
+the header line is arbitrary but should be informative. Avoid strange
+characters in the sequence header, such as ’&amp;’ or ’\’ and use ’N’ to
+denote in-determinations in the sequences.</p>
+<p class="wy-text-center"><img alt="fasta" src="_images/fasta.png" /></p>
+<p class="wy-text-center">Figure 2: An example for the FASTA format</p>
+<div class="section" id="import-one-fasat-file">
+<h2>Import One FASAT File<a class="headerlink" href="#import-one-fasat-file" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Go to <strong>File Menu -&gt; Import Fasta</strong>.</p></li>
+<li><p>Select a FASTA formatted file containing your sequences.</p></li>
+<li><p>Click <strong>Open</strong> to import FASTA file.</p></li>
+</ol>
+</div>
+<div class="section" id="import-multiple-fasta-files">
+<h2>Import Multiple FASTA Files<a class="headerlink" href="#import-multiple-fasta-files" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Put your FASTA files in a folder</p></li>
+<li><p>Go to <strong>File Menu -&gt; Import Fastas</strong> <strong>in Folder</strong>.</p></li>
+<li><p>Select the folder to load FASTA files in that folder.</p></li>
+</ol>
+</div>
+<div class="section" id="import-fasta-from-ncbi">
+<h2>Import Fasta from NCBI<a class="headerlink" href="#import-fasta-from-ncbi" title="Permalink to this headline">¶</a></h2>
+<p>Krait provides a tool for user to download the FASTA formatted DNA
+sequence from NCBI nucleotide database (Figure 3).</p>
+<p class="wy-text-center"><img alt="ncbi" src="_images/ncbi.png" /></p>
+<p class="wy-text-center">Figure 3: Downloading sequence from NCBI database</p>
+<ol class="arabic simple">
+<li><p>Go to <strong>Tool Menu -&gt; Download Sequence from NCBI</strong> to open download dialog.</p></li>
+<li><p>Input accession, version or GI number of a sequence in NCBI nucleotide database.</p></li>
+<li><p>Click <strong>Browser</strong> to select an output file path.</p></li>
+<li><p>Click <strong>OK</strong> to start download file and wait for finish.</p></li>
+<li><p>Once download finished, go to <strong>File Menu -&gt; Import Fasta</strong> to select your downloaded file to import.</p></li>
+</ol>
+</div>
+</div>
+<div class="section" id="search-for-tandem-repeats">
+<h1>Search for Tandem Repeats<a class="headerlink" href="#search-for-tandem-repeats" title="Permalink to this headline">¶</a></h1>
+<p>Krait allows user to identify perfect microsatellites (SSRs), compound microsatellites (cSSRs) and imperfect SSRs (iSSRs) as well as VNTRs.</p>
+<div class="section" id="search-for-ssrs">
+<h2>Search for SSRs<a class="headerlink" href="#search-for-ssrs" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="start-ssr-search">
+<h3>Start SSR Search<a class="headerlink" href="#start-ssr-search" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Import fasta sequence file (See 2 Input Files).</p></li>
+<li><p>Go to <strong>SSRs (toobar) -&gt; Specify Minimum Repeats</strong> to specify minimum repeats.</p></li>
+<li><p>Click SSR search bubtton <img alt="ssr" src="_images/ssr.png" /> to start search SSRs.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Search Menu -&gt; Search for SSRs</strong> and <strong>SSRs (toolbar) -&gt; Search for SSRs</strong> will remove the previous searched SSR results and then search for SSRs again.</p>
+</div>
+</div>
+<div class="section" id="ssr-search-results">
+<h3>SSR Search Results<a class="headerlink" href="#ssr-search-results" title="Permalink to this headline">¶</a></h3>
+<p>After SSR search finished, a table containing results will be displayed. An example was shown in Figure 4. The result table contains 9 columns.</p>
+<p class="wy-text-center"><img alt="ssrres" src="_images/ssrres.png" /></p>
+<p class="wy-text-center">Figure 4: An example for SSR search result</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 88%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>column</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>id</p></td>
+<td><p>unique identifier generated by Krait</p></td>
+</tr>
+<tr class="row-odd"><td><p>sequence</p></td>
+<td><p>the name of sequence where SSR was found</p></td>
+</tr>
+<tr class="row-even"><td><p>standard</p></td>
+<td><p>the standardized motif</p></td>
+</tr>
+<tr class="row-odd"><td><p>motif</p></td>
+<td><p>repeat unit of SSR</p></td>
+</tr>
+<tr class="row-even"><td><p>type</p></td>
+<td><p>SSR type, mononucleotide, dinucleotide etc corresponding to motif length</p></td>
+</tr>
+<tr class="row-odd"><td><p>repeat</p></td>
+<td><p>number of repeats</p></td>
+</tr>
+<tr class="row-even"><td><p>start</p></td>
+<td><p>start position of SSR in original sequence, 1-based</p></td>
+</tr>
+<tr class="row-odd"><td><p>end</p></td>
+<td><p>end position of SSR in original sequence, 1-based</p></td>
+</tr>
+<tr class="row-even"><td><p>length</p></td>
+<td><p>the length of SSR (bp)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="show-ssr-results">
+<h3>Show SSR Results<a class="headerlink" href="#show-ssr-results" title="Permalink to this headline">¶</a></h3>
+<p>If you have searched SSRs, you can click SSR search button <img alt="ssr" src="_images/ssr.png" /> or go to <strong>SSRs (toolbar) -&gt; Show Perfect SSRs</strong> or go to <strong>View Menu -&gt; Show Perfect SSRs</strong> to display SSR results in table.</p>
+</div>
+<div class="section" id="remove-ssr-results">
+<h3>Remove SSR Results<a class="headerlink" href="#remove-ssr-results" title="Permalink to this headline">¶</a></h3>
+<p>You can go to <strong>SSRs (toolbar) -&gt; Remove Perfect SSRs</strong> or <strong>View Menu -&gt; Remove Perfect SSRs</strong> to remove searched SSR results.</p>
+</div>
+</div>
+<div class="section" id="search-for-cssrs">
+<h2>Search for cSSRs<a class="headerlink" href="#search-for-cssrs" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="start-cssr-search">
+<h3>Start cSSR Search<a class="headerlink" href="#start-cssr-search" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Search perfect SSRs (See 3.1.1).</p></li>
+<li><p>Go to <strong>cSSRs -&gt; Specify Maximum Distance</strong> to specify a maximum distance (dMAX) allowed between two perfect SSRs.</p></li>
+<li><p>Click cSSR search button <img alt="cssr" src="_images/cssr.png" /> to start search cSSRs.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Search Menu -&gt; Search for cSSRs</strong> and <strong>cSSRs (toolbar) -&gt; Search for cSSRs</strong> will remove the previous searched cSSR results and then search for cSSRs again.</p>
+</div>
+</div>
+<div class="section" id="cssr-seach-results">
+<h3>cSSR Seach Results<a class="headerlink" href="#cssr-seach-results" title="Permalink to this headline">¶</a></h3>
+<p>After cSSR search finished, a table containing results will be displayed. An example was shown in Figure 5. The result table contains 10 columns.</p>
+<p class="wy-text-center"><img alt="cssrres" src="_images/cssrres.png" /></p>
+<p class="wy-text-center">Figure 5: An example for cSSR search result</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>column</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>id</p></td>
+<td><p>unique identifier generated by Krait</p></td>
+</tr>
+<tr class="row-odd"><td><p>sequence</p></td>
+<td><p>the name of sequence where cSSR was found</p></td>
+</tr>
+<tr class="row-even"><td><p>start</p></td>
+<td><p>start position of cSSR in original sequence</p></td>
+</tr>
+<tr class="row-odd"><td><p>end</p></td>
+<td><p>end position of cSSR in original sequence</p></td>
+</tr>
+<tr class="row-even"><td><p>motif</p></td>
+<td><p>the motifs of individual SSR in a cSSR</p></td>
+</tr>
+<tr class="row-odd"><td><p>complexity</p></td>
+<td><p>the number of individual SSR in a cSSR</p></td>
+</tr>
+<tr class="row-even"><td><p>length</p></td>
+<td><p>the length of cSSR</p></td>
+</tr>
+<tr class="row-odd"><td><p>gap</p></td>
+<td><p>total bases of distance between two SSR</p></td>
+</tr>
+<tr class="row-even"><td><p>component</p></td>
+<td><p>the SSR id of individual SSRs comprised cSSR</p></td>
+</tr>
+<tr class="row-odd"><td><p>structure</p></td>
+<td><p>the detail of SSRs comprised cSSR</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="show-cssr-results">
+<h3>Show cSSR Results<a class="headerlink" href="#show-cssr-results" title="Permalink to this headline">¶</a></h3>
+<p>If you have searched cSSRs, you can click cSSR search button <img alt="cssr" src="_images/cssr.png" /> or go to <strong>cSSRs (toolbar) -&gt; Show Compound SSRs</strong> or <strong>View Menu -&gt; Show Compound SSRs</strong> to dispay cSSR result in table.</p>
+</div>
+<div class="section" id="remove-cssr-results">
+<h3>Remove cSSR Results<a class="headerlink" href="#remove-cssr-results" title="Permalink to this headline">¶</a></h3>
+<p>You can go to <strong>cSSRs (toolbar) -&gt; Remove Compound SSRs</strong> or <strong>View Menu -&gt; Remove Compound SSRs</strong> to remove searched cSSR results.</p>
+</div>
+</div>
+<div class="section" id="search-for-issrs">
+<h2>Search for iSSRs<a class="headerlink" href="#search-for-issrs" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="start-issr-search">
+<h3>Start iSSR Search<a class="headerlink" href="#start-issr-search" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Import fasta sequence file (See 2 Input Files).</p></li>
+<li><p>Go to <strong>iSSRs (toobar) -&gt; Specify Search Parameters</strong> to specify minimum length and repeats of seed, maximum consecutive edits, gap penalty and minimum score required.</p></li>
+<li><p>Click cSSR search bubtton <img alt="issr" src="_images/issr.png" /> to start search cSSRs.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Search Menu -&gt; Search for iSSRs</strong> and <strong>iSSRs (toolbar) -&gt; Search for iSSRs</strong> will remove the previous searched iSSR results and then search for iSSRs again.</p>
+</div>
+</div>
+<div class="section" id="issr-search-results">
+<h3>iSSR Search Results<a class="headerlink" href="#issr-search-results" title="Permalink to this headline">¶</a></h3>
+<p>After iSSR search finished, a table containing results will be displayed. An example was shown in Figure 6. The result table contains 13 columns.</p>
+<p class="wy-text-center"><img alt="issrres" src="_images/issrres.png" /></p>
+<p class="wy-text-center">Figure 6: An example for iSSR search result</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>column</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>id</p></td>
+<td><p>unique identifier generated by Krait</p></td>
+</tr>
+<tr class="row-odd"><td><p>sequence</p></td>
+<td><p>the name of sequence where SSR was found</p></td>
+</tr>
+<tr class="row-even"><td><p>standard</p></td>
+<td><p>the standardized motif</p></td>
+</tr>
+<tr class="row-odd"><td><p>motif</p></td>
+<td><p>repeat unit of SSR</p></td>
+</tr>
+<tr class="row-even"><td><p>type</p></td>
+<td><p>SSR type, mononucleotide, dinucleotide etc. corresponding to motif length</p></td>
+</tr>
+<tr class="row-odd"><td><p>start</p></td>
+<td><p>start position of SSR in original sequence</p></td>
+</tr>
+<tr class="row-even"><td><p>end</p></td>
+<td><p>end position of SSR in original sequence</p></td>
+</tr>
+<tr class="row-odd"><td><p>length</p></td>
+<td><p>the length of SSR (bp)</p></td>
+</tr>
+<tr class="row-even"><td><p>match</p></td>
+<td><p>the number of matches</p></td>
+</tr>
+<tr class="row-odd"><td><p>substitution</p></td>
+<td><p>the number of substitutions</p></td>
+</tr>
+<tr class="row-even"><td><p>insertion</p></td>
+<td><p>the number of insertions</p></td>
+</tr>
+<tr class="row-odd"><td><p>deletion</p></td>
+<td><p>the number of deletions</p></td>
+</tr>
+<tr class="row-even"><td><p>score</p></td>
+<td><p>the score of iSSR</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="show-issr-results">
+<h3>Show iSSR Results<a class="headerlink" href="#show-issr-results" title="Permalink to this headline">¶</a></h3>
+<p>If you have searched iSSRs, you can click iSSR search button <img alt="issr" src="_images/issr.png" /> or go to <strong>iSSRs (toolbar) -&gt; Show Imperfect SSRs</strong> or <strong>View Menu -&gt; Show Imperfect SSRs</strong> to dispay iSSR result in table.</p>
+</div>
+<div class="section" id="remove-issr-results">
+<h3>Remove iSSR Results<a class="headerlink" href="#remove-issr-results" title="Permalink to this headline">¶</a></h3>
+<p>You can go to <strong>iSSRs (toolbar) -&gt; Remove Imperfect SSRs</strong> or <strong>View Menu -&gt; Remove Imperfect SSRs</strong> to remove searched cSSR results.</p>
+</div>
+</div>
+<div class="section" id="search-for-vntrs">
+<h2>Search for VNTRs<a class="headerlink" href="#search-for-vntrs" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="start-vntr-search">
+<h3>Start VNTR Search<a class="headerlink" href="#start-vntr-search" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Import fasta sequence file (See 2 Input Sequences).</p></li>
+<li><p>Go to <strong>VNTRs (toobar) -&gt; Specify Search Parameters</strong> to specify minimum and maximum length of motif and minimum repeats.</p></li>
+<li><p>Click VNTR search bubtton <img alt="vntr" src="_images/vntr.png" /> to start search VNTRs.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Search Menu -&gt; Search for VNTRs</strong> and <strong>VNTRs (toolbar) -&gt; Search for VNTRs</strong> will remove the previous searched VNTR results and then search for VNTRs again.</p>
+</div>
+</div>
+<div class="section" id="vntr-search-results">
+<h3>VNTR Search Results<a class="headerlink" href="#vntr-search-results" title="Permalink to this headline">¶</a></h3>
+<p>After VNTR search finished, a table containing results will be displayed. An example was shown in Figure 7. The result table contains 8 columns.</p>
+<p class="wy-text-center"><img alt="vntrres" src="_images/vntrres.png" /></p>
+<p class="wy-text-center">Figure 7: An example for VNTR search result</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 81%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>column</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>id</p></td>
+<td><p>unique identifier generated by Krait</p></td>
+</tr>
+<tr class="row-odd"><td><p>sequence</p></td>
+<td><p>the name of sequence where SSR was found</p></td>
+</tr>
+<tr class="row-even"><td><p>motif</p></td>
+<td><p>repeat unit of SSR</p></td>
+</tr>
+<tr class="row-odd"><td><p>type</p></td>
+<td><p>VNTR type, motif length</p></td>
+</tr>
+<tr class="row-even"><td><p>repeat</p></td>
+<td><p>number of repeats</p></td>
+</tr>
+<tr class="row-odd"><td><p>start</p></td>
+<td><p>start position of SSR in original sequence</p></td>
+</tr>
+<tr class="row-even"><td><p>end</p></td>
+<td><p>end position of SSR in original sequence</p></td>
+</tr>
+<tr class="row-odd"><td><p>length</p></td>
+<td><p>the length of SSR (bp)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="show-vntr-results">
+<h3>Show VNTR Results<a class="headerlink" href="#show-vntr-results" title="Permalink to this headline">¶</a></h3>
+<p>If you have searched VNTRs, you can click VNTR search button <img alt="vntr" src="_images/vntr.png" /> or go to <strong>VNTRs (toolbar) -&gt; Show VNTRs</strong> or go to <strong>View Menu -&gt; Show VNTRs</strong> to display VNTR results in table.</p>
+</div>
+<div class="section" id="remove-vntr-results">
+<h3>Remove VNTR Results<a class="headerlink" href="#remove-vntr-results" title="Permalink to this headline">¶</a></h3>
+<p>You can go to <strong>VNTRs (toolbar) -&gt; Remove VNTRs</strong> or <strong>View Menu -&gt; Remove VNTRs</strong> to remove searched VNTR results.</p>
+</div>
+</div>
+<div class="section" id="settings-for-search">
+<h2>Settings for Search<a class="headerlink" href="#settings-for-search" title="Permalink to this headline">¶</a></h2>
+<p>The setting panel also can be opened by <strong>Edit Menu -&gt; Preferences</strong>. The setting panel was shown in Figure 8.</p>
+<p class="wy-text-center"><img alt="settings" src="_images/settings.png" /></p>
+<p class="wy-text-center">Figure 8: The setting panel for search</p>
+<p>The setting panel contains 6 subpanels:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>Minimum repeats Panel</p></td>
+<td><p>specify minimum repeats for each type (di- tohexa-nucleotide) of perfect SSRs</p></td>
+</tr>
+<tr class="row-even"><td><p>cSSR Panel</p></td>
+<td><p>specify maximum distance allowed between two perfectSSRs</p></td>
+</tr>
+<tr class="row-odd"><td><p>VNTR Panel</p></td>
+<td><p>set minimum and maximum length of motifs and minimumrepeats</p></td>
+</tr>
+<tr class="row-even"><td><p>iSSR Panel</p></td>
+<td><p>set minimum repeats and length of extended seed, maximum consecutive edits allowed in an extension, mismatch penalty, indel penalty and minimum required score</p></td>
+</tr>
+<tr class="row-odd"><td><p>Motif Standardization Level Panel</p></td>
+<td><p>set the motif standardization level (0-4), the level only affects the result of perfect and imperfect SSRs search</p></td>
+</tr>
+<tr class="row-even"><td><p>Flanking Sequence Panel</p></td>
+<td><p>set the flanking sequence length, used to design primer, export FASTA and display the details of SSR</p></td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="motif-standardization">
+<h3>Motif Standardization<a class="headerlink" href="#motif-standardization" title="Permalink to this headline">¶</a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 5%" />
+<col style="width: 95%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>Level 0</p></td>
+<td><p>no standardization will be performed</p></td>
+</tr>
+<tr class="row-even"><td><p>Level 1</p></td>
+<td><p>Similar motifs. For example, CA can be viewed as AC. ATGcan represent TGA and GAT</p></td>
+</tr>
+<tr class="row-odd"><td><p>Level 2</p></td>
+<td><p>Reverse complementary motifs, including Level 1. For example, CAT is a reverse complementary motif of ATG. ATG can represent TGA, GAT, CAT, ATC and TCA</p></td>
+</tr>
+<tr class="row-even"><td><p>Level 3</p></td>
+<td><p>Complementary motifs, including Level 1 and Level 2. For example, TAC is a complementary motif of ATG. ATG can represent TGA,GAT, CAT, ATC, TCA, TAC, ACT and CTA</p></td>
+</tr>
+<tr class="row-odd"><td><p>Level 4</p></td>
+<td><p>Reverse motifs, including Level 1, Level 2 and Level 3. For example, GTA is a reverse motif of ATG. ATG can represent TGA,GAT, CAT, ATC, TCA, TAC, ACT, CTA, GTA, TAG and AGT</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="section" id="mapping-repeats-in-genes">
+<h1>Mapping Repeats in Genes<a class="headerlink" href="#mapping-repeats-in-genes" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="start-mapping-repeats">
+<h2>Start Mapping Repeats<a class="headerlink" href="#start-mapping-repeats" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Search SSRs, cSSRs, iSSRs or VNTRs (See 3 Search for Repeats )</p></li>
+<li><p>Go to <strong>Mapping (toolbar) -&gt; Import Annotation File</strong> to select a GTF or GFF file corresponding to the imported sequence file.</p></li>
+<li><p>Click the locate button <img alt="mapping" src="_images/locate.png" /> to start locating.</p></li>
+</ol>
+</div>
+<div class="section" id="locating-results">
+<h2>Locating Results<a class="headerlink" href="#locating-results" title="Permalink to this headline">¶</a></h2>
+<p>If locating task finished, the repeats located in gene exon, intron, CDS or UTRs will be marked as different colors in table. An example was shown in Figure 9.</p>
+<p class="wy-text-center"><img alt="mappingres" src="_images/mappingres.png" /></p>
+<p class="wy-text-center">Figure 9: An example for locating result</p>
+</div>
+<div class="section" id="select-by-color">
+<h2>Select by Color<a class="headerlink" href="#select-by-color" title="Permalink to this headline">¶</a></h2>
+<p>This function allows selection of repeats on the basis of their color i.e. the region in where the repeat located. You can go to <strong>Mapping (toolbar) -&gt; Show SSRs in CDS, Exon, UTR or Intron</strong> to screen as shown in Figure 10.</p>
+<p class="wy-text-center"><img alt="color" src="_images/color.png" /></p>
+<p class="wy-text-center">Figure 10: Selection by Colors</p>
+</div>
+<div class="section" id="remove-mapping-results">
+<h2>Remove Mapping Results<a class="headerlink" href="#remove-mapping-results" title="Permalink to this headline">¶</a></h2>
+<p>You can go to <strong>Mapping (toolbar) -&gt; Remove mapping result</strong> to remove mapping results.</p>
+</div>
+</div>
+<div class="section" id="primer-design">
+<h1>Primer Design<a class="headerlink" href="#primer-design" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="start-primer-design">
+<h2>Start Primer Design<a class="headerlink" href="#start-primer-design" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Select tandem repeats in table that you want to design primer.</p></li>
+<li><p>Go to <strong>Primer (toolbar) -&gt; Specify Primer3 Setttings</strong> to set parameters for primer3.</p></li>
+<li><p>Click design primer button <img alt="primer" src="_images/primer.png" /> to start design primer for selected tandem repeats.</p></li>
+</ol>
+</div>
+<div class="section" id="primer-design-results">
+<h2>Primer Design Results<a class="headerlink" href="#primer-design-results" title="Permalink to this headline">¶</a></h2>
+<p>After primer design, a table contains primer details will be display. The result table contains 12 columns. An example for primer design was shown in Figure 11.</p>
+<p class="wy-text-center"><img alt="primerres" src="_images/primerres.png" /></p>
+<p class="wy-text-center">Figure 11: An example for primer design</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 86%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>id</p></td>
+<td><p>unique identifier generated by Krait</p></td>
+</tr>
+<tr class="row-even"><td><p>category</p></td>
+<td><p>the type of repeats, ssr, issr, cssr or vntr</p></td>
+</tr>
+<tr class="row-odd"><td><p>target</p></td>
+<td><p>the id of the tandem repeat</p></td>
+</tr>
+<tr class="row-even"><td><p>entry</p></td>
+<td><p>the primer number for tandem repeats. A tandem repeats can contains multigroup primers</p></td>
+</tr>
+<tr class="row-odd"><td><p>product</p></td>
+<td><p>the product size of primer</p></td>
+</tr>
+<tr class="row-even"><td><p>forward</p></td>
+<td><p>the sequence of forward primer</p></td>
+</tr>
+<tr class="row-odd"><td><p>reverse</p></td>
+<td><p>the sequence of reverse primer</p></td>
+</tr>
+<tr class="row-even"><td><p>tm1,tm2</p></td>
+<td><p>the temperature of the forward primer and reverse primer</p></td>
+</tr>
+<tr class="row-odd"><td><p>gc1,gc2</p></td>
+<td><p>the GC content of the forward primer and reverse primer</p></td>
+</tr>
+<tr class="row-even"><td><p>stability1,2</p></td>
+<td><p>the end stability of the forward primer and reverse primer</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="show-or-remove-primer-design-results">
+<h2>Show or Remove Primer Design Results<a class="headerlink" href="#show-or-remove-primer-design-results" title="Permalink to this headline">¶</a></h2>
+<p>If you have designed primers, you can go to <strong>Primer (toolbar) -&gt; Show Designed Primer</strong> to display primer results. The primer results can be removed by <strong>Primer (toolbar) -&gt; Remove Designed Primer</strong>.</p>
+</div>
+<div class="section" id="settings-for-primer-design">
+<h2>Settings for Primer Design<a class="headerlink" href="#settings-for-primer-design" title="Permalink to this headline">¶</a></h2>
+<p>The settings for primer design shown in Figure 12 are the same with Primer3 tags. Click the setting name will redirect to the corresponding tags in <a class="reference external" href="https://primer3.org/manual.html">Primer3 manual</a>.</p>
+<p class="wy-text-center"><img alt="primersettings" src="_images/primersettings.png" /></p>
+<p class="wy-text-center">Figure 12: Setting panel for primer design</p>
+</div>
+</div>
+<div class="section" id="filter-data-in-table">
+<h1>Filter Data in Table<a class="headerlink" href="#filter-data-in-table" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="start-filter-data">
+<h2>Start Filter Data<a class="headerlink" href="#start-filter-data" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Verify that the current display is a table with rows.</p></li>
+<li><p>Input the conditions into input box as shown in Figure 13.</p></li>
+<li><p>Press <strong>Enter</strong> to filter rows in table.</p></li>
+</ol>
+<p class="wy-text-center"><img alt="filter" src="_images/filter.png" /></p>
+<p class="wy-text-center">Figure 13: Filter condition input box.</p>
+</div>
+<div class="section" id="construct-filter-conditions">
+<h2>Construct Filter Conditions<a class="headerlink" href="#construct-filter-conditions" title="Permalink to this headline">¶</a></h2>
+<p>Krait provides comparison operators and logical operators that allow you to construct the condition. The comparison operators include <strong>=, &gt;, &lt;, &gt;=, &lt;=</strong>; the logical operators include <strong>AND</strong>, <strong>OR</strong>. There is a special operator <strong>IN</strong> can be used. The condition is case-insensitive. Thus you can use column name and operators to construct a condition to filter table rows. The numeric column can be allowed to use all comparison operators and the text column only be allowed to use <strong>=</strong> and IN. Examples:</p>
+<ol class="arabic simple">
+<li><p>Suppose you want to find SSRs whose motif is ATG, you can construct a condition:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">motif</span><span class="o">=</span><span class="n">ATG</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>If you want to find SSRs whose motif is ATG and repeats greater than 10, you can construct a condition:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">motif</span><span class="o">=</span><span class="n">ATG</span> <span class="ow">and</span> <span class="n">repeat</span><span class="o">&gt;</span><span class="mi">10</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>If you want to find SSRs whose motifs are ATG, AT, AAAG and repeats between 10 and 15, you can construct a condition:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">motif</span> <span class="ow">in</span> <span class="p">(</span><span class="n">ATG</span><span class="p">,</span><span class="n">AT</span><span class="p">,</span><span class="n">AAAG</span><span class="p">)</span> <span class="ow">and</span> <span class="n">repeats</span><span class="o">&gt;=</span><span class="mi">10</span> <span class="ow">and</span> <span class="n">repeats</span><span class="o">&lt;=</span><span class="mi">15</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>If you want to find SSRs whose length less than 12 or length greater than 20, you can construct a condition:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">length</span><span class="o">&lt;</span><span class="mi">12</span> <span class="ow">or</span> <span class="n">length</span><span class="o">&gt;</span><span class="mi">20</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="statistical-analysis">
+<h1>Statistical Analysis<a class="headerlink" href="#statistical-analysis" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="perform-statistical-analysis">
+<h2>Perform statistical Analysis<a class="headerlink" href="#perform-statistical-analysis" title="Permalink to this headline">¶</a></h2>
+<p>If you have searched SSRs, cSSRs, iSSRs or VNTRs, you can just click the statistics button <img alt="stat" src="_images/stat.png" /> to start statistical analysis.</p>
+<p>If you have performed statistical analysis, click the statistics button will display the statistical results. If you want to perform statistical analysis again, you can go to <strong>Statistics (toobar) -&gt; Statistical Analysis</strong>.</p>
+</div>
+<div class="section" id="statistical-analysis-results">
+<h2>Statistical Analysis Results<a class="headerlink" href="#statistical-analysis-results" title="Permalink to this headline">¶</a></h2>
+<p>Once statistical analysis finished, a statistical report contains several tables and graphs will be generated and save to a html file. You can use browser (Chrome or firefox) to view html report.</p>
+<p class="wy-text-center"><img alt="report" src="_images/report.png" /></p>
+<p class="wy-text-center">Figure 14: A part of statistical report</p>
+<p>You can also go to <strong>File Menu -&gt; Export Statistical Report</strong> to perform statistics and export html formatted statistical report.</p>
+</div>
+<div class="section" id="refresh-statistical-results">
+<h2>Refresh Statistical Results<a class="headerlink" href="#refresh-statistical-results" title="Permalink to this headline">¶</a></h2>
+<p>If you have performed statistical analysis, you can go to <strong>Statistics (toolbar) -&gt; Refresh Statistical Analysis</strong> to regenerate statistical results.</p>
+</div>
+</div>
+<div class="section" id="export-output-files">
+<h1>Export Output Files<a class="headerlink" href="#export-output-files" title="Permalink to this headline">¶</a></h1>
+<p>Krait allows user to export Table (CSV, GTF, GFF) and FASTA formatted files.</p>
+<div class="section" id="export-table">
+<h2>Export Table<a class="headerlink" href="#export-table" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Select rows in table that you want to export.</p></li>
+<li><p>Go to File Menu -&gt; Export Selected as Table and select a format (CSV, GTF, GFF or TEXT) and provide an output file name.</p></li>
+<li><p>Click <strong>Save</strong> to export to output file.</p></li>
+</ol>
+</div>
+<div class="section" id="export-fasta">
+<h2>Export FASTA<a class="headerlink" href="#export-fasta" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Select rows in table that you want to export.</p></li>
+<li><p>Go to <strong>File Menu -&gt; Export Selected as Fasta</strong> and provide an output file name.</p></li>
+<li><p>Click <strong>Save</strong> to export to output file</p></li>
+</ol>
+</div>
+</div>
+<div class="section" id="feedback">
+<h1>Feedback<a class="headerlink" href="#feedback" title="Permalink to this headline">¶</a></h1>
+<p>Report issues:
+<a class="reference external" href="https://github.com/lmdu/krait/issues">https://github.com/lmdu/krait/issues</a>.</p>
+<p>Contact email: <a class="reference external" href="mailto:adullb&#37;&#52;&#48;qq&#46;com">adullb<span>&#64;</span>qq<span>&#46;</span>com</a></p>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Lianming Du
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

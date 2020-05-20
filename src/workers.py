@@ -314,7 +314,7 @@ class VNTRWorker(Worker):
 				
 				def values():
 					for vntr in vntrs:
-						row = [None, seq.name]
+						row = [None, name]
 						row.extend(vntr)
 						yield row
 
