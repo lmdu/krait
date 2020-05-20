@@ -21,7 +21,7 @@ project = 'krait'
 copyright = '2020, Lianming Du'
 author = 'Lianming Du'
 
-with open(os.path.join(os.path.abspath('..'), 'src', 'config.py')) as fh:
+with open(os.path.join(os.path.abspath('../..'), 'src', 'config.py')) as fh:
 	for line in fh:
 		if line.startswith('VERSION'):
 			__version__ = line.strip().split()[-1].strip('"')
