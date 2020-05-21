@@ -46,6 +46,7 @@ script:
       cd dist;
       tar -czvf Krait-v${version}-linux.tar.gz Krait;
     fi
+  - ls -lh
   - cd ..
 
 deploy:
