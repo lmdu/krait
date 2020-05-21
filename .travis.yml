@@ -40,8 +40,8 @@ script:
       cd dist;
       #tar -czvf Krait-v${version}-mac.tar.gz Krait;
       npm install --global create-dmg;
-      create-dmg Krait.app
-      mv "Krait 0.0.0.dmg" Kriat-v${version}-mac.dmg
+      create-dmg Krait.app;
+      mv "Krait 0.0.0.dmg" Kriat-v${version}-mac.dmg;
     else
       pyinstaller linux.spec;
       cd dist;
