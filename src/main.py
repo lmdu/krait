@@ -12,9 +12,6 @@ from PySide2.QtWidgets import QApplication, QSplashScreen
 #from PySide2.QtCore import Qt, QCoreApplication
 #from PySide2.QtGui import QPixmap, QFont, QFontDatabase, QApplication, QSplashScreen
 
-#create application and set properties
-os.environ['PRIMER3HOME'] = os.getcwd()
-
 if __name__ == '__main__':
 	#QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
 	#QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)

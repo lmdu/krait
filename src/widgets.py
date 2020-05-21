@@ -12,7 +12,7 @@ import platform
 
 from PySide2.QtCore import *
 from PySide2.QtGui import *
-from PySide2.QtSql import *
+#from PySide2.QtSql import *
 #from PySide2.QtWebEngineWidgets import *
 from PySide2.QtWidgets import *
 #from PySide2.QtPrintSupport import *
@@ -873,25 +873,25 @@ class SSRMainWindow(QMainWindow):
 
 	def doCopy(self):
 		focus = QApplication.focusWidget()
-		if focus is 0: return
+		if focus == 0: return
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyPress, Qt.Key_C, Qt.ControlModifier))
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyRelease, Qt.Key_C, Qt.ControlModifier))
 
 	def doCut(self):
 		focus = QApplication.focusWidget()
-		if focus is 0: return
+		if focus == 0: return
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyPress, Qt.Key_X, Qt.ControlModifier))
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyRelease, Qt.Key_X, Qt.ControlModifier))
 	
 	def doPaste(self):
 		focus = QApplication.focusWidget()
-		if focus is 0: return
+		if focus == 0: return
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyPress, Qt.Key_V, Qt.ControlModifier))
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyRelease, Qt.Key_V, Qt.ControlModifier))
 	
 	def doSelectAll(self):
 		focus = QApplication.focusWidget()
-		if focus is 0: return
+		if focus == 0: return
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyPress, Qt.Key_A, Qt.ControlModifier))
 		QApplication.postEvent(focus, QKeyEvent(QEvent.KeyRelease, Qt.Key_A, Qt.ControlModifier))
 
@@ -1268,30 +1268,6 @@ class SSRMainWindow(QMainWindow):
 			self.statis_result = None
 			#self.browser.setHtml('')
 
-	def showSSRSequence(self, index):
-		'''
-		The row in table double clicked, show the sequence of SSR
-		'''
-		table = self.model.tableName()
-		if table not in ['ssr', 'cssr']:
-			return
-		
-		flank = int(self.settings.value('flank', 50))
-		record = self.model.record(index.row())
-		ssr = Data({record.fieldName(i) : record.value(i) for i in range(record.count())})
-		sql = "SELECT f.path FROM fasta AS f, sequence AS s WHERE f.fid=s.fid AND s.name='%s'"
-		query = QSqlQuery(sql % ssr.sequence)
-		query.next()
-		seq_file = query.value(0)
-		start = int(record.value('start'))
-		stop = int(record.value('stop'))
-		html = get_ssr_sequence(seq_file, record.value('sequence'), start, stop, flank)
-		#print ssr_seq
-		dialog = BrowserDialog(self, html)
-		if dialog.exec_() == QDialog.Accepted:
-			pass
-
-
 	def changeRowColCount(self, count):
 		#self.table.setColumnWidth(0, 30)
 		self.table.resizeColumnToContents(0)
@@ -1463,7 +1439,8 @@ class SSRTableView(QTableView):
 		else:
 			content = SequenceDetail(table, _id, flank).generateHtml()
 
-		SSRDetailDialog(self.parent, "%s Sequence" % table.upper(), content)
+		dialog=SSRDetailDialog(self.parent, "%s Sequence" % table.upper(), content)
+		dialog.exec_()
 
 
 class TableModel(QAbstractTableModel):
@@ -2246,7 +2223,7 @@ class SSRDetailDialog(QDialog):
 		self.resize(700, 500)
 
 		self.setLayout(mainLayout)
-		self.open()
+		#self.open()
 
 class DownloadDialog(QDialog):
 	def __init__(self, parent=None):

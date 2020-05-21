@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+import os
 import csv
 import time
 import json
@@ -11,8 +11,7 @@ import multiprocessing
 
 from PySide2.QtCore import *
 #from PySide.QtCore import *
-from primer3 import primerdesign
-#import plot
+
 import motif
 from libs import *
 from db import *
@@ -20,6 +19,10 @@ from gff import *
 from utils import *
 from config import *
 from statistics import *
+from config import ROOT_PATH
+
+os.environ['PRIMER3HOME'] = ROOT_PATH
+from primer3 import primerdesign
 
 class Worker(QObject):
 	update_progress = Signal(int)

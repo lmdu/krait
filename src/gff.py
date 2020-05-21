@@ -275,7 +275,7 @@ class GTFParser(AnnotParser):
 	def get_gene_mapping(self):
 		gene_num = 0
 		for row in self.parse():
-			if row.feature is not 'GENE':
+			if row.feature != 'GENE':
 				continue
 
 			gene_id = row.attrs.GENE_ID
