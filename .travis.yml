@@ -40,7 +40,7 @@ script:
       cd dist;
       npm install --global create-dmg;
       create-dmg Krait.app;
-      mv "Krait 0.0.0.dmg" Kriat-v${version}-macos.dmg;
+      mv "Krait 0.0.0.dmg" Krait-v${version}-macos.dmg;
     else
       pyinstaller linux.spec;
       cd dist;
