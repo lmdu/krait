@@ -40,9 +40,62 @@ Krait is an operating system independent application and works on Windows, Linux
 Installation
 ------------
 
+Windows
+~~~~~~~
+
 On windows, the preferred way to install Krait is to download the installer directly from `https://github.com/lmdu/krait/releases <https://github.com/lmdu/krait/releases>`_ Then double click the downloaded installer to install the program following the on-screen instructions.
 
-On Linux or Mac, download the latest version of Krait for your operating system from the following URL: `https://github.com/lmdu/krait/releases <https://github.com/lmdu/krait/releases>`_ and then decompress the downloaded file. Just simply double click krait to run the program not required installation.
+MacOS
+~~~~~
+
+On MacOS, you can download the dmg package from the following URL: `https://github.com/lmdu/krait/releases <https://github.com/lmdu/krait/releases>`_ and double click the dmg file to mount it, and then drag Krait to Applcations folder to install krait.
+
+Linux
+~~~~~
+
+On Linux, you don't need to install krait, just download the package from the following URL: `https://github.com/lmdu/krait/releases <https://github.com/lmdu/krait/releases>`_ and then decompress the downloaded file. Just simply double click krait to run the program.
+
+Build from source
+~~~~~~~~~~~~~~~~~
+
+If you can not install krait through above approaches. You can run krait from source code and build yourself binary executable. Prior to start krait, you should install `python <https://www.python.org/>`_ (3.6 and 3.7 recommended) required packages: `PySide2 <https://wiki.qt.io/Qt_for_Python>`_, `pyfastx <https://github.com/lmdu/pyfastx>`_, `numpy <https://numpy.org/>`_, `requests <https://requests.readthedocs.io/en/master/>`_, `jinja2 <https://jinja.palletsprojects.com/en/2.11.x/>`_, `appdirs <https://github.com/ActiveState/appdirs>`_, `primer3-py <https://github.com/libnano/primer3-py>`_, `Cython <https://cython.org/>`_, `pyinstaller <https://www.pyinstaller.org/>`_.
+
+On windows, firstly you should install `mingw64 <https://sourceforge.net/projects/mingw-w64/>`_ and add it to your PATH enviroment. Download the source code from github and then open the cmd.
+
+::
+
+	pip3 install apsw-wheels
+	pip3 install -r requirements.txt
+	cd krait\src\libs\src
+	python3 setup.py build_ext --inplace -c mingw32
+	move *.pyd ..
+	cd ..\..\..
+	python3 main.py
+
+On MacOS and Linux, open the terminal.
+
+::
+
+	pip3 install apsw
+	pip3 install -r requirements.txt
+	cd krait/src/libs/src
+	python3 setup.py build_ext --inplace
+	mv *.so ..
+	cd ../../..
+	python3 main.py
+
+Build binary executable
+
+::
+
+	# On windows
+	pyinstaller win.spec
+
+	# On Linux
+	pyinstaller linux.spec
+
+	# On MacOS
+	pyinstaller mac.spec
 
 User Interface
 --------------
