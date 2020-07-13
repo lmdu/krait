@@ -97,7 +97,7 @@ extern int find_intervals(IntervalIterator *it0, int32_t start, int32_t end,Inte
 }
 
 #define HAS_OVERLAP_POSITIVE(IM,START,END) (((IM).start>=0) ? \
-    ((IM).start<=(START) && (END)<=(IM).end) \
+    ((IM).start<(END) && (START)<(IM).end) \
   : (-((IM).end)<(END) && (START) < -((IM).start)))
  /* ????? MERGE_INTERVAL_ORIENTATIONS ??????? */
 
@@ -105,7 +105,7 @@ extern int find_intervals(IntervalIterator *it0, int32_t start, int32_t end,Inte
 /* STANDARD MACROS */
 #define START_POSITIVE(IM) ((IM).start)
 #define END_POSITIVE(IM) ((IM).end)
-#define HAS_OVERLAP_POSITIVE(IM,START,END) ((IM).start<=(START) && (END)<=(IM).end)
+#define HAS_OVERLAP_POSITIVE(IM,START,END) ((IM).start<(END) && (START)<(IM).end)
 
 #endif
 

@@ -179,7 +179,7 @@ class SSRMainWindow(QMainWindow):
 			return
 
 		for suffix in ['.fa', '.fna', '.fas', '.fasta', '.fa.gz', '.fna.gz', '.fas.gz', '.fasta.gz']:
-			if drag_file.endswith(suffix):
+			if drag_file.endswith(suffix) or drag_file.endswith(suffix.upper()):
 				self.importFasta(drag_file)
 				return
 		warn_msg = (
@@ -722,7 +722,12 @@ class SSRMainWindow(QMainWindow):
 		if not fasta:
 			return
 
-		self.db.clear('fasta')
+		tables = ['ssr', 'cssr', 'issr', 'vntr', 'fasta', 'seq', 'option',
+				  'meta', 'primer', 'primer_meta', 'gene', 'location']
+
+		for tb in tables:
+			self.db.clear(tb)
+		self.model.clear()
 
 		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, fasta))
 		self.setStatusMessage("Import fasta %s" % fasta)
@@ -749,8 +754,13 @@ class SSRMainWindow(QMainWindow):
 
 		if not fastas:
 			return
-		else:
-			self.db.clear('fasta')
+		
+		tables = ['ssr', 'cssr', 'issr', 'vntr', 'fasta', 'seq', 'option',
+				  'meta', 'primer', 'primer_meta', 'gene', 'location']
+
+		for tb in tables:
+			self.db.clear(tb)
+		self.model.clear()
 		
 		count = 0
 		for fasta in fastas:
@@ -867,7 +877,7 @@ class SSRMainWindow(QMainWindow):
 		self.statis_outfile = htmlfile
 
 		if not self.statis_result:
-		 self.performStatistics()
+			self.performStatistics()
 		else:
 			self.showStatistics()
 
@@ -1326,7 +1336,7 @@ class SSRMainWindow(QMainWindow):
 		QMessageBox.about(self, "About Krait", about_message)
 
 	def openDocumentation(self):
-		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait"))
+		QDesktopServices.openUrl(QUrl("https://krait.biosv.com"))
 
 	def reportIssue(self):
 		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait/issues"))

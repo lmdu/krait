@@ -33,7 +33,7 @@ cdef class NCLS32:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.initializedcheck(False)
-    def __cinit__(self, const int32_t [::1] starts=None, const int32_t [::1] ends=None, const int32_t [::1] ids=None):
+    def __cinit__(self, const int32_t [::1] starts=None, const int32_t [::1] ends=None, const int64_t [::1] ids=None):
 
         if None in (starts, ends, ids):
             return

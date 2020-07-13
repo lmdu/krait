@@ -38,7 +38,7 @@ extensions = [
 	#	extra_compile_args=['-DMS_WIN64'],
 	#	extra_link_args=['-DMS_WIN64']
 	#),
-	Extension('ncls32', ['ncls/src/ncls32.pyx', 'ncls/src/intervaldb32.c'],
+	Extension('ncls', ['ncls/src/ncls.pyx', 'ncls/src/intervaldb.c'],
 		include_dirs = [os.path.join(PACKAGE_PATH, "ncls/src"), PACKAGE_PATH],
 		extra_compile_args=['-DMS_WIN64'],
 		extra_link_args=['-DMS_WIN64']

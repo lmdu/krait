@@ -54,6 +54,8 @@ class Worker(QObject):
 
 		with multiprocessing.Pool() as pool:
 			pool.apply_async(lambda fafile: pyfastx.Fasta(fafile, full_index=True), (fasta_path,))
+			pool.close()
+			pool.join()
 
 		seqs = pyfastx.Fasta(fasta_path)
 		
@@ -517,7 +519,7 @@ class ExportTableWorker(Worker):
 			else:
 				sql = (
 					"select {0}.*,location.feature,gene.geneid,gene.genename,gene.biotype "
-					"from {0} left join location on (location.target=ssr.id) inner join gene "
+					"from {0} left join location on (location.target={0}.id) inner join gene "
 					"on (gene.id=location.gid) WHERE location.reptype={1}"
 				).format(table_name, repeat_type)
 		else:
@@ -529,8 +531,8 @@ class ExportTableWorker(Worker):
 			else:
 				sql = (
 					"select {0}.*,location.feature,gene.geneid,gene.genename,gene.biotype "
-					"from {0} left join location on (location.target=ssr.id) inner join gene "
-					"on (gene.id=location.gid) WHERE location.reptype={1} AND ssr.id IN ({2})"
+					"from {0} left join location on (location.target={0}.id) inner join gene "
+					"on (gene.id=location.gid) WHERE location.reptype={1} AND {0}.id IN ({2})"
 				).format(table_name, repeat_type, ",".join(map(str,ids)))
 
 		prev_progress = 0
@@ -790,7 +792,7 @@ class LocateWorker(Worker):
 				prev_progress = progress
 
 		self.db.get_cursor().executemany("INSERT INTO location VALUES (?,?,?,?,?)", recs)
-		self.emit_finish("%s location completed." % self.table)
+		self.emit_finish("%s mapping completed." % self.table)
 
 class ExportFeatureWorker(Worker):
 	def __init__(self, selected, model, outfile):

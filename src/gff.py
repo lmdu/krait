@@ -56,7 +56,7 @@ class AnnotParser(object):
 			if line[0] == '#': continue
 			
 			cols = line.strip().split('\t')
-			
+
 			record = Data(
 				seqid = cols[0],
 				feature = cols[2].upper(),
@@ -64,18 +64,20 @@ class AnnotParser(object):
 				end = int(cols[4]),
 				attrs = Data()
 			)
-			
+
 			for item in cols[-1].split(';'):
 				if not item:
 					continue
-				
+
 				#if _format == 'GFF':
 				#	name, value = item.split('=')
 				#else:
 				#	name, value = item.strip().strip('"').split('"')
+				try:
+					name, value = self.split_val(item)
+				except ValueError:
+					continue
 
-				name, value = self.split_val(item)
-				
 				record.attrs[name.strip().upper()] = value
 			
 			yield record
@@ -104,10 +106,10 @@ class AnnotParser(object):
 
 			if feature[0] != prev_chrom:
 				if starts:
-					starts = numpy.array(starts, dtype=numpy.int32)
-					ends = numpy.array(ends, dtype=numpy.int32)
-					indexes = numpy.array(indexes, dtype=numpy.int32)
-					self.interval_forest[prev_chrom] = ncls.NCLS32(starts, ends, indexes)
+					starts = numpy.array(starts, dtype=numpy.int64)
+					ends = numpy.array(ends, dtype=numpy.int64)
+					indexes = numpy.array(indexes, dtype=numpy.int64)
+					self.interval_forest[prev_chrom] = ncls.NCLS64(starts, ends, indexes)
 
 				prev_chrom = feature[0]
 				starts = []
@@ -119,10 +121,10 @@ class AnnotParser(object):
 			indexes.append(feat_id)
 
 		if starts:
-			starts = numpy.array(starts, dtype=numpy.int32)
-			ends = numpy.array(ends, dtype=numpy.int32)
-			indexes = numpy.array(indexes, dtype=numpy.int32)
-			self.interval_forest[prev_chrom] = ncls.NCLS32(starts, ends, indexes)
+			starts = numpy.array(starts, dtype=numpy.int64)
+			ends = numpy.array(ends, dtype=numpy.int64)
+			indexes = numpy.array(indexes, dtype=numpy.int64)
+			self.interval_forest[prev_chrom] = ncls.NCLS64(starts, ends, indexes)
 
 	def mapping(self, chrom, start, end):
 		if chrom not in self.interval_forest:
@@ -138,7 +140,7 @@ class AnnotParser(object):
 		for candidate in ['CDS', 'exon', 'UTR', 'intron']:
 			for feat, gid in feats:
 				if candidate in feat:
-					return (self.featid_mapping[feat], self.gene_mapping[gid])
+					return (self.featid_mapping[feat], self.gene_mapping[gid]) 
 
 		return None
 
@@ -192,12 +194,29 @@ class GFFParser(AnnotParser):
 			self.gene_info.append((gene_num, row.seqid, row.start, row.end, gene_id, gene_name, biotype))
 
 	def get_features(self):
+		chrom = None
 		father = None
 		exons = []
 
 		parents = {}
 
 		for r in self.parse():
+			if r.seqid != chrom:
+				if exons:
+					exons = sorted(exons, key=lambda x: x[2])
+
+					for idx, exon in enumerate(exons):
+						yield exon
+
+						if idx < len(exons)-1:
+							start = exon[2] + 1
+							end = exons[idx+1][1] - 1
+							yield (exons[0][0], start, end, 'intron', exons[0][4])
+
+				chrom = r.seqid
+				exons = []
+				father = None
+
 			if r.feature == 'REGION':
 				continue
 
@@ -258,15 +277,15 @@ class GFFParser(AnnotParser):
 					except:
 						parents[r.attrs.ID] = r.attrs.ID
 
-		exons = sorted(exons, key=lambda x: x[2])
-		
-		for idx, exon in enumerate(exons):
-			yield exon
+		if exons:
+			exons = sorted(exons, key=lambda x: x[2])
+			for idx, exon in enumerate(exons):
+				yield exon
 
-			if idx < len(exons)-1:
-				start = exon[2] + 1
-				end = exons[idx+1][1] - 1
-				yield (exons[0][0], start, end, 'intron', exons[0][4])
+				if idx < len(exons)-1:
+					start = exon[2] + 1
+					end = exons[idx+1][1] - 1
+					yield (exons[0][0], start, end, 'intron', exons[0][4])
 
 class GTFParser(AnnotParser):
 	def split_val(self, item):
@@ -288,12 +307,28 @@ class GTFParser(AnnotParser):
 			self.gene_info.append((gene_num, row.seqid, row.start, row.end, gene_id, gene_name, biotype))
 
 	def get_features(self):
+		chrom = None
 		father = None
 		exons = []
-		for row in self.parse():
-			parent = row.attrs.GENE_ID
+		for r in self.parse():
+			if r.seqid != chrom:
+				if exons:
+					exons = sorted(exons, key=lambda x: x[1])
 
-			if row.feature == 'CDS':
+					for idx, exon in enumerate(exons):
+						yield exon
+
+						if idx < len(exons)-1:
+							start = exon[2] + 1
+							end = exons[idx+1][1] - 1
+							yield (exons[0][0], start, end, 'intron', exons[0][4])
+				exons = []
+				chrom = None
+				father = None
+
+			parent = r.attrs.GENE_ID
+
+			if r.feature == 'CDS':
 				yield (r.seqid, r.start, r.end, 'CDS', parent)
 			
 			elif r.feature == 'FIVE_PRIME_UTR':
