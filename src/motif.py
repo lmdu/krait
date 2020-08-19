@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import itertools
 
 def is_motif(motif):
@@ -64,7 +63,6 @@ def complete_motif(motif):
 	new_motif = "".join([ codes.get(base, base) for base in motif])
 	return similar_motif(new_motif)
 
-
 def reverse_complete_motif(motif):
 	'''
 	remove the reverse complete motifs e.g. AC and GT.
@@ -82,7 +80,6 @@ def motif_to_number(motif):
 
 def motif_sorted(motifs):
 	return sorted(motifs, key=motif_to_number)
-
 
 class StandardMotif:
 	_motifs = {}

@@ -102,6 +102,16 @@ class MotifStandard:
 		motifs = self.generate_motifs()
 		self._motif_mapping = {m2:m1 for m1 in motifs for m2 in motifs[m1]}
 
+	def generate_matrix(self):
+		matrix = {}
+		for m,v in self._motif_mapping.items():
+			if v not in matrix:
+				matrix[v] = []
+			matrix[v].append(m)
+
+		for m in sorted(matrix, key=motif_to_number):
+			print("{}\t{}".format(m, "\t".join(matrix[m])))
+
 	def generate_motifs(self):
 		'''Generate standard motifs and corresponding equal motifs'''
 		bases = ['A', 'T', 'C', 'G']
@@ -145,5 +155,6 @@ class MotifStandard:
 		return mappings
 
 if __name__ == '__main__':
-	s = MotifStandard(2)
-	print(s.get_standard('ATG'))
+	s = MotifStandard(3)
+	#print(s.get_standard('ATG'))
+	s.generate_matrix()

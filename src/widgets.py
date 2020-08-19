@@ -26,6 +26,7 @@ from utils import *
 from detail import *
 from workers import *
 from config import *
+from motif import StandardMotif
 
 class SSRMainWindow(QMainWindow):
 	def __init__(self):
@@ -400,6 +401,8 @@ class SSRMainWindow(QMainWindow):
 		#tool action
 		self.downloadNCBIAct = QAction(self.tr("Download sequence from NCBI"), self)
 		self.downloadNCBIAct.triggered.connect(self.downloadFasta)
+		#self.motifMappingAct = QAction(self.tr("Generate standard motif mapping"), self)
+		#self.motifMappingAct.triggered.connect(self.generateMotifMapping)
 
 		#about action
 		self.aboutAct = QAction(self.tr("About Krait"), self)
@@ -477,6 +480,8 @@ class SSRMainWindow(QMainWindow):
 		#self.toolMenu.addAction(self.statisticsForceAct)
 		self.toolMenu.addSeparator()
 		self.toolMenu.addAction(self.downloadNCBIAct)
+		#self.toolMenu.addSeparator()
+		#self.toolMenu.addAction(self.motifMappingAct)
 
 		self.helpMenu.addAction(self.documentAct)
 		self.helpMenu.addAction(self.issueAct)
@@ -783,6 +788,20 @@ class SSRMainWindow(QMainWindow):
 		self.progressBar.setMaximum(0)
 		worker = EutilWorker(acc, out)
 		self.executeTask(worker, lambda: self.progressBar.setMaximum(100))
+
+	"""
+	def generateMotifMapping(self):
+		'''
+		generate standard motif mapping matrix
+		'''
+		levels = ["1", "2", "3", "4"]
+		level, ok = QInputDialog.getItem(self, "Standard level", "Level:", levels, 0, False)
+		if not ok: return
+		outfile, _ = QFileDialog.getSaveFileName(self, filter="CSV (*.csv)")
+		if not outfile: return
+		StandardMotif(int(level)).generate_matrix(outfile)
+		QMessageBox.information(self, "Information", "Successfully exported to %s" % outfile)
+	"""
 
 	def exportTable(self, selected):
 		suffix = ['Tabular (*.tsv)', 'CSV (*.csv)']

@@ -2,9 +2,9 @@
 import os
 import appdirs
 
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 
-BUILD = '20200713'
+BUILD = '20200819'
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 

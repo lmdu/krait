@@ -66,7 +66,7 @@ class Worker(QObject):
 			for seq in seqs:
 				compos = seq.composition
 				ns = sum(compos[b] for b in compos if b not in ['A', 'T', 'G', 'C'])
-				row = (None, seq.name, fasta_id, len(seq), compos['G']+compos['C'], ns)
+				row = (None, seq.name, fasta_id, len(seq), compos.get('G',0)+compos.get('C',0), ns)
 				rows.append(row)
 			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
 
