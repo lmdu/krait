@@ -33,14 +33,18 @@ class Statistics(object):
 	@property
 	def seqcount(self):
 		if not self._total_sequences:
-			self._total_sequences = self.db.get_one("SELECT COUNT(1) FROM seq LIMIT 1")
+			#self._total_sequences = self.db.get_one("SELECT COUNT(1) FROM seq LIMIT 1")
+			self._total_sequences = self.db.get_one("SELECT value FROM option WHERE name='total_seqs'")
+			self._total_sequences = int(self._total_sequences)
 
 		return self._total_sequences
 
 	@property
 	def size(self):
 		if not self._total_bases:
-			self._total_bases = self.db.get_one("SELECT SUM(size) FROM seq LIMIT 1")
+			#self._total_bases = self.db.get_one("SELECT SUM(size) FROM seq LIMIT 1")
+			self._total_bases = self.db.get_one("SELECT value FROM option WHERE name='total_base'")
+			self._total_bases = int(self._total_bases)
 
 		return self._total_bases
 
@@ -51,7 +55,9 @@ class Statistics(object):
 	@property
 	def ns(self):
 		if self._total_unknown is None:
-			self._total_unknown = self.db.get_one("SELECT SUM(ns) FROM seq LIMIT 1")
+			#self._total_unknown = self.db.get_one("SELECT SUM(ns) FROM seq LIMIT 1")
+			self._total_unknown = self.db.get_one("SELECT value FROM option WHERE name='unkown_base'")
+			self._total_unknown = int(self._total_unknown)
 
 		return self._total_unknown
 
@@ -75,9 +81,12 @@ class Statistics(object):
 		get the GC content of the fastas
 		'''
 		if not self._total_gc:
-			self._total_gc = self.db.get_one("SELECT SUM(gc) FROM seq LIMIT 1")
+			#self._total_gc = self.db.get_one("SELECT SUM(gc) FROM seq LIMIT 1")
+			self._total_gc = self.db.get_one("SELECT value FROM option WHERE name='gc_content'")
+			self._total_gc = round(float(self._total_gc), 2)
 
-		return round(self._total_gc/self.validsize*100, 2)
+		#return round(self._total_gc/self.validsize*100, 2)
+		return self._total_gc
 
 	def ra(self, counts):
 		'''

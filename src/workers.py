@@ -24,6 +24,9 @@ from config import ROOT_PATH
 os.environ['PRIMER3HOME'] = ROOT_PATH
 from primer3 import primerdesign
 
+def build_full_index(fafile):
+	_ = pyfastx.Fasta(fafile, full_index=True)
+
 class Worker(QObject):
 	update_progress = Signal(int)
 	update_message = Signal(str)
@@ -53,22 +56,34 @@ class Worker(QObject):
 		self.emit_message("Building fasta index for %s" % fasta_path)
 
 		with multiprocessing.Pool() as pool:
-			pool.apply_async(lambda fafile: pyfastx.Fasta(fafile, full_index=True), (fasta_path,))
+			pool.apply_async(build_full_index, (fasta_path,))
 			pool.close()
 			pool.join()
 
 		seqs = pyfastx.Fasta(fasta_path)
 		
 		#get sequence detail information
-		sql = "SELECT * FROM seq INNER JOIN fasta ON (seq.fid=fasta.id) WHERE fasta.path='{}' LIMIT 1".format(fasta_path)
+		#sql = "SELECT * FROM seq INNER JOIN fasta ON (seq.fid=fasta.id) WHERE fasta.path='{}' LIMIT 1".format(fasta_path)
+		#if not self.db.get_one(sql):
+		#	rows = []
+		#	for seq in seqs:
+		#		compos = seq.composition
+		#		ns = sum(compos[b] for b in compos if b not in ['A', 'T', 'G', 'C'])
+		#		row = (None, seq.name, fasta_id, len(seq), compos.get('G',0)+compos.get('C',0), ns)
+		#		rows.append(row)
+		#	self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
+
+		sql = "SELECT * FROM option WHERE name='gc_content'"
 		if not self.db.get_one(sql):
-			rows = []
-			for seq in seqs:
-				compos = seq.composition
-				ns = sum(compos[b] for b in compos if b not in ['A', 'T', 'G', 'C'])
-				row = (None, seq.name, fasta_id, len(seq), compos.get('G',0)+compos.get('C',0), ns)
-				rows.append(row)
-			self.db.insert("INSERT INTO seq VALUES (?,?,?,?,?,?)", rows)
+			gc = seqs.gc_content
+			compos = seqs.composition
+			ns = sum(compos[b] for b in compos if b not in ['A', 'T', 'G', 'C'])
+			self.db.insert("INSERT INTO option (name, value) VALUES (?,?)", [
+				('total_base', str(seqs.size)),
+				('total_seqs', str(len(seqs))),
+				('gc_content', str(gc)),
+				('unkown_base', str(ns))
+			])
 
 		self.total_bases = seqs.size
 		seqs = pyfastx.Fasta(fasta_path, build_index=False)
@@ -143,7 +158,11 @@ class SSRWorker(Worker):
 			#start search perfect microsatellites
 			with multiprocessing.Pool() as pool:
 				for name, seq in seqs:
+				#for s in seqs:
+				#	name, seq = s.name, s.seq
+
 					current_bases += len(seq)
+
 					seq_progress = current_bases/self.total_bases
 
 					self.emit_message("Searching for perfect SSRs from %s" % name)
@@ -159,6 +178,7 @@ class SSRWorker(Worker):
 							yield row
 
 					self.db.insert(sql, values())
+
 					self.emit_progress(int(seq_progress*fasta_progress*100))
 
 		self.db.set_option('ssr_end_time', int(time.time()))
@@ -242,7 +262,7 @@ class CSSRWorker(Worker):
 		self.emit_message("Concatenate compound SSRs...")
 		cssrs = [next(ssrs)]
 		prev_progress = 0
-		self.db.begin()
+		#self.db.begin()
 		for ssr in ssrs:
 			d = ssr.start - cssrs[-1].end - 1
 			if ssr.sequence == cssrs[-1].sequence and d <= self.dmax:
@@ -259,7 +279,7 @@ class CSSRWorker(Worker):
 		if len(cssrs) > 1:
 			self.concatenate(cssrs)
 
-		self.db.commit()
+		#self.db.commit()
 		self.db.set_option('cssr_end_time', int(time.time()))
 		self.emit_finish("Compound SSRs search completed")
 
@@ -427,7 +447,7 @@ class PrimerWorker(Worker):
 
 		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		
-		self.db.begin()
+		#self.db.begin()
 		for item in self.db.query(sql):
 			if item.sequence != current_name:
 				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
@@ -489,7 +509,7 @@ class PrimerWorker(Worker):
 				self.emit_progress(progress)
 				prev_progress = progress
 
-		self.db.commit()
+		#self.db.commit()
 
 		self.emit_finish('Primer design completed, %s succeed %s failed' % (succeeded, total_select-succeeded))
 

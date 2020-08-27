@@ -215,8 +215,8 @@ class SSRMainWindow(QMainWindow):
 		self.loadFastaAct = QAction(self.tr("Import Fasta"), self)
 		self.loadFastaAct.triggered.connect(self.importFasta)
 		self.loadFastaAct.setShortcut(QKeySequence(Qt.CTRL+Qt.SHIFT+Qt.Key_O))
-		self.loadFastasAct = QAction(self.tr("Import Fastas in Folder"), self)
-		self.loadFastasAct.triggered.connect(self.importFastas)
+		#self.loadFastasAct = QAction(self.tr("Import Fastas in Folder"), self)
+		#self.loadFastasAct.triggered.connect(self.importFastas)
 		
 		#export the Results
 		self.exportWholeTableAct = QAction(self.tr("Export Whole Table"), self)
@@ -437,7 +437,7 @@ class SSRMainWindow(QMainWindow):
 		self.fileMenu.addAction(self.saveAsProjectAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.loadFastaAct)
-		self.fileMenu.addAction(self.loadFastasAct)
+		#self.fileMenu.addAction(self.loadFastasAct)
 		self.fileMenu.addAction(self.locateSetAct)
 		self.fileMenu.addSeparator()
 		self.fileMenu.addAction(self.exportWholeTableAct)
@@ -498,7 +498,7 @@ class SSRMainWindow(QMainWindow):
 		self.SSRMenu.addAction(self.SSRRemoveAct)
 		self.SSRMenu.addSeparator()
 		self.SSRMenu.addAction(self.loadFastaAct)
-		self.SSRMenu.addAction(self.loadFastasAct)
+		#self.SSRMenu.addAction(self.loadFastasAct)
 		self.SSRMenu.addSeparator()
 		self.SSRMenu.addAction(self.SSRSetAct)
 
@@ -737,6 +737,7 @@ class SSRMainWindow(QMainWindow):
 		self.db.get_cursor().execute('INSERT INTO fasta VALUES (?,?)', (None, fasta))
 		self.setStatusMessage("Import fasta %s" % fasta)
 
+	"""
 	def importFastas(self):
 		'''
 		import all fasta files from a directory
@@ -773,7 +774,7 @@ class SSRMainWindow(QMainWindow):
 			self.db.get_cursor().execute("INSERT INTO fasta VALUES (?,?)", (None, folder.absoluteFilePath(fasta)))
 		
 		self.setStatusMessage("Import %s fastas in %s" % (count, directory))
-
+	"""
 
 	def downloadFasta(self):
 		'''
@@ -1290,7 +1291,9 @@ class SSRMainWindow(QMainWindow):
 			fw.write(self.statis_result)
 
 		self.progressBar.setMaximum(100)
-		return QMessageBox.information(self, "Information", "Statistical report was successfully save to %s" % self.statis_outfile)
+
+		QDesktopServices.openUrl(QUrl("file:///{}".format(self.statis_outfile), QUrl.TolerantMode))
+		self.setStatusMessage("Statistical report was successfully save to %s" % self.statis_outfile)
 
 	def removeStatistics(self):
 		if self.statis_result:
@@ -1402,6 +1405,7 @@ class SSRTableView(QTableView):
 
 	def contextMenuEvent(self, event):
 		self.current_row = self.rowAt(event.pos().y())
+
 		if self.current_row == -1:
 			return
 
@@ -1777,7 +1781,7 @@ class TableModel(QAbstractTableModel):
 			return
 		remainder = self.total_row_counts - self.readed_row_counts
 		fetch_row = min(100, remainder)
-		sql = self.sql % 'id' + " LIMIT %s,%s" % (self.readed_row_counts-1, fetch_row)
+		sql = self.sql % 'id' + " LIMIT %s,%s" % (self.readed_row_counts, fetch_row)
 		IDs = self.db.get_column(sql)
 		self.beginInsertRows(QModelIndex(), self.readed_row_counts, self.readed_row_counts+fetch_row-1)
 		self.displayed.extend(IDs)
