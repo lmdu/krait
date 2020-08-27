@@ -10,10 +10,10 @@ mkdir -p ${appdir}/usr/share/applications
 mkdir -p ${appdir}/DEBIAN
 
 #move app to folder
-mv dist/Krait ${appdir}/usr/lib
+mv Krait ${appdir}/usr/lib
 
 #copy icons
-cp src/icons/krait_logo.png ${appdir}/usr/share/icons
+cp ../src/icons/krait_logo.png ${appdir}/usr/share/icons
 
 #write desktop file
 desktop="[Desktop Entry]
@@ -37,5 +37,6 @@ maintainer: lmdu <adullb@qq.com>
 description: krait installer on ubuntu and debian
 "
 echo "$control" > ${appdir}/DEBIAN/control
-
+chmod 0775 ${appdir}/DEBIAN
+chmod 0775 ${appdir}/DEBIAN/control
 dpkg -b ${appdir} Krait-v${version}-amd64.deb
