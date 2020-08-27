@@ -45,7 +45,7 @@ script:
       pyinstaller linux.spec;
       cd dist;
       tar -czvf Krait-v${version}-linux.tar.gz Krait;
-      ../build_deb ${version};
+      ../build_deb.sh ${version};
     fi
   - ls -lh
   - cd ..
