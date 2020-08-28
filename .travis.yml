@@ -49,8 +49,8 @@ script:
       ../build_deb.sh ${version};
     fi
   - ls -lh
-  - ls -lh ..
   - cd ..
+  - ls -lh
 
 deploy:
   provider: releases
