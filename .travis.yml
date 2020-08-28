@@ -43,12 +43,12 @@ script:
       mv "Krait 0.0.0.dmg" Krait-v${version}-macos.dmg;
     else
       pyinstaller linux.spec;
-      ls -lh;
       cd dist;
       tar -czvf Krait-v${version}-linux.tar.gz Krait;
       ../build_deb.sh ${version};
     fi
   - ls -lh
+  - ls -lh ..
   - cd ..
 
 deploy:
