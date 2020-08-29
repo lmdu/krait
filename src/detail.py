@@ -58,10 +58,7 @@ class SequenceDetail(Detail):
 		self.flank = flank
 
 	def generateHtml(self):
-		sql = (
-			"SELECT f.path FROM fasta AS f, seq AS s, {0} AS t "
-			"WHERE f.id=s.fid AND t.sequence=s.name AND t.id={1}"
-		)
+		sql = "SELECT path FROM fasta LIMIT 1"
 		fasta_file = self.db.get_one(sql.format(self.table, self.id))
 		self.fasta = pyfastx.Fasta(fasta_file)
 
@@ -100,10 +97,7 @@ class ISSRSeqDetail(Detail):
 		return "".join(alignment)
 
 	def generateHtml(self):
-		sql = (
-			"SELECT f.path FROM fasta AS f, seq AS s, {0} AS t "
-			"WHERE f.id=s.fid AND t.sequence=s.name AND t.id={1}"
-		)
+		sql = "SELECT path FROM fasta LIMIT 1"
 		fasta_file = self.db.get_one(sql.format(self.table, self.id))
 		self.fasta = pyfastx.Fasta(fasta_file)
 
@@ -134,10 +128,7 @@ class PrimerDetail(Detail):
 
 		#table, tid = primer.target.split('-')
 
-		sql = (
-			"SELECT f.path FROM fasta AS f, seq AS s, {0} AS t "
-			"WHERE f.id=s.fid AND t.sequence=s.name AND t.id={1}"
-		)
+		sql = "SELECT path FROM fasta LIMIT 1"
 
 		fasta_file = self.db.get_one(sql.format(table, tid))
 		self.fasta = pyfastx.Fasta(fasta_file)

@@ -446,11 +446,11 @@ class PrimerWorker(Worker):
 			self.db.get_cursor().execute("DELETE FROM primer")
 
 		insert_sql = "INSERT INTO primer VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
-		
+
 		#self.db.begin()
 		for item in self.db.query(sql):
 			if item.sequence != current_name:
-				sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
+				sql = "SELECT path FROM fasta LIMIT 1"
 				seqfile = self.db.get_one(sql)
 				#seqs = fasta.GzipFasta(seqfile)
 				seqs = pyfastx.Fasta(seqfile)
@@ -632,7 +632,7 @@ class ExportFastaWorker(Worker):
 		with open(self.outfile, 'wt') as fp:
 			for item in self.db.query(sql):
 				if item.sequence != current_name:
-					sql = "SELECT f.path FROM fasta AS f,seq AS s WHERE f.id=s.fid AND s.name='{}' LIMIT 1".format(item.sequence)
+					sql = "SELECT path FROM fasta LIMIT 1"
 					seqfile = self.db.get_one(sql)
 					seqs = pyfastx.Fasta(seqfile)
 					current_seq = seqs[item.sequence].seq
