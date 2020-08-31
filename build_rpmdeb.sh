@@ -33,5 +33,8 @@ files:
 "
 echo "$nfpmconfig" > nfpm.yaml
 
+# copy logo file
+cp ../src/icons/krait_logo.png .
+
 ./nfpm pkg -t Krait-v${version}-amd64.deb
 ./nfpm pkg -t Krait-v${version}-amd64.rpm
