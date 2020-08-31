@@ -45,8 +45,8 @@ script:
       pyinstaller linux.spec;
       cd dist;
       tar -czvf Krait-v${version}-linux.tar.gz Krait;
-      chmod a+x ../build_deb.sh;
-      ../build_deb.sh ${version};
+      chmod a+x ../build_rpmdeb.sh;
+      ../build_rpmdeb.sh ${version};
     fi
   - ls -lh
   - cd ..
