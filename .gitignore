@@ -18,3 +18,4 @@ src/libs/src/build/temp.win-amd64-3.7/Release/ncls/src/ncls.o
 src/libs/src/build/temp.win-amd64-3.7/Release/tandem.cp37-win_amd64.def
 src/libs/src/build/temp.win-amd64-3.7/Release/tandem.o
 src/libs/tandem.cp37-win_amd64.pyd
+src/__pycache__/main.cpython-37.pyc
