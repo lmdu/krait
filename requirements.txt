@@ -1,9 +1,9 @@
-PySide2==5.14.2.1
+PySide2==5.15.2
 Cython==0.29.19
 numpy==1.19.0
 requests==2.23.0
 jinja2==2.11.2
-pyfastx==0.6.17
+pyfastx==0.8.4
 appdirs==1.4.4
 pyinstaller==3.6
 primer3-py==0.6.1
