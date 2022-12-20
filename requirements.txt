@@ -1,6 +1,6 @@
 PySide2==5.15.2
 Cython==0.29.19
-numpy==1.19.0
+numpy==1.22.0
 requests==2.23.0
 jinja2==2.11.2
 pyfastx==0.8.4
