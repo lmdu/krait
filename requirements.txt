@@ -1,9 +1,10 @@
+apsw==3.39.4.0
 PySide2==5.15.2
-Cython==0.29.19
-numpy==1.19.0
+Cython==0.29.32
+numpy==1.22.0
 requests==2.23.0
-jinja2==2.11.2
+jinja2==2.11.3
 pyfastx==0.8.4
 appdirs==1.4.4
-pyinstaller==3.6
+pyinstaller==5.7.0
 primer3-py==0.6.1
