@@ -1,7 +1,7 @@
 apsw==3.39.4.0
 PySide2==5.15.2
 Cython==0.29.32
-numpy==1.22.0
+numpy==1.21.6
 requests==2.23.0
 jinja2==2.11.3
 pyfastx==0.8.4
