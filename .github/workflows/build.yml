@@ -36,6 +36,7 @@ jobs:
           cd ..
 
       - name: Upload Installer
+        uses: actions/upload-artifact@v3
         with:
           name: Krait-win64
           path: setup/*.exe
