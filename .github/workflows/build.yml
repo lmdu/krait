@@ -25,6 +25,8 @@ jobs:
       - name: Build Windows Exe
         if: runner.os == 'Windows'
         run: |
+          gcc --version
+          where gcc
           dir c:
           cd src\libs\src
           python setup.py build_ext --inplace -c mingw32
