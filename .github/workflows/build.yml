@@ -25,7 +25,7 @@ jobs:
       - name: Fix Python Compiler
         run: |
           $pydir = python -c "import sys;print(sys.exec_prefix)" | Out-String
-          dir $pydir
+          dir %pythonLocation%
           gendef $pydir\vcruntime140.dll
           dlltool -D $pydir\vcruntime140.dll -d vcruntime140.def -l $pydir\libs\libvcruntime140.a
           pip install pywin32
