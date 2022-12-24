@@ -35,7 +35,7 @@ jobs:
         run: |
           cd src\libs\src
           python setup.py build_ext --inplace -c mingw32
-          move /y *.pyd ..
+          mv *.pyd ..
           cd ..\..\..
           pyinstaller win.spec
           cd setup
