@@ -1,0 +1,41 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build_installer:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{  matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2019, ubuntu-18.04, macos-10.15]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.7
+
+      - name: Install Requirements:
+        run: |
+          pip install -r requirements.txt
+
+      - name: Build Windows Exe
+        if: runner.os == 'Windows'
+        run: |
+          dir c:
+          cd src\libs\src
+          python setup.py build_ext --inplace -c mingw32
+          move /y *.pyd ..
+          cd ..\..\..
+          pyinstaller win.spec
+          cd setup
+          iscc win.iss
+          cd ..
+
+      - name: Upload Installer
+        with:
+          name: Krait-win64
+          path: setup/*.exe
