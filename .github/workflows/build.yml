@@ -22,12 +22,17 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Fix Python Compiler
+        run: |
+          $pydir = python -c "import sys;print(sys.exec_prefix)" | Out-String
+          gendef $pydir\vcruntime140.dll
+          dlltool -D $pydir\vcruntime140.dll -d vcruntime140.def -l $pydir\libs\libvcruntime140.a
+          pip install pywin32
+          python ci\fix_compiler_error.py
+
       - name: Build Windows Exe
         if: runner.os == 'Windows'
         run: |
-          gcc --version
-          where gcc
-          dir c:
           cd src\libs\src
           python setup.py build_ext --inplace -c mingw32
           move /y *.pyd ..
