@@ -4,6 +4,7 @@ Cython==0.29.32
 numpy==1.21.6
 requests==2.23.0
 jinja2==2.11.3
+MarkupSafe==0.23
 pyfastx==0.8.4
 appdirs==1.4.4
 pyinstaller==5.7.0
