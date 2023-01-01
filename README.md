@@ -1,7 +1,6 @@
 <p align="center"><img width="100" src="src/icons/krait_logo.png"></p>
 <p align="center">
-	<a href="https://travis-ci.org/lmdu/krait"><img src="https://travis-ci.org/lmdu/krait.svg?branch=master"></a>
-	<a href="https://ci.appveyor.com/project/lmdu/krait"><img src="https://ci.appveyor.com/api/projects/status/9yl44rnhmavyfe90?svg=true"></a>
+	<a href="https://github.com/lmdu/krait/actions/workflows/build.yml"><img src="https://github.com/lmdu/krait/actions/workflows/build.yml/badge.svg"></a>
 	<a href="https://kraitms.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/kraitms/badge/?version=latest"></a>
 	<img src="https://img.shields.io/github/downloads/lmdu/krait/total.svg">
 	<img src="https://img.shields.io/github/release/lmdu/krait.svg">
@@ -40,7 +39,7 @@ Krait is a robust and ultrafast tool with a user-friendly graphic interface for 
 [https://github.com/lmdu/krait/releases](https://github.com/lmdu/krait/releases)
 
 # Documentation
-[http://krait.biosv.com/en/latest//](http://krait.biosv.com/en/latest/)
+[http://krait.biosv.com/en/latest//](http://krait.biosv.com/en/latest)
 
 # Citation
 Du L, Zhang C, Liu Q, Zhang X, Yue B (2018) Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design. Bioinformatics. 34(4):681-683. [10.1093/bioinformatics/btx665](https://doi.org/10.1093/bioinformatics/btx665)
