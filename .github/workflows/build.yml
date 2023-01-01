@@ -64,7 +64,7 @@ jobs:
           pyinstaller mac.spec
           cd dist
           npm install --global create-dmg
-          create-dmg Krait.app
+          create-dmg Krait.app || true
           mv "Krait 0.0.0.dmg" Krait-v${version}-macos.dmg
 
       - name: Upload Installer
