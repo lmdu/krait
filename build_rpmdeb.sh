@@ -5,7 +5,8 @@ version=$1
 wget https://github.com/goreleaser/nfpm/releases/download/v1.7.0/nfpm_1.7.0_Linux_x86_64.tar.gz
 tar xzvf nfpm_1.7.0_Linux_x86_64.tar.gz
 
-desktop="[Desktop Entry]
+cat > krait.desktop <<EOF
+[Desktop Entry]
 Version=${version}
 Name=Krait
 Comment=microsatellite investigation and primer design
@@ -14,10 +15,10 @@ Icon=/usr/share/icons/krait_logo.png
 Terminal=false
 Type=Application
 Categories=Application
-"
-echo "$desktop" > krait.desktop
+EOF
 
-nfpmconfig="name: Krait
+cat > nfpm.yaml <<EOF
+name: Krait
 arch: amd64
 platform: linux
 version: ${version}
@@ -30,11 +31,9 @@ files:
   ./Krait/**/*: /usr/lib/Krait
   ./krait.desktop: /usr/share/applications/krait.desktop
   ./krait_logo.png: /usr/share/icons/krait_logo.png
-"
-echo "$nfpmconfig" > nfpm.yaml
+EOF
 
 # copy logo file
 cp ../src/icons/krait_logo.png .
 
 ./nfpm pkg -t Krait-v${version}-amd64.deb
-./nfpm pkg -t Krait-v${version}-amd64.rpm

@@ -57,6 +57,9 @@ class AnnotParser(object):
 			
 			cols = line.strip().split('\t')
 
+			if len(cols) < 9:
+				continue
+
 			record = Data(
 				seqid = cols[0],
 				feature = cols[2].upper(),

@@ -77,7 +77,7 @@ class Worker(QObject):
 		if not self.db.get_one(sql):
 			gc = seqs.gc_content
 			compos = seqs.composition
-			ns = sum(compos[b] for b in compos if b not in ['A', 'T', 'G', 'C'])
+			ns = sum(compos[b] for b in compos if b.upper() not in ['A', 'T', 'G', 'C'])
 			self.db.insert("INSERT INTO option (name, value) VALUES (?,?)", [
 				('total_base', str(seqs.size)),
 				('total_seqs', str(len(seqs))),
