@@ -1240,7 +1240,7 @@ class SSRMainWindow(QMainWindow):
 		if self.db.is_empty('fasta'):
 			return QMessageBox.warning(self, "Warning", "No fasta file inputted")
 
-		if self.db.is_empty('ssr') or self.db.is_empty('issr') or self.db.is_empty('cssr') or self.db.is_empty('vntr'):
+		if self.db.is_empty('ssr') and self.db.is_empty('issr') and self.db.is_empty('cssr') and self.db.is_empty('vntr'):
 			return QMessageBox.warning(self, "Warning", "No repeat sequence found")
 
 		worker = StatisWorker()
