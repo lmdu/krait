@@ -40,6 +40,7 @@ Krait is a robust and ultrafast tool with a user-friendly graphic interface for 
 
 # Documentation
 Download URL: [http://krait.biosv.com/en/latest](http://krait.biosv.com/en/latest)
+
 中国镜像下载地址: [https://big.cdu.edu.cn/software/krait](https://big.cdu.edu.cn/software/krait)
 
 # Citation
