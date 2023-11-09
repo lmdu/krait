@@ -2,7 +2,7 @@ apsw==3.39.4.0
 PySide2==5.15.2
 Cython==0.29.32
 numpy==1.21.6
-requests==2.23.0
+requests==2.31.0
 jinja2==2.11.3
 MarkupSafe==0.23
 pyfastx==2.0.0
