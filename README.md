@@ -1,3 +1,6 @@
+<h2>
+	Recommended to use Krait2 <a href="https://github.com/lmdu/krait2">https://github.com/lmdu/krait2</a>
+</h2>
 <p align="center"><img width="100" src="src/icons/krait_logo.png"></p>
 <p align="center">
 	<a href="https://github.com/lmdu/krait/actions/workflows/build.yml"><img src="https://github.com/lmdu/krait/actions/workflows/build.yml/badge.svg"></a>
